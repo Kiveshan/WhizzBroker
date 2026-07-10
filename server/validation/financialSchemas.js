@@ -78,3 +78,15 @@ export const instructionSaveSchema = z
     weightData: z.array(z.object({}).passthrough()).optional().nullable(),
   })
   .passthrough();
+
+// POST /api/instructions/group — a group is one client plus one or more
+// child instructions, each shaped like a standalone save payload.
+export const instructionGroupSaveSchema = z
+  .object({
+    clientId: requiredId,
+    groupRef: z.string().max(100).optional().nullable(),
+    instructions: z
+      .array(instructionSaveSchema)
+      .min(1, "An instruction group needs at least one instruction"),
+  })
+  .passthrough();

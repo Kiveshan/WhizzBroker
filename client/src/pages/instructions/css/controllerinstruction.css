@@ -1751,3 +1751,313 @@ Unique wrapper for ControllerInstructions component only
     max-width: 100%;
   }
 }
+
+/* ============================================================================
+   WhizzBroker redesign (2026-07): white rounded cards on a pale-cyan page,
+   uppercase micro-labels, soft rounded inputs — matches the grouped
+   instruction mockups. Appended last so it wins over the legacy rules above.
+   Covers the create form, the FC update form and the grouped create page,
+   which all render inside .controller-instructions-unique-wrapper.
+   ========================================================================== */
+
+.controller-instructions-unique-wrapper {
+  background-color: #eef8fa;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* The blue panel becomes an invisible column; the sections carry the look.
+   margin-top 0 cancels the legacy -90px pull-up that covered content above
+   the form (the group page's tab bar). */
+.controller-instructions-unique-wrapper .controller-instructions-form-container {
+  background-color: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin-top: 0 !important;
+}
+
+/* The legacy back-button offset (top: -20px) fights the new layout. */
+.controller-instructions-unique-wrapper .controller-instructions-back-button {
+  top: 0;
+  left: 0;
+  margin: 10px 0;
+}
+
+/* Every form section is a white card. */
+.controller-instructions-unique-wrapper .controller-instructions-form-section {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.08);
+  padding: 18px 22px;
+  margin-bottom: 14px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-client-info-section {
+  background-color: #ffffff !important;
+  padding: 18px 22px !important;
+  margin-bottom: 14px;
+}
+
+/* Kill the legacy grey divider under the client section. */
+.controller-instructions-unique-wrapper .controller-instructions-client-info-section::after {
+  content: none;
+}
+
+/* Uppercase micro-labels. */
+.controller-instructions-unique-wrapper .controller-instructions-form-field label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #667085;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* Required markers. */
+.controller-instructions-unique-wrapper .controller-instructions-form-field label .wb-required {
+  color: #e02424;
+  margin-left: 2px;
+}
+
+/* Inputs, selects and textareas: light border, soft radius. */
+.controller-instructions-unique-wrapper .controller-instructions-form-input,
+.controller-instructions-unique-wrapper .controller-instructions-dropdown,
+.controller-instructions-unique-wrapper select.dropdown,
+.controller-instructions-unique-wrapper .controller-instructions-form-field input[type="text"],
+.controller-instructions-unique-wrapper .controller-instructions-form-field input[type="email"],
+.controller-instructions-unique-wrapper .controller-instructions-form-field input[type="number"],
+.controller-instructions-unique-wrapper .controller-instructions-form-field input[type="date"],
+.controller-instructions-unique-wrapper .controller-instructions-form-field select,
+.controller-instructions-unique-wrapper .controller-instructions-form-field textarea {
+  background-color: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13.5px;
+  color: #101828;
+  box-sizing: border-box;
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-form-field input:focus,
+.controller-instructions-unique-wrapper .controller-instructions-form-field select:focus,
+.controller-instructions-unique-wrapper .controller-instructions-form-field textarea:focus {
+  outline: none;
+  border-color: #67c3e0;
+  box-shadow: 0 0 0 3px rgba(103, 195, 224, 0.18);
+}
+
+/* Read-only / disabled fields go quiet like the mock's Creation Date. */
+.controller-instructions-unique-wrapper .controller-instructions-form-field input:disabled,
+.controller-instructions-unique-wrapper .controller-instructions-form-field input[readonly],
+.controller-instructions-unique-wrapper .controller-instructions-form-field select:disabled,
+.controller-instructions-unique-wrapper .controller-instructions-form-field textarea:disabled {
+  background-color: #f9fafb;
+  color: #98a2b3;
+}
+
+/* Validation error borders must survive the input restyle above. */
+.controller-instructions-unique-wrapper .controller-instructions-error-field,
+.controller-instructions-unique-wrapper .controller-instructions-form-field .controller-instructions-error-field {
+  border: 1px solid #e02424 !important;
+  box-shadow: 0 0 0 3px rgba(224, 36, 36, 0.12) !important;
+}
+
+/* Card headers: bold title + muted one-line subtitle. */
+.controller-instructions-unique-wrapper .wb-card-header {
+  margin-bottom: 16px;
+}
+
+.controller-instructions-unique-wrapper .wb-card-header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.controller-instructions-unique-wrapper .wb-card-header p {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #667085;
+}
+
+/* Card 2 reads top-to-bottom like the mock: shipment/refs/dates/vessel first,
+   the trailer-count + rate block below them (legacy layout put counts in a
+   left column). */
+.controller-instructions-unique-wrapper .controller-instructions-container-section {
+  flex-direction: column !important;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-container-section
+  .controller-instructions-booking-rates-group {
+  order: 0;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-container-section
+  .controller-instructions-container-group {
+  order: 1;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 12px;
+  border-top: 1px solid #eef0f4;
+  padding-top: 16px;
+}
+
+/* Trailer-count and rate inputs: soften the legacy black borders. */
+.controller-instructions-unique-wrapper .controller-instructions-container-inputs input {
+  border: 1px solid #e4e7ec !important;
+  border-radius: 8px !important;
+  background-color: #ffffff;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-inputs input:disabled {
+  background-color: #f9fafb !important;
+}
+
+/* Tighten the tall vertical gaps between detail rows. */
+.controller-instructions-unique-wrapper .controller-instructions-booking-rates-row {
+  margin-bottom: 10px !important;
+}
+
+/* Left-align the trailer-size heading with the rest of the card. */
+.controller-instructions-unique-wrapper .controller-instructions-container-label,
+.controller-instructions-unique-wrapper .controller-instructions-trailer-size-label {
+  text-align: left;
+}
+
+/* Grouped containers table (ContainersCard): type header rows with quantity +
+   rate, one sub-row per container. */
+.controller-instructions-unique-wrapper .wb-containers-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table th {
+  background: #f0f7fb;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f3f7;
+  vertical-align: middle;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table .wb-type-row td {
+  background: #fbfdfe;
+}
+
+.controller-instructions-unique-wrapper .wb-type-label {
+  font-weight: 700;
+  color: #101828;
+  font-size: 13.5px;
+}
+
+.controller-instructions-unique-wrapper .wb-sub-label {
+  color: #98a2b3;
+  font-size: 12px;
+  padding-left: 24px;
+  white-space: nowrap;
+}
+
+.controller-instructions-unique-wrapper .wb-type-hint {
+  color: #98a2b3;
+  font-size: 12px;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table input[type="text"],
+.controller-instructions-unique-wrapper .wb-containers-table input[type="number"] {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.controller-instructions-unique-wrapper .wb-qty-input {
+  max-width: 90px;
+  text-align: center;
+}
+
+.controller-instructions-unique-wrapper .wb-rate-input {
+  max-width: 110px;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table input:disabled {
+  background: #f9fafb;
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+/* Surcharge multiselect (per container row) */
+.controller-instructions-unique-wrapper .wb-surcharge-select {
+  position: relative;
+  min-width: 150px;
+}
+
+.controller-instructions-unique-wrapper .wb-surcharge-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #101828;
+  cursor: pointer;
+}
+
+.controller-instructions-unique-wrapper .wb-surcharge-placeholder {
+  color: #98a2b3;
+}
+
+.controller-instructions-unique-wrapper .wb-surcharge-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(16, 24, 40, 0.12);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 150px;
+}
+
+.controller-instructions-unique-wrapper .wb-surcharge-menu label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #101828;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  margin: 0;
+  cursor: pointer;
+}
+
+.controller-instructions-unique-wrapper .wb-surcharge-menu input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #1c7ed6;
+}

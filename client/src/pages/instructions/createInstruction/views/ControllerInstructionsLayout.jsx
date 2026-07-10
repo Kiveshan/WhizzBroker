@@ -2,6 +2,7 @@
 import { ConfirmationModal } from "../../../../components/instructions/ConfirmationModal"
 import { InstructionLoadingGate } from "../../../../components/instructions/InstructionLoadingGate"
 import { AddonInvoicePicker } from "../../../../components/instructions/AddonInvoicePicker"
+import { ContainersCard } from "../../../../components/instructions/ContainersCard"
 
 const ErrorTooltip = (props) => <SharedErrorTooltip {...props} disabled />
 
@@ -64,6 +65,8 @@ export function ControllerInstructionsLayout({
   disabledRateStyle,
   navigate,
   openCalendar,
+  groupMode = false,
+  clientLocked = false,
 }) {
   return (
     <div className="controller-instructions-unique-wrapper">
@@ -125,11 +128,13 @@ export function ControllerInstructionsLayout({
         </div>
       )}
 
-      <div className="controller-instructions-header">
-        <button className="controller-instructions-back-button" onClick={() => navigate("/ControllerDashboard")}>
-          Back
-        </button>
-      </div>
+      {!groupMode && (
+        <div className="controller-instructions-header">
+          <button className="controller-instructions-back-button" onClick={() => navigate("/ControllerDashboard")}>
+            Back
+          </button>
+        </div>
+      )}
 
       {isLoadingLocations && <div style={{ height: "20px" }}></div>}
 
@@ -144,15 +149,23 @@ export function ControllerInstructionsLayout({
         style={{ maxWidth: "1200px", width: "calc(100% - 40px)", margin: "0 auto", boxSizing: "border-box" }}
       >
         <div className="controller-instructions-form-section controller-instructions-client-info-section">
+          <div className="wb-card-header">
+            <h4>Instruction Information</h4>
+            <p>Client, shipment and reference details for this instruction.</p>
+          </div>
           <div className="controller-instructions-form-row">
             <div className="controller-instructions-form-field">
-              <label>Client</label>
+              <label>
+                Client<span className="wb-required">*</span>
+              </label>
               <div className="controller-instructions-select-wrapper" ref={fieldRefs.current.clientId}>
                 <select
                   className={`dropdown ${fieldErrors.clientId ? "controller-instructions-error-field" : ""}`}
                   name="clientId"
                   value={formData.clientId}
                   onChange={handleClientChange}
+                  disabled={clientLocked}
+                  style={clientLocked ? { backgroundColor: "#f5f5f5", cursor: "not-allowed" } : undefined}
                 >
                   <option value="" disabled>
                     Select Client
@@ -166,6 +179,41 @@ export function ControllerInstructionsLayout({
                 <ErrorTooltip message={fieldErrors.clientId} />
               </div>
             </div>
+            <div className="controller-instructions-form-field">
+              <label>Representative</label>
+              <input
+                type="text"
+                className="controller-instructions-form-input"
+                name="representative"
+                value={formData.representative}
+                readOnly
+                style={nonEditableStyle}
+              />
+            </div>
+            <div className="controller-instructions-form-field">
+              <label>Contact Details</label>
+              <input
+                type="text"
+                className="controller-instructions-form-input"
+                name="contactDetails"
+                value={formData.contactDetails}
+                readOnly
+                style={nonEditableStyle}
+              />
+            </div>
+            <div className="controller-instructions-form-field">
+              <label>Email</label>
+              <input
+                type="email"
+                className="controller-instructions-form-input"
+                name="email"
+                value={formData.email}
+                readOnly
+                style={nonEditableStyle}
+              />
+            </div>
+          </div>
+          <div className="controller-instructions-form-row">
             <div className="controller-instructions-form-field">
               <label>Pick-Up Location</label>
               <div className="controller-instructions-select-wrapper" ref={fieldRefs.current.pickup}>
@@ -218,46 +266,15 @@ export function ControllerInstructionsLayout({
                 <ErrorTooltip message={fieldErrors.dropoff} />
               </div>
             </div>
-            <div className="controller-instructions-form-field">
-              <label>Representative</label>
-              <input
-                type="text"
-                className="controller-instructions-form-input"
-                name="representative"
-                value={formData.representative}
-                readOnly
-                style={nonEditableStyle}
-              />
-            </div>
-            <div className="controller-instructions-form-field">
-              <label>Contact Details</label>
-              <input
-                type="text"
-                className="controller-instructions-form-input"
-                name="contactDetails"
-                value={formData.contactDetails}
-                readOnly
-                style={nonEditableStyle}
-              />
-            </div>
-            <div className="controller-instructions-form-field">
-              <label>Email</label>
-              <input
-                type="email"
-                className="controller-instructions-form-input"
-                name="email"
-                value={formData.email}
-                readOnly
-                style={nonEditableStyle}
-              />
-            </div>
           </div>
         </div>
         {false && (
           <div className="controller-instructions-form-section">
             <div className="controller-instructions-form-row">
               <div className="controller-instructions-form-field">
-                <label>Shipment Type</label>
+                <label>
+                  Shipment Type<span className="wb-required">*</span>
+                </label>
                 <div
                   className="controller-instructions-select-wrapper"
                   ref={fieldRefs.current.shipmentTypeId}
@@ -294,247 +311,6 @@ export function ControllerInstructionsLayout({
           <div className="controller-instructions-container-section">
             {/* LEFT: Trailer size / containers / unit per */}
             <div className="controller-instructions-container-group">
-              <div className="controller-instructions-container-label">
-                <span className="controller-instructions-trailer-size-label">Trailer Size</span>
-                <label>No. of Containers</label>
-                {fieldErrors.containers && (
-                  <div className="controller-instructions-container-error-message">{fieldErrors.containers}</div>
-                )}
-              </div>
-              <div
-                className="controller-instructions-container-inputs"
-                style={{
-                  opacity: isWeightBased || isSetRateMode ? 0.5 : 1,
-                  pointerEvents: isWeightBased || isSetRateMode ? "none" : "auto",
-                }}
-              >
-                <div className="controller-instructions-container-input">
-                  <label>6m</label>
-                  <div className="controller-instructions-container-rate-group" style={{ display: "flex", width: "100px" }}>
-                    <input
-                      type="number"
-                      className={fieldErrors.containers ? "controller-instructions-error-field" : ""}
-                      value={formData.num_six_meters}
-                      min="0"
-                      name="num_six_meters"
-                      onChange={(e) => handleContainerCountChange("num_six_meters", e.target.value)}
-                      disabled={isWeightBased || isSetRateMode}
-                    />
-                    <div style={{ width: "100%", marginLeft: "10px" }}>
-                      <input
-                        type="text"
-                        value={
-                          formData.sixMeterRate !== undefined && formData.sixMeterRate !== ""
-                            ? Number.parseFloat(formData.sixMeterRate).toFixed(2)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value
-                          if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              sixMeterRate: value === "" ? "" : Number.parseFloat(value) || 0,
-                            }))
-                          }
-                        }}
-                        onFocus={(e) => {
-                          e.target.select()
-                          if (formData.sixMeterRate) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              sixMeterRate: Number.parseFloat(prev.sixMeterRate).toString(),
-                            }))
-                          }
-                        }}
-                        onBlur={() => {
-                          if (formData.sixMeterRate !== "") {
-                            setFormData((prev) => ({
-                              ...prev,
-                              sixMeterRate: Number.parseFloat(prev.sixMeterRate),
-                            }))
-                          }
-                        }}
-                        style={{
-                          width: "90px",
-                          padding: "8px",
-                          border: "1px solid #000",
-                          borderRadius: "4px",
-                          backgroundColor:
-                            rateFieldsEnabled.sixMeter && !isWeightBased && !rateLockStatus.sixMeter
-                              ? "#fff"
-                              : "#f5f5f5",
-                          fontSize: "16px",
-                          position: "relative",
-                          zIndex: 1000,
-                          cursor:
-                            rateFieldsEnabled.sixMeter && !isWeightBased && !rateLockStatus.sixMeter
-                              ? "text"
-                              : "not-allowed",
-                        }}
-                        disabled={!rateFieldsEnabled.sixMeter || isWeightBased || rateLockStatus.sixMeter}
-                        placeholder={
-                          rateFieldsEnabled.sixMeter && !isWeightBased && !rateLockStatus.sixMeter ? "0.00" : ""
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="controller-instructions-container-input">
-                  <label>12m</label>
-                  <div className="controller-instructions-container-rate-group" style={{ display: "flex", width: "100px" }}>
-                    <input
-                      type="number"
-                      className={fieldErrors.containers ? "controller-instructions-error-field" : ""}
-                      value={formData.num_twelve_meters}
-                      min="0"
-                      name="num_twelve_meters"
-                      onChange={(e) => handleContainerCountChange("num_twelve_meters", e.target.value)}
-                      disabled={isWeightBased || isSetRateMode}
-                    />
-                    <div style={{ width: "100%", marginLeft: "10px" }}>
-                      <input
-                        type="text"
-                        value={
-                          formData.twelveMeterRate !== undefined && formData.twelveMeterRate !== ""
-                            ? Number.parseFloat(formData.twelveMeterRate).toFixed(2)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value
-                          if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              twelveMeterRate: value === "" ? "" : Number.parseFloat(value) || 0,
-                            }))
-                          }
-                        }}
-                        onFocus={(e) => {
-                          e.target.select()
-                          if (formData.twelveMeterRate) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              twelveMeterRate: Number.parseFloat(prev.twelveMeterRate).toString(),
-                            }))
-                          }
-                        }}
-                        onBlur={() => {
-                          if (formData.twelveMeterRate !== "") {
-                            setFormData((prev) => ({
-                              ...prev,
-                              twelveMeterRate: Number.parseFloat(prev.twelveMeterRate),
-                            }))
-                          }
-                        }}
-                        style={{
-                          width: "90px",
-                          padding: "8px",
-                          border: "1px solid #000",
-                          borderRadius: "4px",
-                          backgroundColor:
-                            rateFieldsEnabled.twelveMeter && !isWeightBased && !rateLockStatus.twelveMeter
-                              ? "#fff"
-                              : "#f5f5f5",
-                          fontSize: "16px",
-                          position: "relative",
-                          zIndex: 1000,
-                          cursor:
-                            rateFieldsEnabled.twelveMeter && !isWeightBased && !rateLockStatus.twelveMeter
-                              ? "text"
-                              : "not-allowed",
-                        }}
-                        disabled={!rateFieldsEnabled.twelveMeter || isWeightBased || rateLockStatus.twelveMeter}
-                        placeholder={
-                          rateFieldsEnabled.twelveMeter && !isWeightBased && !rateLockStatus.twelveMeter ? "0.00" : ""
-                        }
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="controller-instructions-container-input">
-                  <label>Abnormal</label>
-                  <div className="controller-instructions-container-rate-group" style={{ display: "flex", width: "100px" }}>
-                    <input
-                      type="number"
-                      className={fieldErrors.containers ? "controller-instructions-error-field" : ""}
-                      value={formData.num_abnormal}
-                      min="0"
-                      name="num_abnormal"
-                      onChange={(e) => handleContainerCountChange("num_abnormal", e.target.value)}
-                      disabled={isWeightBased || isSetRateMode}
-                    />
-                    <div style={{ width: "100%", marginLeft: "10px" }}>
-                      <input
-                        type="text"
-                        value={
-                          formData.abnormalRate !== undefined && formData.abnormalRate !== ""
-                            ? Number.parseFloat(formData.abnormalRate).toFixed(2)
-                            : ""
-                        }
-                        onChange={(e) => {
-                          const value = e.target.value
-                          if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              abnormalRate: value === "" ? "" : Number.parseFloat(value) || 0,
-                            }))
-                          }
-                        }}
-                        onFocus={(e) => {
-                          e.target.select()
-                          if (formData.abnormalRate) {
-                            setFormData((prev) => ({
-                              ...prev,
-                              abnormalRate: Number.parseFloat(prev.abnormalRate).toString(),
-                            }))
-                          }
-                        }}
-                        onBlur={() => {
-                          if (formData.abnormalRate !== "") {
-                            setFormData((prev) => ({
-                              ...prev,
-                              abnormalRate: Number.parseFloat(prev.abnormalRate),
-                            }))
-                          }
-                        }}
-                        style={{
-                          width: "90px",
-                          padding: "8px",
-                          border: "1px solid #000",
-                          borderRadius: "4px",
-                          backgroundColor: rateFieldsEnabled.abnormal && !isWeightBased ? "#fff" : "#f5f5f5",
-                          fontSize: "16px",
-                          position: "relative",
-                          zIndex: 1000,
-                          cursor: rateFieldsEnabled.abnormal && !isWeightBased ? "text" : "not-allowed",
-                        }}
-                        disabled={!rateFieldsEnabled.abnormal || isWeightBased}
-                        placeholder={rateFieldsEnabled.abnormal && !isWeightBased ? "0.00" : ""}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {fieldErrors.containerCount && (
-                  <div
-                    className="controller-instructions-error-message"
-                    style={{
-                      color: "#d32f2f",
-                      fontSize: "0.75rem",
-                      marginTop: "4px",
-                      gridColumn: "1 / -1",
-                      textAlign: "center",
-                      padding: "4px 8px",
-                      backgroundColor: "#ffebee",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    {fieldErrors.containerCount}
-                  </div>
-                )}
-              </div>
-
               {/* Unit per / weight rate row */}
               <div className="controller-instructions-form-row" style={{ margin: "16px 0", padding: "0 10px" }}>
                 <div
@@ -874,7 +650,7 @@ export function ControllerInstructionsLayout({
 
                   {/* Name of Task */}
                   <div className="controller-instructions-form-field" style={{ flex: "1 1 160px" }}>
-                    <label>KSM File Reference</label>
+                    <label>Company File Reference</label>
                     <div className="controller-instructions-input-wrapper" ref={fieldRefs.current.task}>
                       <input
                         type="text"
@@ -1174,7 +950,10 @@ export function ControllerInstructionsLayout({
                         className="controller-instructions-form-field"
                         style={{ flex: "0 0 140px" }}
                       >
-                        <label>{isImport ? "ETA" : "Stack Date"}</label>
+                        <label>
+                          {isImport ? "ETA Date" : "Stack Date"}
+                          <span className="wb-required">*</span>
+                        </label>
                         <div
                           className="controller-instructions-input-wrapper"
                           ref={etaDateRef}
@@ -1306,7 +1085,9 @@ export function ControllerInstructionsLayout({
                         className="controller-instructions-form-field"
                         style={{ flex: "1 1 160px", minWidth: "140px" }}
                       >
-                        <label>Vessel Name</label>
+                        <label>
+                          Vessel Name<span className="wb-required">*</span>
+                        </label>
                         <div
                           className="controller-instructions-input-wrapper"
                           ref={fieldRefs.current.vesselName}
@@ -1570,272 +1351,26 @@ export function ControllerInstructionsLayout({
           </div>
         </div>
         {/* Container Details Section - Only show for container-based calculations */}
-        {!isWeightBased && showContainerDetails ? (
-          <div className="container-details-section" style={{ margin: "20px 0", width: "100%" }}>
-            <div
-              className="controller-instructions-form-section"
-              style={{ backgroundColor: "#f8f9fa", padding: "15px", borderRadius: "4px" }}
-            >
-              <h4 style={{ marginBottom: "15px", color: "#0d6efd" }}>Container Details</h4>
-              <div style={{ overflowX: "auto" }}>
-                <table className="table" style={{ marginBottom: "0", backgroundColor: "white" }}>
-                  <thead className="table-primary">
-                    <tr>
-                      <th style={{ width: "5%" }}>#</th>
-                      <th style={{ width: "15%" }}>Container Type</th>
-                      <th style={{ width: "15%" }}>Container Number</th>
-                      {(isExport || formData.shipmentTypeId === "2") && <th style={{ width: "15%" }}>File Reference</th>}
-                      {(isImport || isExport || isCrossHaul) && <th style={{ width: "10%" }}>Weight</th>}
-                      <th style={{ width: (isImport || isExport || isCrossHaul) ? "25%" : "40%" }}>Cargo Description</th>
-                      <th style={{ width: "80px", textAlign: "center" }}>Hazardous</th>
-                      <th style={{ width: "100px", textAlign: "center" }}>Add Surcharges</th>
-                      {allowVgmUI && (
-                        <th style={{ width: "60px", textAlign: "center" }}>VGM</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {containers.map((container) => (
-                      <tr key={container.id}>
-                        <td>{container.id}</td>
-                        <td>{container.containerType}</td>
-                        <td>
-                          <div style={{ position: "relative" }}>
-                            <input
-                              type="text"
-                              className={`form-control form-control-sm ${containerFieldErrors[`container-${container.id}`] ? "is-invalid" : ""}`}
-                              value={container.containerNum}
-                              onChange={(e) => handleContainerChange(container.id, "containerNum", e.target.value)}
-                              placeholder="Enter container number"
-                              maxLength={20}
-                              style={{
-                                minWidth: "120px",
-                                backgroundColor: containerFieldErrors[`container-${container.id}`]
-                                  ? "#ffebee"
-                                  : "white",
-                                borderColor: containerFieldErrors[`container-${container.id}`] ? "#f44336" : "#ced4da",
-                              }}
-                            />
-                            {containerFieldErrors[`container-${container.id}`] && (
-                              <div
-                                style={{
-                                  position: "fixed",
-                                  zIndex: 9999,
-                                  backgroundColor: "#f44336",
-                                  color: "white",
-                                  padding: "6px 10px",
-                                  borderRadius: "4px",
-                                  fontSize: "12px",
-                                  whiteSpace: "nowrap",
-                                  boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-                                  transform: "translateY(4px)",
-                                  pointerEvents: "none",
-                                  maxWidth: "250px",
-                                }}
-                                ref={(el) => {
-                                  if (el) {
-                                    const input = el.previousElementSibling
-                                    if (input) {
-                                      const rect = input.getBoundingClientRect()
-                                      el.style.left = `${rect.left}px`
-                                      el.style.top = `${rect.bottom + 4}px`
-                                    }
-                                  }
-                                }}
-                              >
-                                {containerFieldErrors[`container-${container.id}`]}
-                                <div
-                                  style={{
-                                    position: "absolute",
-                                    top: "-4px",
-                                    left: "10px",
-                                    width: "0",
-                                    height: "0",
-                                    borderLeft: "4px solid transparent",
-                                    borderRight: "4px solid transparent",
-                                    borderBottom: "4px solid #f44336",
-                                  }}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        {(isExport || formData.shipmentTypeId === "2") && (
-                          <td>
-                            <div style={{ position: "relative" }}>
-                              <input
-                                type="text"
-                                className={`form-control form-control-sm ${containerFieldErrors[`file-ref-${container.id}`] ? "is-invalid" : ""}`}
-                                value={container.fileRef || ""}
-                                onChange={(e) => handleContainerChange(container.id, "fileRef", e.target.value)}
-                                placeholder="Enter file reference"
-                                maxLength={20}
-                                style={{
-                                  minWidth: "120px",
-                                  backgroundColor: containerFieldErrors[`file-ref-${container.id}`]
-                                    ? "#ffebee"
-                                    : "white",
-                                  borderColor: containerFieldErrors[`file-ref-${container.id}`] ? "#f44336" : "#ced4da",
-                                }}
-                              />
-                              {containerFieldErrors[`file-ref-${container.id}`] && (
-                                <div
-                                  style={{
-                                    position: "fixed",
-                                    zIndex: 9999,
-                                    backgroundColor: "#f44336",
-                                    color: "white",
-                                    padding: "6px 10px",
-                                    borderRadius: "4px",
-                                    fontSize: "12px",
-                                    whiteSpace: "nowrap",
-                                    boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-                                    transform: "translateY(4px)",
-                                    pointerEvents: "none",
-                                    maxWidth: "250px",
-                                  }}
-                                  ref={(el) => {
-                                    if (el) {
-                                      const input = el.previousElementSibling
-                                      if (input) {
-                                        const rect = input.getBoundingClientRect()
-                                        el.style.left = `${rect.left}px`
-                                        el.style.top = `${rect.bottom + 4}px`
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {containerFieldErrors[`file-ref-${container.id}`]}
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: "-4px",
-                                      left: "10px",
-                                      width: "0",
-                                      height: "0",
-                                      borderLeft: "4px solid transparent",
-                                      borderRight: "4px solid transparent",
-                                      borderBottom: "4px solid #f44336",
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                        {(isImport || isExport || isCrossHaul) && (
-                          <td>
-                            <div style={{ position: "relative" }}>
-                              <input
-                                type="text"
-                                className={`form-control form-control-sm ${containerFieldErrors[`weight-${container.id}`] ? "is-invalid" : ""}`}
-                                value={container.weight || ""}
-                                onChange={(e) => handleContainerChange(container.id, "weight", e.target.value)}
-                                placeholder="Enter weight"
-                                style={{
-                                  minWidth: "80px",
-                                  backgroundColor: containerFieldErrors[`weight-${container.id}`] ? "#ffebee" : "white",
-                                  borderColor: containerFieldErrors[`weight-${container.id}`] ? "#f44336" : "#ced4da",
-                                }}
-                              />
-                              {containerFieldErrors[`weight-${container.id}`] && (
-                                <div
-                                  style={{
-                                    position: "fixed",
-                                    zIndex: 9999,
-                                    backgroundColor: "#f44336",
-                                    color: "white",
-                                    padding: "6px 10px",
-                                    borderRadius: "4px",
-                                    fontSize: "12px",
-                                    whiteSpace: "nowrap",
-                                    boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
-                                    transform: "translateY(4px)",
-                                    pointerEvents: "none",
-                                    maxWidth: "250px",
-                                  }}
-                                  ref={(el) => {
-                                    if (el) {
-                                      const input = el.previousElementSibling
-                                      if (input) {
-                                        const rect = input.getBoundingClientRect()
-                                        el.style.left = `${rect.left}px`
-                                        el.style.top = `${rect.bottom + 4}px`
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {containerFieldErrors[`weight-${container.id}`]}
-                                  <div
-                                    style={{
-                                      position: "absolute",
-                                      top: "-4px",
-                                      left: "10px",
-                                      width: "0",
-                                      height: "0",
-                                      borderLeft: "4px solid transparent",
-                                      borderRight: "4px solid transparent",
-                                      borderBottom: "4px solid #f44336",
-                                    }}
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        )}
-                        <td>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            value={container.cargoDescription}
-                            onChange={(e) => handleContainerChange(container.id, "cargoDescription", e.target.value)}
-                            placeholder="Enter cargo description"
-                          />
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div className="form-check" style={{ display: "flex", justifyContent: "center" }}>
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={container.hazardous || false}
-                              onChange={(e) => handleContainerChange(container.id, "hazardous", e.target.checked)}
-                              style={{ cursor: "pointer" }}
-                            />
-                          </div>
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div className="form-check" style={{ display: "flex", justifyContent: "center" }}>
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={container.addSurcharges || false}
-                              onChange={(e) => handleContainerChange(container.id, "addSurcharges", e.target.checked)}
-                              style={{ cursor: "pointer" }}
-                            />
-                          </div>
-                        </td>
-                        {allowVgmUI && (
-                          <td style={{ textAlign: "center" }}>
-                            <div className="form-check" style={{ display: "flex", justifyContent: "center" }}>
-                              <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={container.vgm || false}
-                                onChange={(e) => handleContainerChange(container.id, "vgm", e.target.checked)}
-                                style={{ cursor: "pointer" }}
-                              />
-                            </div>
-                          </td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+        {!isWeightBased && !isSetRateMode ? (
+          <ContainersCard
+            formData={formData}
+            setFormData={setFormData}
+            rateFieldsEnabled={rateFieldsEnabled}
+            rateLockStatus={rateLockStatus}
+            handleContainerCountChange={handleContainerCountChange}
+            containers={containers}
+            containerFieldErrors={containerFieldErrors}
+            handleContainerChange={handleContainerChange}
+            isImport={isImport}
+            isExport={isExport}
+            isCrossHaul={isCrossHaul}
+            allowVgmUI={allowVgmUI}
+            countsDisabled={isWeightBased || isSetRateMode}
+            countError={fieldErrors.containers || fieldErrors.containerCount || ""}
+          />
         ) : null}
         <div className="controller-instructions-button-container" style={{ margin: "20px 0" }}>
+          {!groupMode && (
           <button
             type="submit"
             className="btn btn-primary"
@@ -1859,6 +1394,7 @@ export function ControllerInstructionsLayout({
               "Submit Instruction"
             )}
           </button>
+          )}
           {submitError && (
             <div className="alert alert-danger mt-3" role="alert" style={{ marginTop: "15px" }}>
               {submitError}

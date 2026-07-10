@@ -33,7 +33,7 @@ import {
 } from "./pages/user_menus";
 import { Login, Register } from "./pages/auth";
 import {
-  ControllerInstructions,
+  ControllerInstructionGroup,
   ControllerInstructionDetails,
   FCcontrollerinstructions,
   ViewClientInstruction,
@@ -329,7 +329,7 @@ function ContentWrapper() {
         <Route path="/DirectorDashboard" element={<DirectorDashboard />} />
         <Route
           path="/ControllerInstructions"
-          element={<ControllerInstructions />}
+          element={<ControllerInstructionGroup />}
         />
         <Route
           path="/ControllerInstructionDetails"

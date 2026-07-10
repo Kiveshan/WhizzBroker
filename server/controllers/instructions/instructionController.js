@@ -18,6 +18,8 @@ import {
   deleteContainerAndLegs,
   getClientSetRate,
   searchInstructions,
+  saveInstructionGroup,
+  getInstructionGroupById,
 } from "../../models/instructions/instructionModel.js"
 import { auditFromReq } from "../../utils/auditLogger.js"
 
@@ -288,6 +290,80 @@ export const saveInstructionHandler = async (req, res) => {
     res.json({ success: true, m1key: result.m1key })
   } catch (error) {
     console.error("Error in save-instruction endpoint:", error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+export const saveInstructionGroupHandler = async (req, res) => {
+  try {
+    const { clientId, groupRef, instructions } = req.body
+
+    if (!Array.isArray(instructions) || instructions.length === 0) {
+      return res.status(400).json({ error: "An instruction group needs at least one instruction" })
+    }
+
+    // Same server-authoritative pricing as the standalone save: recompute
+    // each child's total from its submitted rate/container/weight inputs.
+    const preparedInstructions = instructions.map((instruction) => {
+      const controllerData = instruction.controllerData || {}
+      const containerData = Array.isArray(instruction.containerData) ? instruction.containerData : []
+      const weightData = Array.isArray(instruction.weightData) ? instruction.weightData : []
+
+      const shipmentTypeStr = String(controllerData.shipmentTypeId || controllerData.shipment_type || "")
+      const finalTotalCost = calculateTotalCost(controllerData, containerData, weightData)
+      const clientTotalCost = Number(controllerData.total_cost)
+      if (!Number.isNaN(clientTotalCost) && Math.abs(clientTotalCost - finalTotalCost) > 0.01) {
+        console.warn(
+          `save-instruction-group: client total_cost ${clientTotalCost} differs from server-calculated ${finalTotalCost}; using server value`
+        )
+      }
+
+      return {
+        controllerData: {
+          ...controllerData,
+          total_cost: shipmentTypeStr === "5" ? 0 : finalTotalCost,
+        },
+        containerData,
+        weightData,
+      }
+    })
+
+    const result = await saveInstructionGroup({
+      clientId,
+      groupRef: groupRef || null,
+      instructions: preparedInstructions,
+    })
+
+    auditFromReq(req, {
+      actionType: "INSTRUCTION_GROUP_CREATED",
+      entityType: "instruction_group",
+      targetId: result.groupKey,
+      targetName: `client ${clientId ?? "?"}`,
+      details: `Instruction group ${result.groupKey} created with ${result.instructions.length} instruction(s): ${result.instructions
+        .map((i) => i.m1key)
+        .join(", ")}`,
+    })
+
+    res.json({
+      success: true,
+      groupKey: result.groupKey,
+      m1keys: result.instructions.map((i) => i.m1key),
+    })
+  } catch (error) {
+    console.error("Error in save-instruction-group endpoint:", error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+export const getInstructionGroupHandler = async (req, res) => {
+  try {
+    const group = await getInstructionGroupById(req.params.id)
+    if (!group) {
+      return res.status(404).json({ error: "Instruction group not found" })
+    }
+    res.json(group)
+  } catch (error) {
+    console.error("Error fetching instruction group:", error)
     res.status(500).json({ error: error.message })
   }
 }

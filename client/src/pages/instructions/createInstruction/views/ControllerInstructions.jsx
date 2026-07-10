@@ -16,7 +16,16 @@ import { validateForm as validateFormUtil } from "../../../../utils/instructions
 import { checkRateCountMismatch as checkRateCountMismatchUtil } from "../../../../utils/instructions/rateCountMismatch"
 import { ControllerInstructionsLayout } from "./ControllerInstructionsLayout"
 
-const ControllerInstructions = () => {
+// Renders standalone (own submit + navigation) by default. When groupMode is
+// set, the form becomes one panel of the grouped create page: page chrome and
+// the submit button are hidden, the client select follows lockedClient, and
+// the panel's validate/buildPayload functions are handed up via registerPanel.
+const ControllerInstructions = ({
+  groupMode = false,
+  lockedClient = null,
+  onClientSelected = null,
+  registerPanel = null,
+}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isMounted = useRef(true)
@@ -200,7 +209,7 @@ const ControllerInstructions = () => {
 
   // ─── new hooks ───────────────────────────────────────────────────────────────
 
-  const { submitInstruction, isSubmitting, submitError, setSubmitError } =
+  const { submitInstruction, buildPayload, isSubmitting, submitError, setSubmitError } =
     useCreateInstructionSubmit({
       formData,
       containers,
@@ -328,6 +337,49 @@ const ControllerInstructions = () => {
 
   const handleCancelSubmit = useCallback(() => setShowConfirmationPopup(false), [])
 
+  // ─── group-panel wiring ──────────────────────────────────────────────────────
+
+  // Let the group page know which client was picked (first panel drives the
+  // group's client; the rest are locked to it).
+  const handleClientChangeForLayout = useCallback(
+    (e) => {
+      handleClientChange(e)
+      if (groupMode && onClientSelected) onClientSelected(e.target.value)
+    },
+    [handleClientChange, groupMode, onClientSelected],
+  )
+
+  // Follow the group's locked client. Re-runs when the client list arrives so
+  // the lookup inside handleClientChange finds the client record.
+  useEffect(() => {
+    if (!groupMode || !lockedClient) return
+    if (String(formData.clientId) === String(lockedClient)) return
+    handleClientChange({ target: { value: String(lockedClient) } })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupMode, lockedClient, clients.length])
+
+  // Hand the group page fresh validate/buildPayload closures every render.
+  useEffect(() => {
+    if (!registerPanel) return
+    registerPanel({
+      validate: () => {
+        const errors = validateForm()
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors)
+          return false
+        }
+        if (!isWeightBased && !isSetRateMode && showContainerDetails) {
+          if (!validateContainers()) return false
+        }
+        return true
+      },
+      getRateMismatch: checkRateCountMismatch,
+      buildPayload,
+      clientId: formData.clientId,
+      clientName: formData.clientName,
+    })
+  })
+
   // ─── effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -450,7 +502,7 @@ const ControllerInstructions = () => {
       fieldErrors={fieldErrors}
       setFieldErrors={setFieldErrors}
       fieldRefs={fieldRefs}
-      handleClientChange={handleClientChange}
+      handleClientChange={handleClientChangeForLayout}
       handlePickupChange={handlePickupChange}
       clientStartingPoints={clientStartingPoints}
       handleDropoffChange={handleDropoffChange}
@@ -490,6 +542,8 @@ const ControllerInstructions = () => {
       disabledRateStyle={disabledRateStyle}
       navigate={navigate}
       openCalendar={openCalendar}
+      groupMode={groupMode}
+      clientLocked={groupMode && !!lockedClient}
     />
   )
 }

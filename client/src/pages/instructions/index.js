@@ -1,4 +1,5 @@
 export { default as ControllerInstructions } from "./createInstruction/views/ControllerInstructions.jsx";
+export { default as ControllerInstructionGroup } from "./createInstruction/views/ControllerInstructionGroup.jsx";
 export { default as ControllerInstructionDetails } from "./createInstruction/views/ControllerInstructionDetails.jsx";
 
 export { default as CompanyInstructionView } from "./lists/views/CompanyInstructionView.jsx";

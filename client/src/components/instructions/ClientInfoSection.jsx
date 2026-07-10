@@ -35,9 +35,15 @@ export function ClientInfoSection({
 }) {
   return (
     <div className="controller-instructions-form-section controller-instructions-client-info-section">
+      <div className="wb-card-header">
+        <h4>Instruction Information</h4>
+        <p>Client, shipment and reference details for this instruction.</p>
+      </div>
       <div className="controller-instructions-form-row">
         <div className="controller-instructions-form-field">
-          <label>Client</label>
+          <label>
+            Client<span className="wb-required">*</span>
+          </label>
           <div
             className="controller-instructions-select-wrapper"
             ref={fieldRefs?.clientId}

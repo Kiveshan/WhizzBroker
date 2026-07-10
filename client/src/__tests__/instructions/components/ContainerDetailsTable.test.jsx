@@ -44,9 +44,9 @@ const defaultProps = {
 beforeEach(() => jest.clearAllMocks());
 
 describe("ContainerDetailsTable — rendering", () => {
-  it("renders Container Details heading", () => {
+  it("renders Containers heading", () => {
     render(<ContainerDetailsTable {...defaultProps} />);
-    expect(screen.getByText("Container Details")).toBeInTheDocument();
+    expect(screen.getByText("Containers")).toBeInTheDocument();
   });
 
   it("renders column headers", () => {

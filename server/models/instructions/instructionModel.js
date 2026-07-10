@@ -237,14 +237,31 @@ export const saveInstruction = async ({
   controllerData,
   containerData = [],
   weightData = [],
+  dbClient = null,
+  instructionGroupId = null,
 }) => {
-  const client = await pool.connect();
+  // When dbClient is provided the caller owns the connection and transaction
+  // (group save); standalone calls open and manage their own.
+  const ownsTransaction = !dbClient;
+  const client = dbClient || (await pool.connect());
   try {
-    await client.query("BEGIN");
+    if (ownsTransaction) await client.query("BEGIN");
 
     console.log(
       `DEBUG: saveInstruction called with ${containerData.length} containers`
     );
+
+    // Every instruction belongs to a group. Standalone saves (legacy
+    // endpoint) get their own single-child group so the invariant holds.
+    let groupId = instructionGroupId;
+    if (!groupId) {
+      const groupInsert = await client.query(
+        `INSERT INTO public.instruction_group (client, status, created_at)
+         VALUES ($1, 'New', CURRENT_DATE) RETURNING group_key`,
+        [controllerData.client || controllerData.clientId]
+      );
+      groupId = groupInsert.rows[0].group_key;
+    }
 
     const controllerQuery = `
       INSERT INTO public.m1_controller (
@@ -254,11 +271,11 @@ export const saveInstruction = async ({
         num_six_meters, num_twelve_meters, num_abnormal, num_breakbulk,
         weight, total_cost, booking_ref, vessel_name,
         rateper_6, rateper_12, rateper_abnormal, rateper_breakbulk, unitrate,
-        is_set_rate, historical_set_rate, created_at, addon_id
+        is_set_rate, historical_set_rate, created_at, addon_id, instruction_group_id
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
       ) RETURNING m1key
     `;
 
@@ -442,6 +459,7 @@ export const saveInstruction = async ({
       fields.historical_set_rate, // Historical set rate value
       formatDate(new Date()), // Current date for created_at
       fields.addon_id, // Link to add-on invoice (null for non-add-on instructions)
+      groupId, // Parent instruction group
     ];
 
     const controllerResult = await client.query(
@@ -872,14 +890,94 @@ export const saveInstruction = async ({
       await client.query(updateTotalCostQuery, [recalculatedTotalCost, m1key]);
     }
 
+    if (ownsTransaction) await client.query("COMMIT");
+    return { m1key, finalTotalCost: recalculatedTotalCost, instructionGroupId: groupId };
+  } catch (error) {
+    if (ownsTransaction) await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    if (ownsTransaction) client.release();
+  }
+};
+
+/**
+ * Saves a whole instruction group in one transaction: the group row plus
+ * every child instruction (each child reuses saveInstruction, so container,
+ * weight-row and total-cost behaviour is identical to a standalone save).
+ * All children must belong to the group's client.
+ */
+export const saveInstructionGroup = async ({ clientId, groupRef = null, instructions = [] }) => {
+  if (!Array.isArray(instructions) || instructions.length === 0) {
+    throw new Error("An instruction group needs at least one instruction");
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const groupInsert = await client.query(
+      `INSERT INTO public.instruction_group (client, status, created_at, group_ref)
+       VALUES ($1, 'New', CURRENT_DATE, $2) RETURNING group_key`,
+      [clientId, groupRef]
+    );
+    const groupKey = groupInsert.rows[0].group_key;
+
+    const children = [];
+    for (const instruction of instructions) {
+      const childClient =
+        instruction.controllerData?.client || instruction.controllerData?.clientId;
+      if (String(childClient) !== String(clientId)) {
+        throw new Error("All instructions in a group must belong to the group's client");
+      }
+      const saved = await saveInstruction({
+        controllerData: instruction.controllerData,
+        containerData: instruction.containerData || [],
+        weightData: instruction.weightData || [],
+        dbClient: client,
+        instructionGroupId: groupKey,
+      });
+      children.push(saved);
+    }
+
     await client.query("COMMIT");
-    return { m1key, finalTotalCost: recalculatedTotalCost };
+    return { groupKey, instructions: children };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
   }
+};
+
+/**
+ * Fetches a group with its children, each child in the same shape
+ * getInstructionById returns (containers + weight_rows included).
+ */
+export const getInstructionGroupById = async (groupKey) => {
+  const groupResult = await query(
+    `SELECT g.group_key, g.client, g.status, g.created_at, g.group_ref,
+            c.client AS client_name
+     FROM public.instruction_group g
+     LEFT JOIN public.m5_client c ON g.client = c.m5clientkey
+     WHERE g.group_key = $1`,
+    [groupKey]
+  );
+  if (groupResult.rows.length === 0) return null;
+
+  const childKeys = await query(
+    `SELECT m1key FROM public.m1_controller
+     WHERE instruction_group_id = $1
+     ORDER BY m1key`,
+    [groupKey]
+  );
+
+  const instructions = [];
+  for (const row of childKeys.rows) {
+    const instruction = await getInstructionById(row.m1key);
+    if (instruction) instructions.push(instruction);
+  }
+
+  return { ...groupResult.rows[0], instructions };
 };
 
 export const getClientInstructionStats = async () => {

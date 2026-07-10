@@ -81,3 +81,17 @@ export async function saveInstruction(controllerData, containerData, weightData)
   });
   return response.data;
 }
+
+export async function saveInstructionGroup(clientId, instructions, groupRef = null) {
+  const response = await api.post("/api/instructions/group", {
+    clientId,
+    groupRef,
+    instructions,
+  });
+  return response.data;
+}
+
+export async function fetchInstructionGroup(groupKey) {
+  const response = await api.get(`/api/instructions/group/${groupKey}`);
+  return response.data;
+}
