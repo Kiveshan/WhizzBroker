@@ -2,7 +2,7 @@ name: Deploy to Elastic Beanstalk Main
 on:
   push:
     branches:
-      - main
+      - pop
 
 env:
   AWS_REGION: af-south-1
