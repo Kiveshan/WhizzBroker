@@ -1,0 +1,186 @@
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Modal Content */
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  padding: 25px;
+  position: relative;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+/* Close Button */
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 5px;
+  line-height: 1;
+}
+
+.close-button:hover {
+  color: #000;
+}
+
+/* Modal Body */
+.modal-body {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.modal-icon {
+  font-size: 3rem;
+  margin-bottom: 15px;
+  line-height: 1;
+}
+
+.modal-body p {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* Modal Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.modal-button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.modal-button:hover {
+  background-color: #0056b3;
+}
+
+/* Button with spinner */
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner-border {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  vertical-align: text-bottom;
+  border: 0.2em solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  -webkit-animation: spinner-border 0.75s linear infinite;
+  animation: spinner-border 0.75s linear infinite;
+}
+
+@keyframes spinner-border {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.me-2 {
+  margin-right: 0.5rem !important;
+}
+
+/* Error Modal Specific */
+.error-modal .modal-header h2 {
+  color: #d32f2f;
+}
+
+.error-modal .modal-icon {
+  color: #d32f2f;
+}
+
+/* Success Modal Specific */
+.success-modal {
+  text-align: center;
+}
+
+.success-modal .modal-header {
+  justify-content: center;
+  border: none;
+}
+
+.success-modal .modal-header h2 {
+  color: #2e7d32;
+}
+
+.success-modal .modal-icon {
+  color: #2e7d32;
+  font-size: 4rem;
+  margin: 10px 0 20px;
+  animation: bounceIn 0.5s;
+}
+
+/* Animations */
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

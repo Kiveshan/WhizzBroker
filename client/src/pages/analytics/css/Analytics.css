@@ -1,0 +1,504 @@
+/* Adjustable header/footer heights. Tweak these to match your actual navbar/footer sizes */
+:root {
+  --site-header-height: 90px;
+  --site-footer-height: 40px;
+}
+
+.analytics-page-wrapper {
+  /* Fill the remaining space between the navbar and footer */
+  height: calc(100vh - var(--site-header-height) - var(--site-footer-height));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* When this class is applied to <body>, it will fully disable vertical scrolling
+   while this page is active, without affecting global styles on other pages. */
+body.no-vertical-scroll,
+html.no-vertical-scroll {
+  height: 100%;
+  overflow-y: hidden !important;
+}
+
+/* Prevent accidental layout shifts due to body margins on some browsers */
+body.no-vertical-scroll {
+  margin: 0;
+}
+
+.analytics-page-wrapper .analytics-container {
+  padding: 5px;
+  /* Further reduced from 10px to minimize top space */
+  width: 100%;
+  font-family: Arial, sans-serif;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.analytics-page-wrapper .header-actions {
+  margin-bottom: 5px;
+  /* Further reduced from 10px to minimize space below back button */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analytics-page-wrapper .period-filters {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+  /* Further reduced from 20px */
+}
+
+.analytics-page-wrapper .period-button {
+  background-color: #092beb;
+  border: 1px solid #ddd;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.analytics-page-wrapper .period-button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.analytics-page-wrapper .back-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  margin-top: 115px;
+  /* Kept as is to maintain back button position */
+}
+
+.analytics-page-wrapper .back-button:hover {
+  background-color: #45a049;
+}
+
+.analytics-page-wrapper .period-button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+
+.analytics-page-wrapper .period-button.active {
+  background-color: white;
+  color: #4169e1;
+}
+
+.analytics-page-wrapper .analytics-content {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.analytics-page-wrapper .sidebar-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 250px;
+  flex-shrink: 0;
+}
+
+.analytics-page-wrapper .sidebar-filters .filter-select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  color: white;
+  background-color: #3845fd;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, border-color 0.2s ease;
+  background-image: none;
+  /* Explicitly remove chevron */
+  outline: none;
+}
+
+.analytics-page-wrapper .sidebar-filters .filter-select:hover {
+  background-color: #1a228b;
+}
+
+.analytics-page-wrapper .sidebar-filters .filter-select:focus {
+  border-color: #4169e1;
+}
+
+.analytics-page-wrapper .sidebar-filters .filter-select option {
+  background-color: white;
+  color: #333;
+}
+
+.analytics-page-wrapper .filter-button {
+  background-color: #3845fd;
+  color: white;
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.analytics-page-wrapper .filter-button:hover {
+  background-color: #1a228b;
+}
+
+.analytics-page-wrapper .filter-button.active {
+  background-color: white;
+  color: #05288f;
+}
+
+.analytics-page-wrapper .chart-area {
+  flex: 1;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.analytics-page-wrapper .chart-title {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: #333;
+  font-size: 18px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.analytics-page-wrapper .chart-wrapper {
+  overflow: visible;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.analytics-page-wrapper .chart-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  flex: 1;
+  min-height: 0;
+}
+
+.analytics-page-wrapper .chart-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.analytics-page-wrapper .chart-scroll-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.analytics-page-wrapper .chart-scroll-container::-webkit-scrollbar-thumb {
+  background: #4169e1;
+  border-radius: 4px;
+}
+
+.analytics-page-wrapper .chart-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #3151c1;
+}
+
+.analytics-page-wrapper .chart-scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: #4169e1 #f1f1f1;
+}
+
+.analytics-page-wrapper .chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-top: 10px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
+.analytics-page-wrapper .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-page-wrapper .legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+/* Legend color classes */
+.analytics-page-wrapper .legend-color.green {
+  background-color: #4CAF50;
+}
+
+.analytics-page-wrapper .legend-color.yellow {
+  background-color: #FFC107;
+}
+
+.analytics-page-wrapper .legend-color.red {
+  background-color: #F44336;
+}
+
+.analytics-page-wrapper .legend-color.blue {
+  background-color: #2196F3;
+}
+
+.analytics-page-wrapper .legend-color.royal-blue {
+  background-color: #4169E1;
+}
+
+.analytics-page-wrapper .legend-color.tomato {
+  background-color: #FF6347;
+}
+
+.analytics-page-wrapper .chart-header {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.analytics-page-wrapper .chart-header-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.analytics-page-wrapper .chart-subtitle {
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+  color: #555;
+}
+
+.analytics-page-wrapper .custom-tooltip {
+  background-color: white;
+  border: 1px solid #ddd;
+  padding: 12px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  font-size: 13px;
+}
+
+.analytics-page-wrapper .tooltip-label {
+  margin: 0 0 5px 0;
+  font-weight: bold;
+}
+
+.analytics-page-wrapper .tooltip-value {
+  margin: 0;
+}
+
+.analytics-page-wrapper .recharts-cartesian-axis-tick {
+  font-size: 12px;
+  fill: #333;
+}
+
+.analytics-page-wrapper .recharts-cartesian-axis-tick-line {
+  stroke: #666;
+}
+
+.analytics-page-wrapper .recharts-cartesian-axis-tick text {
+  font-size: 12px;
+  fill: #333;
+}
+
+.analytics-page-wrapper .recharts-surface {
+  overflow: visible;
+}
+
+.analytics-page-wrapper .loading-indicator,
+.analytics-page-wrapper .error-message,
+.analytics-page-wrapper .no-data-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: auto; /* Avoid forcing extra vertical space */
+  flex: 1; /* Fill available space without growing the page height */
+  min-height: 0; /* Allow shrinking in flex containers */
+  font-size: 16px;
+  color: #666;
+}
+
+.analytics-page-wrapper .error-message {
+  color: #d32f2f;
+}
+
+@media (max-width: 768px) {
+  .analytics-page-wrapper .analytics-content {
+    flex-direction: column;
+  }
+
+  .analytics-page-wrapper .sidebar-filters {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 5px;
+  }
+
+  .analytics-page-wrapper .sidebar-filters .filter-select {
+    min-width: 150px;
+    white-space: nowrap;
+  }
+
+  .analytics-page-wrapper .chart-scroll-container {
+    padding-bottom: 0;
+  }
+
+  .analytics-page-wrapper .recharts-cartesian-axis-tick {
+    font-size: 10px;
+  }
+
+  .analytics-page-wrapper .date-filters {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+}
+
+.analytics-page-wrapper .date-filters {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 5px 0;
+  /* Further reduced from 10px to move date filters up */
+  margin-left: 250px;
+}
+
+.analytics-page-wrapper .date-filters select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236169e1' height='16' viewBox='0 0 20 20' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.482 4.484-4.482 1.516 1.516-6 6-6-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+}
+
+.analytics-page-wrapper .date-filters select:focus {
+  border-color: #4169e1;
+}
+
+.analytics-page-wrapper .date-filters select.year-select {
+  width: 100px;
+}
+
+/* Base styles for all dropdowns to match date-filters select */
+.analytics-page-wrapper select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 8px 30px 8px 12px; /* Match original date-filters padding, with space for chevron */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 1rem;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236169e1' height='16' viewBox='0 0 20 20' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.482 4.484-4.482 1.516 1.516-6 6-6-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+}
+
+/* Hover state for all dropdowns */
+.analytics-page-wrapper select:hover {
+  background-color: #f8f9fa; /* Subtle gray for hover, similar to button hover */
+  border-color: #4169e1;
+}
+
+/* Focus state for all dropdowns */
+.analytics-page-wrapper select:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 0 2px rgba(65, 105, 225, 0.3); /* Blue glow for focus */
+}
+
+/* Specific widths for date-filters dropdowns */
+.analytics-page-wrapper .date-filters select {
+  width: 120px; /* Slightly wider for consistency */
+}
+
+/* Year select in date-filters */
+.analytics-page-wrapper .date-filters select.year-select {
+  width: 100px;
+}
+
+/* Client, subcontractor, and truck selects */
+.analytics-page-wrapper .date-filters select.client-select,
+.analytics-page-wrapper .date-filters select.subcontractor-select,
+.analytics-page-wrapper .date-filters select.truck-select {
+  width: 180px; /* Wider for longer content */
+}
+
+/* Sidebar filter select to match date-filters */
+.analytics-page-wrapper .sidebar-filters .filter-select {
+  width: 100%;
+  padding: 8px 30px 8px 12px; /* Match date-filters padding */
+  background-color: #fff; /* White background like date-filters */
+  color: #333; /* Dark text for readability */
+  border: 1px solid #ccc; /* Match date-filters border */
+  border-radius: 4px;
+  background-image: url("data:image/svg+xml;utf8,<svg fill='%236169e1' height='16' viewBox='0 0 20 20' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M5.516 7.548l4.484 4.482 4.484-4.482 1.516 1.516-6 6-6-6z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+}
+
+/* Hover state for sidebar filter select */
+.analytics-page-wrapper .sidebar-filters .filter-select:hover {
+  background-color: #f8f9fa;
+  border-color: #4169e1;
+}
+
+/* Focus state for sidebar filter select */
+.analytics-page-wrapper .sidebar-filters .filter-select:focus {
+  border-color: #4169e1;
+}
+
+/* Option styling */
+.analytics-page-wrapper select option {
+  background-color: #fff;
+  color: #333;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .analytics-page-wrapper .date-filters select {
+    width: 100px;
+    font-size: 0.9rem;
+  }
+
+  .analytics-page-wrapper .date-filters select.client-select,
+  .analytics-page-wrapper .date-filters select.subcontractor-select,
+  .analytics-page-wrapper .date-filters select.truck-select {
+    min-width: 120px;
+  }
+
+  .analytics-page-wrapper .sidebar-filters .filter-select {
+    min-width: 150px;
+    font-size: 0.9rem;
+  }
+}

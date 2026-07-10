@@ -1,0 +1,446 @@
+:root {
+  --client-report-bg: linear-gradient(135deg, #f5f8ff 0%, #e9efff 100%);
+  --client-report-card: #ffffff;
+  --client-report-card-border: #d6e0f5;
+  --client-report-primary: #2563eb;
+  --client-report-primary-soft: #e0ecff;
+  --client-report-accent: #f97316;
+  --client-report-text: #1f2937;
+  --client-report-muted: #6b7280;
+  --client-report-divider: #e5e7eb;
+}
+
+.client-subbie-report-page {
+  min-height: calc(100vh - 120px);
+  padding: 32px clamp(16px, 4vw, 48px);
+  background: var(--client-report-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  color: var(--client-report-text);
+}
+
+.client-subbie-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.client-subbie-report-page .header-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.client-subbie-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.client-subbie-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 12px;
+  min-width: 140px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.client-subbie-chip.is-muted {
+  opacity: 0.65;
+}
+
+.client-subbie-chip-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--client-report-muted);
+}
+
+.client-subbie-chip-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--client-report-text);
+}
+
+.client-subbie-toolbar {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+}
+
+/* Tabs for main report sections */
+.client-subbie-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.client-subbie-tab {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--client-report-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease;
+}
+
+.client-subbie-tab:hover {
+  background: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+}
+
+.client-subbie-tab.is-active {
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.client-subbie-filters {
+  flex: 1 1 540px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.client-subbie-report-title {
+  font-size: clamp(24px, 3vw, 36px);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.client-subbie-report-subtitle {
+  margin: 8px 0 0;
+  color: var(--client-report-muted);
+  font-size: 16px;
+  letter-spacing: 0.01em;
+}
+
+.client-subbie-filter-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.client-subbie-filter-card {
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.08);
+}
+
+.client-subbie-filter-card label {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--client-report-muted);
+}
+
+.client-subbie-filter-card select,
+.client-subbie-filter-card input {
+  background: #ffffff;
+  border: 1px solid var(--client-report-divider);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--client-report-text);
+  font-size: 15px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.client-subbie-filter-card select:focus,
+.client-subbie-filter-card input:focus {
+  outline: none;
+  border-color: var(--client-report-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.client-subbie-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.client-subbie-actions button {
+  border-radius: 12px;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.client-subbie-actions button.primary {
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 18px rgba(37, 99, 235, 0.2);
+}
+
+.client-subbie-actions button.secondary {
+  background: var(--client-report-primary-soft);
+  color: var(--client-report-primary);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.client-subbie-actions button:hover {
+  transform: translateY(-2px);
+}
+
+.client-subbie-summary {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.client-subbie-section {
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.client-subbie-section header h2 {
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 26px);
+  color: var(--client-report-primary);
+}
+
+.client-subbie-section header p {
+  margin: 6px 0 0;
+  color: var(--client-report-muted);
+  font-size: 14px;
+}
+
+.client-subbie-summary-card {
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 18px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 10px 32px rgba(15, 23, 42, 0.08);
+}
+
+.client-subbie-summary-label {
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--client-report-muted);
+}
+
+.client-subbie-summary-value {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.client-subbie-summary-footnote {
+  color: var(--client-report-muted);
+  font-size: 13px;
+}
+
+.client-subbie-report-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.client-subbie-card {
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.08);
+}
+
+.client-subbie-card h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.client-subbie-section-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.client-subbie-table-wrapper {
+  border-radius: 16px;
+  /* allow horizontal scrolling instead of clipping long values */
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--client-report-card-border);
+  background: #ffffff;
+}
+
+.client-subbie-table {
+  width: 100%;
+  min-width: 640px; /* ensure columns have enough space before wrapping */
+  border-collapse: collapse;
+}
+
+.client-subbie-table thead {
+  background: var(--client-report-primary-soft);
+}
+
+.client-subbie-table th,
+.client-subbie-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--client-report-divider);
+  /* keep values within their cells and avoid visual cutoff */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.client-subbie-table th {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--client-report-muted);
+}
+
+.client-subbie-table tbody tr:hover {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+.client-subbie-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.client-subbie-empty-state {
+  padding: 32px;
+  text-align: center;
+  color: var(--client-report-muted);
+  background: var(--client-report-card);
+  border: 1px solid var(--client-report-card-border);
+  border-radius: 16px;
+}
+
+.client-subbie-intro,
+.client-subbie-section header {
+  animation: clientFadeUp 0.4s ease;
+}
+
+@keyframes clientFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+.client-subbie-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 0;
+  gap: 12px;
+  color: var(--client-report-muted);
+}
+
+.client-subbie-loading div {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--client-report-primary);
+  animation: clientBounce 0.9s infinite ease-in-out;
+}
+
+.client-subbie-loading div:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.client-subbie-loading div:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes clientBounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.6;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+.client-subbie-download-note {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--client-report-primary);
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+@media (max-width: 768px) {
+  .client-subbie-report-page {
+    padding: 24px 16px;
+  }
+
+  .client-subbie-toolbar {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .client-subbie-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .client-subbie-report-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-subbie-actions button {
+    flex: 1;
+  }
+
+  .client-subbie-chips {
+    flex-direction: column;
+  }
+}

@@ -1,0 +1,184 @@
+.print-container {
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  padding: 12px;
+  font-family: "Roboto", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.form-value {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+  background-color: #f9f9f9;
+  height: 28px;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  display: flex;
+  align-items: center;
+}
+
+.form-value:empty {
+  min-height: 0;
+}
+
+.form-value:empty:before {
+  content: ".";
+  color: transparent;
+  visibility: hidden;
+}
+
+.print-container .form-section {
+  margin-bottom: 12px;
+}
+
+.print-container .form-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.print-container .form-group {
+  flex: 1;
+}
+
+.print-container .form-group label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: #444;
+  font-weight: 500;
+}
+
+.print-container .line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 12px;
+}
+
+.print-container .line-items-table th {
+  background-color: #f5f7fa;
+  padding: 6px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: #1a3c5e;
+  border: 1px solid #ddd;
+}
+
+.print-container .line-items-table td {
+  padding: 6px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.print-container .totals-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+.print-container .totals-table td {
+  padding: 6px;
+  border-bottom: 1px solid #eee;
+  font-size: 14px;
+}
+
+.print-container .totals-table tr:last-child td {
+  border-bottom: none;
+  font-weight: 700;
+}
+
+.print-container .label-cell {
+  width: 50%;
+  text-align: left;
+  font-weight: 600;
+}
+
+.print-container .amount-cell {
+  width: 50%;
+  text-align: right;
+}
+
+.print-container .po-header-section {
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 4px;
+  border-bottom: 2px solid #1a3c5e;
+}
+
+.print-container .po-header-section h2 {
+  font-size: 19px;
+  color: #1a3c5e;
+  margin: 0;
+  font-weight: bold;
+}
+
+.print-container .signature-section {
+  margin-top: 24px;
+}
+
+.print-container .signature-line {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.print-container .signature-line span {
+  border-bottom: 1px solid #000;
+  padding-bottom: 4px;
+  display: inline-block;
+  min-width: 240px;
+}
+
+@media print {
+  .back-button,
+  .view-btn,
+  .submit-section {
+    display: none !important;
+  }
+
+  .po-form-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+  }
+
+  .print-container {
+    max-width: 595px !important;
+    margin: 0 !important;
+    padding: 12px !important;
+    box-sizing: border-box;
+  }
+
+  .print-container .line-items-table th,
+  .print-container .form-value {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .print-container .form-section,
+  .print-container .line-items,
+  .print-container .totals-section,
+  .print-container .po-header-section {
+    page-break-inside: avoid;
+    page-break-before: avoid;
+    page-break-after: avoid;
+  }
+}
+
+@media screen {
+  .print-container {
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    padding: 18px;
+  }
+}

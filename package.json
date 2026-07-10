@@ -1,0 +1,20 @@
+{
+  "name": "trucking_app",
+  "version": "0.1.7",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "concurrently \"npm run server --prefix server\" \"npm run start --prefix client\"",
+    "build": "npm run build --prefix client",
+    "test": "npm run test --prefix client",
+    "server": "npm run server --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "react-select": "^5.10.2",
+    "sweetalert2": "^11.22.2"
+  }
+}

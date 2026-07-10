@@ -1,0 +1,278 @@
+.user-detail-view {
+  padding: 10px 0;
+}
+
+.back-button {
+  background-color: #4caf50; /* Green to match the screenshot */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  margin-top: 132px;
+}
+
+.back-button:hover {
+  background-color: #218838;
+}
+
+.user-detail-view h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.success-message {
+  background-color: #dff0d8;
+  color: #3c763d;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background-color: #f2dede;
+  color: #a94442;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.user-details-container {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.user-detail-row {
+  display: flex;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.user-detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  width: 150px;
+  font-weight: bold;
+  color: #555;
+}
+
+.detail-value {
+  flex: 1;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.approve-button,
+.reject-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.approve-button {
+  background-color: #5cb85c;
+  color: white;
+}
+
+.approve-button:hover {
+  background-color: #4cae4c;
+}
+
+.reject-button {
+  background-color: #d9534f;
+  color: white;
+}
+
+.reject-button:hover {
+  background-color: #c9302c;
+}
+
+.approve-button:disabled,
+.reject-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Add these styles to your existing UserDetailView.css file */
+
+/* Confirmation Popup Styles */
+.confirmation-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-content {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.confirmation-content h3 {
+  color: #d9534f;
+  margin-top: 0;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.confirmation-content p {
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.confirmation-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-button {
+  background-color: #f8f9fa;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-button:hover {
+  background-color: #e9ecef;
+}
+
+.confirm-reject-button {
+  background-color: #d9534f;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.confirm-reject-button:hover {
+  background-color: #c9302c;
+}
+
+/* Existing styles remain unchanged */
+.user-detail-view {
+  padding: 10px 0;
+}
+
+.user-detail-view h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.success-message {
+  background-color: #dff0d8;
+  color: #3c763d;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.error-message {
+  background-color: #f2dede;
+  color: #a94442;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.user-details-container {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.user-detail-row {
+  display: flex;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+}
+
+.user-detail-row:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  width: 150px;
+  font-weight: bold;
+  color: #555;
+}
+
+.detail-value {
+  flex: 1;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.approve-button,
+.reject-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.approve-button {
+  background-color: #5cb85c;
+  color: white;
+}
+
+.approve-button:hover {
+  background-color: #4cae4c;
+}
+
+.reject-button {
+  background-color: #d9534f;
+  color: white;
+}
+
+.reject-button:hover {
+  background-color: #c9302c;
+}
+
+.approve-button:disabled,
+.reject-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

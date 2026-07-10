@@ -1,0 +1,155 @@
+/* View Client Invoice Wrapper */
+.client-list-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.client-list-wrapper *,
+.client-list-wrapper *::before,
+.client-list-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Buttons */
+.client-list-wrapper .button-section,
+.client-list-wrapper .logout-section {
+  margin: 20px;
+}
+
+.client-list-wrapper .back-btn,
+.client-list-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-list-wrapper .logout-btn {
+  background-color: #f9a6a6;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Container */
+.client-list-wrapper .view-client-invoice-container {
+  padding: 20px;
+  font-family: inherit;
+}
+
+.client-list-wrapper .client-payments-header {
+  margin-bottom: 20px;
+}
+
+/* Table */
+.client-list-wrapper .t1 {
+  width: 70%;
+  margin-left: 350px;
+  border-collapse: collapse;
+}
+
+.client-list-wrapper .table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.client-list-wrapper .clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-family: inherit;
+}
+
+.client-list-wrapper .clientinstructiontable {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-top: -35px;
+  margin-left: 60px;
+  align-items: center;
+}
+
+.client-list-wrapper thead {
+  background-color: #9ecbf3;
+}
+
+.client-list-wrapper th,
+.client-list-wrapper td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.client-list-wrapper th {
+  background-color: #9ecbf3;
+  font-weight: bold;
+}
+
+.client-list-wrapper tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.client-list-wrapper .view-butn,
+.client-list-wrapper .view-button {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-list-wrapper .view-butn:hover,
+.client-list-wrapper .view-button:hover {
+  background-color: #2980b9;
+}
+
+/* Dropdown container styling */
+.client-list-wrapper .dropdown-container1 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 20px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Loading, error, and no data states */
+.client-list-wrapper p {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+  margin: 0;
+}
+
+.client-list-wrapper .loading-message {
+  text-align: center;
+  padding: 20px;
+  font-style: italic;
+  color: #666;
+  font-family: inherit;
+}
+
+.client-list-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  color: #d32f2f;
+  font-family: inherit;
+}
+
+.client-list-wrapper .no-data-message {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+  font-style: italic;
+  font-family: inherit;
+}

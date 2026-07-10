@@ -1,0 +1,76 @@
+name: Deploy to Elastic Beanstalk Staging
+on:
+  push:
+    branches:
+      - staging
+
+env:
+  AWS_REGION: af-south-1
+  EB_APPLICATION_NAME: Whizz-Away-Staging
+  EB_ENVIRONMENT_NAME: Whizz-Away-Staging-env
+  S3_BUCKET_NAME: whizz-away-versions-staging
+  DEPLOYMENT_PACKAGE: whizz-${{ github.sha }}.zip
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Cache node modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            client/node_modules
+            server/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+
+      - name: Install client dependencies
+        run: cd client && npm install
+
+      - name: Set React environment variables
+        run: |
+          cd client
+          echo "REACT_APP_API_URL=http://whizz-away-staging-env.eba-jg2eupnk.af-south-1.elasticbeanstalk.com" > .env
+
+      - name: Build React app
+        run: cd client && CI=false npm run build
+
+      - name: Install server dependencies
+        run: cd server && npm install
+
+      - name: Move React build to server
+        run: |
+          rm -rf server/public
+          mkdir -p server/public
+          mv client/build server/public
+          mv .platform server/
+
+      - name: Generate deployment package
+        run: cd server && zip -r ../${{ env.DEPLOYMENT_PACKAGE }} . -x '*.git*' *.env* '*.log' '*.md' 'node_modules/*' 'client/node_modules/*'
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload to S3
+        run: aws s3 cp ${{ env.DEPLOYMENT_PACKAGE }} s3://${{ env.S3_BUCKET_NAME }}/
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: ${{ env.EB_APPLICATION_NAME }}
+          environment_name: ${{ env.EB_ENVIRONMENT_NAME }}
+          version_label: ${{ github.sha }}
+          region: ${{ env.AWS_REGION }}
+          deployment_package: ${{ env.DEPLOYMENT_PACKAGE }}

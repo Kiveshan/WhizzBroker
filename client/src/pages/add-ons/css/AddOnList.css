@@ -1,0 +1,585 @@
+/* Client Payment Dashboard Wrapper - All styles scoped within this wrapper */
+.add-on-list-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: "Arial", sans-serif;
+  box-sizing: border-box;
+}
+
+.add-on-list-wrapper *,
+.add-on-list-wrapper *::before,
+.add-on-list-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Upload Container Styles - Optimized Layout */
+.add-on-list-wrapper .upload-container {
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.add-on-list-wrapper .header-actions {
+  margin-bottom: 20px;
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.add-on-list-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  top: 38px;
+}
+
+.add-on-list-wrapper .back-button:hover {
+  background-color: #5a6268;
+}
+
+.add-on-list-wrapper .upload-content {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.add-on-list-wrapper .upload-form {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 800px;
+  border: 1px solid #e9ecef;
+  margin: 0 auto;
+}
+
+.add-on-list-wrapper .upload-form h2 {
+  color: #2c3e50;
+  margin-bottom: 25px;
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 15px;
+}
+
+/* Form Layout - Responsive Grid */
+.add-on-list-wrapper .form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.add-on-list-wrapper .form-row.full-width {
+  flex-direction: column;
+}
+
+.add-on-list-wrapper .form-row.two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.add-on-list-wrapper .form-row.upload-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 25px;
+  align-items: start;
+}
+
+.add-on-list-wrapper .upload-column {
+  min-height: 200px;
+}
+
+.add-on-list-wrapper .requirements-column {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 25px;
+}
+
+.add-on-list-wrapper .amount-field {
+  margin-bottom: 0;
+  position: relative;
+}
+
+.add-on-list-wrapper .amount-field label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.add-on-list-wrapper .amount-field input,
+.add-on-list-wrapper .amount-field select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background-color: #fff;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .amount-field select {
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  padding-right: 40px;
+}
+
+.add-on-list-wrapper .amount-field input:focus,
+.add-on-list-wrapper .amount-field select:focus {
+  outline: none;
+  border-color: #4169e1;
+  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.1);
+}
+
+.add-on-list-wrapper .amount-field input:disabled,
+.add-on-list-wrapper .amount-field select:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+}
+
+.add-on-list-wrapper .selected-info {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #666;
+}
+
+/* View Proof Section - Centered */
+.add-on-list-wrapper .view-proof-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.add-on-list-wrapper .view-button.centered {
+  background: linear-gradient(135deg, #4169e1 0%, #5a7bff 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(65, 105, 225, 0.3);
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .view-button.centered:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(65, 105, 225, 0.4);
+}
+
+/* Compact File Upload Area */
+.add-on-list-wrapper .file-upload-section.compact {
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  transition: all 0.3s ease;
+  position: relative;
+  min-height: 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.add-on-list-wrapper .file-upload-section.compact:hover {
+  border-color: #4169e1;
+  background: linear-gradient(135deg, #f1f5ff 0%, #ffffff 100%);
+}
+
+.add-on-list-wrapper .upload-icon {
+  font-size: 32px;
+  color: #4169e1;
+  margin-bottom: 8px;
+}
+
+.add-on-list-wrapper .upload-text {
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+}
+
+.add-on-list-wrapper .file-input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.add-on-list-wrapper .file-input-wrapper input[type="file"] {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.add-on-list-wrapper .browse-button {
+  background: linear-gradient(135deg, #4169e1 0%, #5a7bff 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3);
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .browse-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 12px rgba(65, 105, 225, 0.4);
+}
+
+.add-on-list-wrapper .selected-file {
+  margin-top: 10px;
+  padding: 8px;
+  background-color: #e8f5e8;
+  border: 1px solid #c3e6c3;
+  border-radius: 6px;
+  color: #2d5a2d;
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* Compact Upload Specifications */
+.add-on-list-wrapper .upload-specs.compact {
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #4169e1;
+  text-align: left;
+  height: fit-content;
+}
+
+.add-on-list-wrapper .upload-specs.compact h4 {
+  color: #495057;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.add-on-list-wrapper .upload-specs.compact ul {
+  margin: 0;
+  padding-left: 16px;
+  color: #6c757d;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.add-on-list-wrapper .upload-specs.compact li {
+  margin-bottom: 3px;
+}
+
+.add-on-list-wrapper .submit-button {
+  width: 100%;
+  background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+}
+
+.add-on-list-wrapper .submit-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.add-on-list-wrapper .error-message {
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f5c6cb;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.add-on-list-wrapper .view-button {
+  background: linear-gradient(135deg, #4169e1 0%, #5a7bff 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3);
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .view-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.4);
+}
+
+.add-on-list-wrapper .view-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.add-on-list-wrapper .no-file {
+  color: #666;
+  font-style: italic;
+  padding: 20px;
+  text-align: center;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+}
+
+/* Existing Payment List Styles - Preserved */
+.add-on-list-wrapper .client-payment-container {
+  font-family: inherit;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.add-on-list-wrapper .client-payments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 20px;
+}
+
+.add-on-list-wrapper .payment-table1 {
+  width: 100%;
+  max-width: 1000px;
+  border-collapse: collapse;
+  margin: 20px auto 0 auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .payment-table1 th,
+.add-on-list-wrapper .payment-table1 td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.add-on-list-wrapper .payment-table1 th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+}
+
+.add-on-list-wrapper .table-header {
+  display: flex;
+  background-color: #e6e6fa;
+  padding: 10px 0;
+}
+
+.add-on-list-wrapper .upload-button {
+  background: linear-gradient(135deg, #2196f3 0%, #42a5f5 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .upload-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+}
+
+/* Action Bar Styles */
+.add-on-list-wrapper .action-bar {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.add-on-list-wrapper .filter-section46 {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-on-list-wrapper .dropdown-container {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.add-on-list-wrapper .dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  padding-right: 30px;
+  font-family: inherit;
+}
+
+.add-on-list-wrapper .upload-section {
+  text-align: center;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+.add-on-list-wrapper .p-3 {
+  padding: 12px;
+}
+
+.add-on-list-wrapper .text-center {
+  text-align: center;
+}
+
+/* Modal styles for viewing proof of payment - Preserved */
+.add-on-list-wrapper .proof-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.add-on-list-wrapper .proof-modal-content {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  max-width: 80%;
+  max-height: 80%;
+  overflow: auto;
+  position: relative;
+}
+
+.add-on-list-wrapper .proof-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #333;
+}
+
+.add-on-list-wrapper .proof-image {
+  max-width: 100%;
+  max-height: 70vh;
+  display: block;
+  margin: 15px auto 0;
+}
+
+.add-on-list-wrapper .proof-pdf {
+  width: 100%;
+  height: 500px;
+  border: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .add-on-list-wrapper .form-row.two-columns,
+  .add-on-list-wrapper .form-row.upload-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+
+  .add-on-list-wrapper .requirements-column {
+    padding-top: 0;
+  }
+
+  .add-on-list-wrapper .upload-form {
+    padding: 20px;
+  }
+
+  .add-on-list-wrapper .payment-table1 {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .add-on-list-wrapper .filter-section46 {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-on-list-wrapper .dropdown-container {
+    flex-direction: column;
+  }
+
+  .add-on-list-wrapper .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .add-on-list-wrapper .pagination-numbers {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}

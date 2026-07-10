@@ -1,0 +1,77 @@
+.admin-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.admin-header {
+  margin-bottom: 30px;
+}
+
+.admin-header h1 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.admin-tabs {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  margin-bottom: 20px;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: #555;
+  position: relative;
+  transition: color 0.3s;
+}
+
+.tab-button:hover {
+  color: #000;
+}
+
+.tab-button.active {
+  color: #0066cc;
+  font-weight: bold;
+}
+
+.tab-button.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background-color: #0066cc;
+}
+
+.admin-content {
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+.admin-debug {
+  margin-bottom: 20px;
+}
+
+.debug-button {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #666;
+}
+
+.debug-button:hover {
+  background-color: #e9ecef;
+}
+

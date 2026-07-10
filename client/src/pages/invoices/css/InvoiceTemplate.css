@@ -1,0 +1,1073 @@
+/* Client Invoice Wrapper */
+.client-invoice-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.client-invoice-wrapper *,
+.client-invoice-wrapper *::before,
+.client-invoice-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.client-invoice-wrapper .destination .dropoff {
+  max-width: 100%;
+}
+
+.client-invoice-wrapper .invoice-page {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.client-invoice-wrapper .back-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  font-family: inherit;
+}
+
+.client-invoice-wrapper .back-button:hover {
+  background-color: #218838;
+}
+
+/* Keep original PDF-targeted styles without wrapper scoping for PDF generation */
+.invoice-paper {
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: white;
+}
+
+/* Transport and Logistics section */
+.transport-section {
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+  padding: 10px 0;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Middle section with company details */
+.middle-section {
+  position: relative;
+  height: 120px; /* Increased height to provide more space */
+  border-bottom: 1px solid #000;
+}
+
+.company-info {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 15px; /* Added margin to ensure space between text and bottom border */
+  margin-right: 10px;
+}
+
+/* Invoice Title section */
+.invoice-title-section {
+  position: relative;
+  border-bottom: 1px solid #000;
+  padding: 10px 0;
+}
+
+.invoice-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.document-number {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 14px;
+  margin-right: 10px;
+}
+
+/* Sender Details */
+.sender-details {
+  padding: 10px 0;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-left: 10px;
+}
+
+.sender-details div {
+  margin: 0;
+}
+
+/* Vessel/Destination */
+.vessel-destination {
+  display: flex;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+  margin-top: 20px;
+}
+
+.vessel,
+.destination {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.vessel {
+  border-right: 1px solid #000;
+}
+
+/* Additional destination styles */
+.dropoff-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.additional-destination-display {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #f8f9fa;
+  border-radius: 3px;
+  border-left: 3px solid #007bff;
+}
+
+.additional-destination-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 5px;
+  padding: 5px;
+  background-color: #f8f9fa;
+  border-radius: 3px;
+  border: 1px solid #dee2e6;
+}
+
+.additional-label {
+  font-weight: bold;
+  color: #495057;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.additional-destination-input {
+  flex: 1;
+  min-width: 200px;
+  max-width: 100%;
+}
+
+/* Invoice Details */
+.invoice-details {
+  margin: 15px 0 0 0; /* Added top margin to move table down */
+  padding: 0;
+}
+
+.details-table {
+  width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  margin-left: 20px;
+}
+
+.details-table tr {
+  border-bottom: 1px solid #ddd;
+}
+
+.details-table tr:last-child {
+  border-bottom: none;
+}
+
+.details-table .label,
+.details-table .value {
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.details-table .label {
+  width: 50%;
+  border-right: 1px solid #ddd;
+  font-weight: normal;
+}
+
+.details-table .value {
+  width: 50%;
+}
+
+/* Container Details */
+.container-section {
+  position: relative;
+  margin-top: 30px; /* Increased top margin */
+  padding-top: 20px; /* Added padding to make space for the border */
+  border-top: 1px solid #000; /* Added border between tables */
+  padding-bottom: 20px; /* Added padding to make space for the bottom border */
+  border-bottom: 1px solid #000; /* Added border below container table */
+  margin-bottom: 20px; /* Added margin below the section */
+}
+
+.container-table5 {
+  width: 770px;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #ddd;
+  margin-left: 14px;
+  font-size: 12px; /* Slightly smaller font for more columns */
+}
+
+.container-table5 th {
+  background-color: #b8d1f3;
+  padding: 6px 8px; /* Reduced padding to fit more columns */
+  text-align: left;
+  font-size: 12px;
+  font-weight: normal;
+  border-right: 1px solid #ddd;
+  vertical-align: middle;
+}
+
+.container-table5 th:last-child {
+  border-right: none;
+}
+
+.container-table5 td {
+  padding: 6px 8px; /* Reduced padding to fit more columns */
+  font-size: 12px;
+  border-right: 1px solid #ddd;
+  border-top: 1px solid #ddd;
+  vertical-align: top;
+}
+
+.container-table5 td:last-child {
+  border-right: none;
+}
+
+/* Container table header and cell styles using th wrappers */
+.container-table5 .container-number-header,
+.container-table5 .container-number {
+  width: 12%;
+  min-width: 80px;
+  text-align: left;
+}
+
+.container-table5 .type-header,
+.container-table5 .container-type {
+  width: 10%;
+  min-width: 70px;
+  text-align: left;
+}
+
+.container-table5 .weight-header,
+.container-table5 .weight {
+  width: 10%;
+  min-width: 70px;
+  text-align: left;
+}
+
+.container-table5 .truck-header,
+.container-table5 .truck-reg {
+  width: 10%;
+  min-width: 70px;
+  text-align: center;
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.container-table5 .rate-header,
+.container-table5 .rate {
+  width: 8%;
+  min-width: 60px;
+  text-align: right;
+  padding-right: 4px;
+  position: relative;
+}
+
+.container-table5 .rate::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #007bff;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.container-table5 .rate:hover::after {
+  opacity: 1;
+}
+
+.container-table5 .rate[title]:hover::after {
+  border-top-color: #dc3545;
+}
+
+.container-table5 .surcharge-header {
+  width: 8%;
+  min-width: 60px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.container-table5 .surcharge {
+  width: 8%;
+  min-width: 60px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.container-table5 .hazardous-header {
+  width: 8%;
+  min-width: 60px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.container-table5 .hazardous {
+  width: 8%;
+  min-width: 60px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+.container-table5 .vgm-header {
+  width: 8%;
+  min-width: 60px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.container-table5 .vgm {
+  width: 8%;
+  min-width: 60px;
+  text-align: right;
+  padding-right: 4px;
+}
+
+/* Summary table styles */
+.container-table5 .summary-header {
+  background-color: #4682b4 !important;
+  color: white !important;
+  font-weight: bold !important;
+  text-align: center;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+}
+
+.container-table5 .summary-label {
+  font-weight: normal;
+  padding: 8px 12px;
+}
+
+.container-table5 .summary-value {
+  font-weight: bold;
+  text-align: right;
+  padding: 8px 12px;
+}
+
+.container-table5 .summary-total-row .summary-label,
+.container-table5 .summary-total-row .summary-value {
+  font-weight: bold;
+  font-size: 13px;
+  border-top: 2px solid #000;
+}
+
+.container-table5 .summary-total-label {
+  background-color: #f0f0f0;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .container-table5 {
+    width: 100%;
+    font-size: 10px;
+    margin-left: 0;
+  }
+  
+  .container-table5 th,
+  .container-table5 td {
+    padding: 4px 3px;
+  }
+  
+  .container-table5 .container-number-header,
+  .container-table5 .container-number {
+    width: 15%;
+    min-width: 60px;
+  }
+  
+  .container-table5 .type-header,
+  .container-table5 .container-type,
+  .container-table5 .weight-header,
+  .container-table5 .weight,
+  .container-table5 .truck-header,
+  .container-table5 .truck-reg {
+    width: 12%;
+    min-width: 50px;
+  }
+  
+  .container-table5 .rate-header,
+  .container-table5 .rate,
+  .container-table5 .surcharge-header,
+  .container-table5 .surcharge,
+  .container-table5 .hazardous-header,
+  .container-table5 .hazardous,
+  .container-table5 .vgm-header,
+  .container-table5 .vgm {
+    width: 10%;
+    min-width: 45px;
+    padding-right: 2px;
+    font-size: 9px;
+  }
+
+  /* Responsive adjustments for additional destination */
+  .additional-destination-edit {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 5px;
+  }
+  
+  .additional-destination-input {
+    min-width: auto;
+  }
+  
+  .additional-label {
+    text-align: center;
+  }
+}
+
+/* Banking Details */
+.banking-details {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-left: 10px;
+}
+
+.banking-details div {
+  margin: 0;
+}
+
+.payment-note {
+  margin-top: 10px;
+}
+
+.thank-you {
+  color: #ff0000;
+  text-align: center;
+  margin-top: 15px;
+  font-style: italic;
+}
+
+/* Invoice number specific styling */
+.invoice-number-value {
+  margin: 8px 0;
+  font-weight: bold;
+}
+
+.invoice-num {
+  font-family: monospace;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+/* Edit input styles */
+.edit-input {
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  transition: border-color 0.3s;
+  min-width: 100px;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #0056b3;
+  background-color: white;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.edit-input.additional-destination-input:focus {
+  border-color: #28a745;
+  background-color: white;
+  box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.client-invoice-wrapper .dropoff-input {
+  width: 100%;
+  margin-top: 5px;
+  max-width: 300px;
+}
+
+.client-invoice-wrapper .amount-input {
+  width: 120px;
+  text-align: right;
+}
+
+.client-invoice-wrapper .invoice-num-input {
+  width: 150px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* Wrapper-scoped styles for buttons and UI elements */
+.client-invoice-wrapper .invoicedownloadbtn1 {
+  display: flex;
+  justify-content: center; /* Centers buttons horizontally */
+  gap: 20px; /* Space between buttons */
+  margin-top: 20px; /* Adds spacing above */
+  margin-bottom: 30px;
+}
+
+.client-invoice-wrapper .invoicedownloadbtn1 .back-btn {
+  background-color: #28a745; /* Green */
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  font-family: inherit;
+}
+
+.client-invoice-wrapper .invoicedownloadbtn1 .back-btn:hover {
+  background-color: #218838; /* Darker green on hover */
+}
+
+.client-invoice-wrapper .invoicedownloadbtn1 .download-btn {
+  background-color: #007bff; /* Blue */
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  font-family: inherit;
+}
+
+.client-invoice-wrapper .invoicedownloadbtn1 .download-btn:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+.client-invoice-wrapper .invoicedownloadbtn1 .download-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.client-invoice-wrapper .loading-error {
+  text-align: center;
+  padding: 20px;
+  font-size: 16px;
+  color: #d32f2f;
+  font-family: inherit;
+}
+
+/* Wrapper-scoped styles for edit functionality */
+.client-invoice-wrapper .edit-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center buttons horizontally */
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin: 16px 0; /* Add vertical spacing */
+}
+
+.client-invoice-wrapper .edit-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.client-invoice-wrapper .edit-btn:hover {
+  background-color: #0056b3;
+}
+
+.client-invoice-wrapper .save-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.client-invoice-wrapper .save-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.client-invoice-wrapper .cancel-edit-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.client-invoice-wrapper .cancel-edit-btn:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.client-invoice-wrapper .error-message {
+  color: #dc3545;
+  font-size: 14px;
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.client-invoice-wrapper .confirmation-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.client-invoice-wrapper .confirmation-dialog {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.client-invoice-wrapper .confirmation-dialog h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.client-invoice-wrapper .confirmation-dialog p {
+  margin: 0 0 20px 0;
+  color: #666;
+}
+
+.client-invoice-wrapper .dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.client-invoice-wrapper .confirm-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.client-invoice-wrapper .confirm-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.client-invoice-wrapper .cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.client-invoice-wrapper .cancel-btn:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.client-invoice-wrapper .save-btn:disabled,
+.client-invoice-wrapper .cancel-edit-btn:disabled,
+.client-invoice-wrapper .confirm-btn:disabled,
+.client-invoice-wrapper .cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Original styles preserved for PDF generation */
+.invoicedownloadbtn1 {
+  display: flex;
+  justify-content: center; /* Centers buttons horizontally */
+  gap: 20px; /* Space between buttons */
+  margin-top: 20px; /* Adds spacing above */
+  margin-bottom: 30px;
+}
+
+.invoicedownloadbtn1 .back-btn {
+  background-color: #28a745; /* Green */
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.invoicedownloadbtn1 .back-btn:hover {
+  background-color: #218838; /* Darker green on hover */
+}
+
+.invoicedownloadbtn1 .download-btn {
+  background-color: #007bff; /* Blue */
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.invoicedownloadbtn1 .download-btn:hover {
+  background-color: #0056b3; /* Darker blue on hover */
+}
+
+.invoicedownloadbtn1 .download-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.edit-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center buttons horizontally */
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin: 16px 0; /* Add vertical spacing */
+}
+
+.edit-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.edit-btn:hover {
+  background-color: #0056b3;
+}
+
+.save-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.save-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.cancel-edit-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.cancel-edit-btn:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.edit-input {
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 14px;
+  background-color: #f8f9fa;
+  transition: border-color 0.3s;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: #0056b3;
+  background-color: white;
+}
+
+.dropoff-input {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.amount-input {
+  width: 120px;
+  text-align: right;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 14px;
+  margin-right: 10px;
+  padding: 5px 10px;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.confirmation-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.confirmation-dialog {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 90%;
+}
+
+.confirmation-dialog h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.confirmation-dialog p {
+  margin: 0 0 20px 0;
+  color: #666;
+}
+
+.dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.cancel-btn:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.save-btn:disabled,
+.cancel-edit-btn:disabled,
+.confirm-btn:disabled,
+.cancel-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading state for the entire component */
+.client-invoice-wrapper .loading {
+  text-align: center;
+  padding: 50px 20px;
+  font-size: 16px;
+  color: #666;
+  font-family: inherit;
+}
+
+/* PDF-specific styles for additional destination */
+.destination-table .additional-destination-row {
+  background-color: #f8f9fa;
+  font-style: italic;
+}
+
+/* Add these styles to your existing InvoiceTemplate.css */
+
+/* Preview mode styles */
+.client-invoice-wrapper.preview-mode {
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.client-invoice-wrapper.preview-mode .invoice-page {
+  padding: 0;
+}
+
+.client-invoice-wrapper.preview-mode .invoicedownloadbtn1.preview-mode {
+  background: #f8fafc;
+  padding: 20px;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0 0 12px 12px;
+  margin: 0;
+  justify-content: center;
+}
+
+.preview-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.preview-back-btn,
+.preview-download-btn,
+.preview-edit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+
+.preview-back-btn {
+  background: #6b7280;
+  color: white;
+}
+
+.preview-back-btn:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+.preview-download-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+}
+
+.preview-download-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.preview-download-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.preview-edit-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.2);
+}
+
+.preview-edit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Responsive preview controls */
+@media (max-width: 768px) {
+  .preview-controls {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+  
+  .preview-back-btn,
+  .preview-download-btn,
+  .preview-edit-btn {
+    width: 100%;
+    max-width: 280px;
+    justify-content: center;
+  }
+}
+
+/* Preview mode indicator */
+.preview-mode-indicator {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(79, 70, 229, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}

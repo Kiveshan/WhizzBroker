@@ -1,0 +1,390 @@
+/* InvoicePreviewModal.css */
+.invoice-preview-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  backdrop-filter: blur(4px);
+}
+
+.invoice-preview-modal {
+  background: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 98vw;
+  max-height: 98vh;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.invoice-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  background: #4169e1;
+  color: white;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.preview-title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.preview-title-section h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.preview-subtitle {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.preview-close-btn,
+.preview-download-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-close-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  backdrop-filter: blur(10px);
+}
+
+.preview-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.preview-close-btn:active {
+  transform: translateY(0);
+}
+
+.close-icon {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.preview-download-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.preview-download-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+}
+
+.preview-download-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.preview-download-btn:disabled:hover {
+  transform: none;
+}
+
+.preview-content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  background: #f9fafb;
+}
+
+.preview-container {
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-loading,
+.preview-error {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  min-height: 400px;
+  text-align: center;
+  padding: 40px 20px;
+  background: white;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-content h3,
+.preview-error h3 {
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.loading-content p,
+.preview-error .error-message {
+  margin: 0 0 24px 0;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.error-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.preview-error h3 {
+  color: #dc2626;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.error-retry-btn,
+.error-close-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.error-retry-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+.error-retry-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.error-close-btn {
+  background: #6b7280;
+  color: white;
+}
+
+.error-close-btn:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+.invoice-preview-footer {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.preview-info {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.preview-note {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #64748b;
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-icon {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+.preview-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .invoice-preview-modal {
+    margin: 5px;
+    max-width: calc(100vw - 10px);
+    max-height: calc(100vh - 10px);
+    border-radius: 8px;
+  }
+  
+  .invoice-preview-header {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .preview-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .preview-close-btn,
+  .preview-download-btn {
+    flex: 1;
+    min-width: 140px;
+    justify-content: center;
+  }
+  
+  .preview-content {
+    padding: 10px;
+  }
+  
+  .preview-container {
+    padding: 10px;
+  }
+  
+  .invoice-preview-footer {
+    padding: 16px 20px;
+  }
+  
+  .preview-note {
+    font-size: 13px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .invoice-preview-header h2 {
+    font-size: 18px;
+  }
+  
+  .preview-actions {
+    gap: 8px;
+  }
+  
+  .preview-close-btn,
+  .preview-download-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    min-width: 120px;
+  }
+}
+
+/* Print styles for PDF preview */
+@media print {
+  .invoice-preview-modal-overlay {
+    background: white !important;
+  }
+  
+  .invoice-preview-modal {
+    box-shadow: none !important;
+    max-width: none !important;
+    max-height: none !important;
+    border-radius: 0 !important;
+  }
+  
+  .invoice-preview-header,
+  .invoice-preview-footer,
+  .preview-actions,
+  .preview-info {
+    display: none !important;
+  }
+  
+  .preview-content {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+  
+  .preview-container {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}

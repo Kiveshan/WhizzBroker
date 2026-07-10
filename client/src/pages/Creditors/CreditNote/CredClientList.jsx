@@ -1,0 +1,161 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../../../api.js"; // Import the configured Axios instance
+import "../../payments/css/ClientPayments.css";
+import Pagination from "../../../components/Pagination.jsx";
+
+const CredClientList = () => {
+  const navigate = useNavigate();
+  const [clients, setClients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage] = useState(10); // You can make this configurable
+
+  useEffect(() => {
+    const fetchClients = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/api/clients");
+
+        // Handle both response formats - either an object with success/data or direct array
+        const clientsData = response.data.data || response.data;
+
+        // Ensure we have an array before setting state
+        if (Array.isArray(clientsData)) {
+          setClients(clientsData);
+        } else {
+          console.error("Unexpected response format:", response.data);
+          setError("Received invalid data format from server");
+        }
+      } catch (err) {
+        console.error("Error fetching clients:", err);
+        setError("An error occurred while fetching clients");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchClients();
+  }, []);
+
+  // Handle pagination
+  const handlePageChange = useCallback((pageNumber) => {
+    setCurrentPage(pageNumber);
+  }, []);
+
+  // Calculate pagination data
+  const totalRecords = clients.length;
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + recordsPerPage;
+  const currentClients = clients.slice(startIndex, endIndex);
+
+  return (
+    <div className="payment-client-wrapper">
+      {/* Back Button */}
+      <div className="client-payments-header">
+<button
+  className="back-button"
+  onClick={() => {
+    let roleId = null;
+
+    const userData = localStorage.getItem("user");
+    if (userData) {
+      try {
+        roleId = JSON.parse(userData).roleid;
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+
+    if (!roleId) {
+      roleId = Number(
+        localStorage.getItem("roleId") || localStorage.getItem("userRoleId")
+      );
+    }
+
+    // Navigate based on role
+    if (roleId === 8) {
+      navigate("/CreditorsDashboard");
+    } else if (roleId === 1 || roleId === 4) {
+      navigate("/DirectorCreditorsOther");
+    } else {
+      navigate("/CreditorsDashboard"); // fallback
+    }
+  }}
+>
+  Back
+</button>
+
+
+      </div>
+
+      {/* Loading and Error States */}
+      {loading && <div className="loading-message">Loading clients...</div>}
+      {error && <div className="error-message">{error}</div>}
+
+      {/* Table */}
+      {!loading && !error && (
+        <div className="clientinstructiontable">
+          <table className="t1" style={{ width: "70%" }}>
+            <thead className="bg-blue-300">
+              <tr>
+                <th className="p-3">Company</th>
+                <th className="p-3">Representative</th>
+                <th className="p-3">Email</th>
+                <th className="p-3">Credit Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentClients.length > 0 ? (
+                currentClients.map((client, index) => (
+                  <tr key={client.m5clientkey || index} className="border-t">
+                    <td className="p-3">{client.companyname}</td>
+                    <td className="p-3">{client.representative}</td>
+                    <td className="p-3">{client.email}</td>
+                    <td className="p-3">
+                      <button
+                        className="view-butn"
+                        onClick={() =>
+                          navigate("/credit-note-list", {
+                            state: {
+                              clientId: client.m5clientkey,
+                              clientName: client.companyname,
+                            },
+                          })
+                        }
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="4" className="p-3 text-center">
+                    No clients found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Pagination Component - Now properly centered */}
+
+          <Pagination
+            totalRecords={totalRecords}
+            recordsPerPage={recordsPerPage}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default CredClientList;

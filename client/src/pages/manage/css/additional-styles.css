@@ -1,0 +1,572 @@
+/* Loading Spinner */
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Custom Alert Enhancements */
+.custom-alert.success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.custom-alert.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.custom-alert.warning {
+  background-color: #fff3cd;
+  border-color: #ffeaa7;
+  color: #856404;
+}
+
+/* Form improvements */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Sub-tab Navigation Styles */
+.sub-tab-navigation {
+  margin-bottom: 1.5rem;
+}
+
+.sub-tab-container {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0;
+}
+
+.sub-tab-button {
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+  border-bottom: 2px solid transparent;
+}
+
+.sub-tab-button:hover {
+  color: #374151;
+}
+
+.sub-tab-button.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.sub-tab-button.inactive {
+  color: #6b7280;
+}
+
+.sub-tab-button.inactive:hover {
+  color: #374151;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .manage-form-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .manage-button-row {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .manage-tab-button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .sub-tab-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .sub-tab-button {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+  }
+}
+.client-form-group {
+  margin-bottom: 1rem;
+}
+
+.input-error {
+  border: 1px solid red;
+}
+
+.error-message {
+  color: red;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+/* Modal Container */
+.modal-container {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 448px;
+  width: 100%;
+  margin: 16px;
+}
+
+/* Modal Header */
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close-button:hover {
+  color: #4b5563;
+}
+
+.close-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Form */
+.modal-form {
+  padding: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.form-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.input-error {
+  border-color: #ef4444;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-top: 4px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.cancel-button {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #374151;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cancel-button:hover {
+  background-color: #f9fafb;
+}
+
+.cancel-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.cancel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  background-color: #2563eb;
+  color: #ffffff;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #1d4ed8;
+}
+
+.submit-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* driver rate table delete confirmation popup */
+/* Popup backdrop */
+.popup-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Popup container */
+.popup {
+  background-color: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 400px;
+  width: 100%;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Popup message */
+.popup p {
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #333;
+}
+
+/* Popup buttons container */
+.popup-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Confirm button */
+.confirm-button {
+  background-color: #dc2626;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.confirm-button:hover {
+  background-color: #b91c1c;
+}
+
+/* Cancel button */
+.cancel-button {
+  background-color: #6b7280;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cancel-button:hover {
+  background-color: #4b5563;
+}
+
+/* Custom Alert Styles */
+.custom-swal-popup {
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  font-family: 'Arial', sans-serif;
+}
+
+.custom-swal-title {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.custom-swal-content {
+  font-size: 1rem;
+  color: #555;
+}
+
+.custom-swal-confirm {
+  background-color: #3085d6 !important;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.custom-swal-confirm:hover {
+  background-color: #2874b5 !important;
+}
+
+.custom-swal-cancel {
+  background-color: #d33 !important;
+  border-radius: 4px;
+  padding: 10px 20px;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+
+.custom-swal-cancel:hover {
+  background-color: #b32d2d !important;
+}
+
+/* Alert */
+
+/* Alert Box Styling */
+.alert-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #ffebee; /* Light red background */
+  color: #c62828; /* Dark red text */
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: slideIn 0.3s ease-in-out;
+  max-width: 400px;
+  width: 100%;
+  position: relative;
+  border-left: 4px solid #c62828; /* Red accent border */
+}
+
+/* Close Button */
+.alert-close {
+  background: none;
+  border: none;
+  color: #c62828;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 8px;
+  transition: color 0.2s ease;
+}
+
+.alert-close:hover {
+  color: #b71c1c; /* Darker red on hover */
+}
+
+/* Animation for alert appearance */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ensure alert is visually distinct in both light and dark themes */
+@media (prefers-color-scheme: dark) {
+  .alert-box {
+    background-color: #4c2c2c; /* Darker red for dark mode */
+    color: #ffcccb; /* Light red text */
+    border-left-color: #ffcccb;
+  }
+  .alert-close {
+    color: #ffcccb;
+  }
+  .alert-close:hover {
+    color: #ff9999;
+  }
+}
+
+/* Additional styles for EmployeeForm component */
+/* Existing universal styles assumed to remain unchanged */
+/* Adding new classes specific to CompanyForm for 4-column layout */
+
+.company-form .company-form-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+.company-form .form-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.company-form .form-input {
+  padding: 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.company-form .form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+}
+
+/* Responsive adjustments for CompanyForm */
+@media (max-width: 768px) {
+  .company-form .company-form-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .company-form .company-form-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,153 @@
+/* Statement List Wrapper */
+.statement-list-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.statement-list-wrapper *,
+.statement-list-wrapper *::before,
+.statement-list-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.statement-list-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Buttons Row */
+.statement-list-wrapper .button-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+}
+
+.statement-list-wrapper .filter-buttons55 {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-top: -25px;
+}
+
+/* Buttons */
+.statement-list-wrapper .view-btn {
+  padding: 8px 16px;
+  background-color: #5cb4ef;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.statement-list-wrapper .download-btn {
+  padding: 8px 16px;
+  background-color: #4da6ff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.statement-list-wrapper .generate-statement-btn {
+  padding: 8px 18px;
+  margin-left: 10px;
+  background: linear-gradient(135deg, #0077cc, #00a3ff);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  transition: background 0.15s ease-in-out, box-shadow 0.15s ease-in-out,
+    transform 0.1s ease-in-out;
+}
+
+.statement-list-wrapper .generate-statement-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0061a8, #008fe0);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16);
+  transform: translateY(-1px);
+}
+
+.statement-list-wrapper .generate-statement-btn:disabled {
+  background: #c5d4e6;
+  color: #6b7a90;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Table */
+.statement-list-wrapper .instruction-table1 {
+  width: 1000px;
+  margin: 20px auto;
+  border-collapse: collapse;
+  align-items: center;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+  font-family: inherit;
+}
+
+.statement-list-wrapper .instruction-table thead {
+  background-color: #e6f2f8;
+}
+
+.statement-list-wrapper .instruction-table th,
+.statement-list-wrapper .instruction-table td {
+  padding: 15px;
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.statement-list-wrapper .instruction-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+/* Centers filter buttons */
+.statement-list-wrapper .filter-section46 {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+  margin-top: -45px;
+}
+
+.statement-list-wrapper .dropdown-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.statement-list-wrapper .dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+  background-color: white;
+}
+
+.statement-list-wrapper .action-bar {
+  margin-bottom: 20px;
+}
+
+.statement-list-wrapper .error-message {
+  color: #d32f2f;
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}

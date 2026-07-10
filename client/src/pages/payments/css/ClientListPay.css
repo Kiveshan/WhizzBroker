@@ -1,0 +1,141 @@
+/* Payment Client Wrapper */
+.payment-client-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  box-sizing: border-box;
+  display: block;
+  padding: 20px;
+}
+
+.payment-client-wrapper *,
+.payment-client-wrapper *::before,
+.payment-client-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Buttons */
+.payment-client-wrapper .button-section,
+.payment-client-wrapper .logout-section {
+  margin: 20px;
+}
+
+.payment-client-wrapper .back-btn,
+.payment-client-wrapper .back-button {
+  background-color: #0a640a;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.payment-client-wrapper .logout-btn {
+  background-color: #f9a6a6;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Container */
+.payment-client-wrapper .client-payments-header {
+  margin-bottom: 20px;
+}
+
+/* Table Container */
+.payment-client-wrapper .clientinstructiontable {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+/* Table */
+.payment-client-wrapper .t1 {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 auto;
+  font-family: inherit;
+  margin-left: 175px;
+}
+
+.payment-client-wrapper thead {
+  background-color: #9ecbf3;
+}
+
+.payment-client-wrapper th,
+.payment-client-wrapper td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.payment-client-wrapper th {
+  background-color: #9ecbf3;
+  font-weight: bold;
+}
+
+.payment-client-wrapper tbody tr:hover {
+  background-color: #f5f5f5;
+}
+
+.payment-client-wrapper .view-butn {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.payment-client-wrapper .view-butn:hover {
+  background-color: #2980b9;
+}
+
+/* Loading, error, and no data states */
+.payment-client-wrapper .loading-message,
+.payment-client-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.payment-client-wrapper .error-message {
+  color: #d32f2f;
+}
+
+/* Center the pagination component */
+.payment-client-wrapper .client-payment-dashboard-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.payment-client-wrapper .pagination-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* Override any inherited pagination styles to ensure centering */
+.payment-client-wrapper
+  .client-payment-dashboard-wrapper
+  .pagination-container {
+  margin: 20px auto;
+  text-align: center;
+}
+
+.payment-client-wrapper .client-payment-dashboard-wrapper .pagination-controls {
+  justify-content: center;
+}

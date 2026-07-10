@@ -1,0 +1,1753 @@
+Unique wrapper for ControllerInstructions component only
+.controller-instructions-unique-wrapper {
+  padding: 0px 20px 10px !important;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0px !important;
+  position: relative;
+  margin-top: -2000px; /* Added to lift the entire wrapper up */
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-header {
+  margin-bottom: 0px;
+  margin-top: 0px;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-back-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+ position: relative;
+  top: -20px;
+  
+  left: 20px;
+  z-index: 1000;
+
+
+  
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-logout-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+}
+
+/* Form container - lifted much higher and wider */
+.controller-instructions-unique-wrapper .controller-instructions-form-container {
+  margin-top: -90px !important; /* Increased negative margin to lift form higher */
+  background-color: #e6f2ff;
+  border-radius: 8px;
+  overflow: visible;
+  width: 98%;
+  max-width: 2000px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 20px !important;
+  padding: 20px;
+  position: relative;
+  box-sizing: border-box;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Added shadow for better depth */
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-form-section {
+  padding: 4px 0;
+  background-color: #e6f2ff;
+  border: none;
+  margin-bottom: 4px;
+}
+
+/* Hide any <hr> elements that might persist */
+.controller-instructions-unique-wrapper hr {
+  display: none;
+  height: 0;
+  margin: 0;
+  border: none;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-form-section:last-child {
+  border-bottom: none;
+}
+
+/* Client information section - top row */
+.controller-instructions-unique-wrapper .controller-instructions-client-info-section {
+  border-bottom: none;
+  margin-bottom: 8px;
+  background-color: #e6f2ff !important;
+  padding: 0 !important;
+  position: relative;
+  width: 100%;
+}
+
+/* Black line below client information */
+.controller-instructions-unique-wrapper .controller-instructions-client-info-section::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: -15px;
+  right: -15px;
+  height: 2px;
+  background-color: #cccccc;
+  width: calc(100% + 30px);
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-client-info-section .controller-instructions-form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-client-info-section
+  .controller-instructions-form-field {
+  flex: 1 1 calc(16.666% - 15px);
+  min-width: 180px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1400px) {
+  .controller-instructions-unique-wrapper
+    .controller-instructions-client-info-section
+    .controller-instructions-form-field {
+    flex: 1 1 calc(33.333% - 15px);
+  }
+}
+
+@media (max-width: 768px) {
+  .controller-instructions-unique-wrapper
+    .controller-instructions-client-info-section
+    .controller-instructions-form-field {
+    flex: 1 1 100%;
+  }
+}
+
+/* Container and booking section */
+.controller-instructions-unique-wrapper .controller-instructions-container-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 90px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-group {
+  flex: 1;
+  max-width: 350px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-label {
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-trailer-size-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin: 4px 0 8px 0;
+  text-align: center;
+}
+
+/* Container table-like layout */
+.controller-instructions-unique-wrapper .controller-instructions-container-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-input {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 12px;
+  width: 100%;
+  padding: 4px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-input label {
+  font-weight: 500;
+  text-align: left;
+  min-width: 60px;
+  font-size: 14px;
+  color: #333;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-rate-group {
+  display: contents;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-input input[type="number"] {
+  width: 80px;
+  height: 32px;
+  text-align: center;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-rate-group input[type="text"] {
+  width: 100px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-input input[type="text"] {
+  width: 100px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  background-color: #fff;
+}
+
+/* Right side booking/rates section */
+.controller-instructions-unique-wrapper .controller-instructions-booking-rates-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-booking-rates-row {
+  display: flex;
+  gap: 15px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-booking-rates-row .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Vessel info section */
+.controller-instructions-unique-wrapper .controller-instructions-vessel-info-section {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-vessel-info-section .controller-instructions-form-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-vessel-info-section
+  .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Shipment and task row */
+.controller-instructions-unique-wrapper .controller-instructions-shipment-task-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-shipment-task-row .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Location row */
+.controller-instructions-unique-wrapper .controller-instructions-location-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-location-row .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Time and date row */
+.controller-instructions-unique-wrapper .controller-instructions-time-date-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-time-date-row .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Stack and deadline row */
+.controller-instructions-unique-wrapper .controller-instructions-stack-deadline-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-stack-deadline-row
+  .controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Checkbox section - centered */
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-section {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 8px 0;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-group label {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Vessel information bottom row */
+.controller-instructions-unique-wrapper .controller-instructions-vessel-bottom-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-vessel-bottom-row .controller-instructions-form-field {
+  flex: 1;
+}
+
+.controller-instructions-unique-wrapper
+  .controller-instructions-vessel-bottom-row
+  .controller-instructions-form-field:last-child {
+  flex: 2; /* Description field wider */
+}
+
+/* Button container */
+.controller-instructions-unique-wrapper .controller-instructions-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0;  /* Reduced padding */
+  margin-top: -60px;  /* Reduced margin */
+  margin-bottom: 8px;  /* Added bottom margin for spacing */
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-add-container-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;  /* Slightly more rounded corners */
+  padding: 14px 28px;  /* Increased padding for taller button */
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;  /* Slightly bolder text */
+  min-height: 48px;  /* Minimum height for better touch targets */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;  /* Smooth transition for hover effects */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-add-container-button:hover {
+  background-color: #3a80d2;
+  transform: translateY(-1px);  /* Slight lift effect on hover */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);  /* Enhanced shadow on hover */
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-add-container-button:active {
+  transform: translateY(0);  /* Push down effect when clicked */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-add-container-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Form elements */
+.controller-instructions-unique-wrapper .controller-instructions-form-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* Base form input styles */
+.controller-instructions-unique-wrapper .controller-instructions-form-input,
+.controller-instructions-unique-wrapper .controller-instructions-dropdown,
+.controller-instructions-unique-wrapper select,
+.controller-instructions-unique-wrapper input[type="text"],
+.controller-instructions-unique-wrapper input[type="email"],
+.controller-instructions-unique-wrapper .controller-instructions-form-textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  height: 36px;
+  box-sizing: border-box;
+  background-color: #fff;
+  margin: 0;
+  transition: border-color 0.2s;
+}
+
+/* Date input specific styles */
+.controller-instructions-unique-wrapper input[type="date"] {
+  min-width: 200px; /* Make date inputs wider */
+  padding-right: 30px; /* Add space for calendar icon */
+}
+
+/* Date input group adjustments */
+.controller-instructions-unique-wrapper .controller-instructions-date-input-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+/* Calendar button positioning */
+.controller-instructions-unique-wrapper .controller-instructions-calendar-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Textarea specific styles */
+.controller-instructions-unique-wrapper .controller-instructions-form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  background-color: #fff;
+  margin: 0;
+}
+
+/* Dropdown arrow for select elements */
+.controller-instructions-unique-wrapper select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5H7z' fill='%23333'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+}
+
+/* Hover and focus states */
+.controller-instructions-unique-wrapper .controller-instructions-form-input:focus,
+.controller-instructions-unique-wrapper .controller-instructions-dropdown:focus,
+.controller-instructions-unique-wrapper select:focus,
+.controller-instructions-unique-wrapper input[type="text"]:focus,
+.controller-instructions-unique-wrapper input[type="email"]:focus,
+.controller-instructions-unique-wrapper .controller-instructions-form-textarea:focus {
+  border-color: #4a90e2;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-input-wrapper {
+  position: relative;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-textarea-wrapper {
+  position: relative;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-date-input-group {
+  position: relative;
+  display: flex;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-calendar-button {
+  background: transparent;
+  border: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+/* Error handling */
+.controller-instructions-unique-wrapper .controller-instructions-error-field {
+  border-color: #ff4d4f;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-error-tooltip {
+  position: absolute;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-error-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #ff4d4f;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-error-message {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Error field styling */
+.controller-instructions-unique-wrapper .controller-instructions-error-field,
+.controller-instructions-unique-wrapper .controller-instructions-form-field .controller-instructions-input-wrapper .controller-instructions-form-input.controller-instructions-error-field,
+.controller-instructions-unique-wrapper .controller-instructions-form-field .controller-instructions-input-wrapper .controller-instructions-form-textarea.controller-instructions-error-field {
+  border: 2px solid #d32f2f !important;
+  background-color: #ffebee !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px #d32f2f !important;
+}
+
+/* Error message styling */
+.controller-instructions-unique-wrapper .controller-instructions-error-message {
+  color: #d32f2f;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+/* Checkbox container styles */
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-container {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-container input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-checkbox-container .controller-instructions-checkmark {
+  margin-left: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .controller-instructions-unique-wrapper
+    .controller-instructions-client-info-section
+    .controller-instructions-form-row,
+  .controller-instructions-unique-wrapper
+    .controller-instructions-vessel-info-section
+    .controller-instructions-form-row,
+  .controller-instructions-unique-wrapper .controller-instructions-shipment-task-row,
+  .controller-instructions-unique-wrapper .controller-instructions-location-row,
+  .controller-instructions-unique-wrapper .controller-instructions-time-date-row,
+  .controller-instructions-unique-wrapper .controller-instructions-stack-deadline-row,
+  .controller-instructions-unique-wrapper .controller-instructions-vessel-bottom-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .controller-instructions-unique-wrapper .controller-instructions-container-section {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .controller-instructions-unique-wrapper .controller-instructions-booking-rates-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .controller-instructions-unique-wrapper .controller-instructions-checkbox-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .controller-instructions-unique-wrapper .controller-instructions-container-input {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    text-align: center;
+  }
+}
+
+/* FC Controller Instructions - Unique wrapper for FCcontrollerinstructions component only */
+.fc-controller-instructions-unique-wrapper {
+  padding: 0px 20px 10px !important;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0px !important;
+  position: relative;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-header {
+  margin-bottom: 0px;
+  margin-top: 0px;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-back-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-logout-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+}
+
+/* Form container */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-container {
+  margin-top: 40px !important;
+  background-color: #e6f2ff;
+  border-radius: 8px;
+  overflow: visible;
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 20px !important;
+  padding: 15px;
+  position: relative;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-section {
+  padding: 4px 0;
+  background-color: #e6f2ff;
+  border: none;
+  margin-bottom: 4px;
+}
+
+/* Hide any <hr> elements that might persist */
+.fc-controller-instructions-unique-wrapper hr {
+  display: none;
+  height: 0;
+  margin: 0;
+  border: none;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-section:last-child {
+  border-bottom: none;
+}
+
+/* Client information section - top row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-client-info-section {
+  border-bottom: none;
+  margin-bottom: 8px;
+  background-color: #e6f2ff !important;
+  padding: 0 !important;
+  position: relative;
+}
+
+/* Black line below client information */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-client-info-section::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: -15px;
+  right: -15px;
+  height: 2px;
+  background-color: #cccccc;
+  width: calc(100% + 30px);
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-client-info-section
+  .fc-controller-instructions-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-client-info-section
+  .fc-controller-instructions-form-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Container and booking section */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 30px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-group {
+  flex: 1;
+  max-width: 350px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-label {
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-trailer-size-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin: 4px 0 8px 0;
+  text-align: center;
+}
+
+/* Container table-like layout */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-input {
+  display: grid;
+  grid-template-columns: 80px 70px 90px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-input label {
+  font-weight: 500;
+  text-align: left;
+  justify-self: start;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-rate-group {
+  display: contents;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-input input[type="number"] {
+  width: 60px;
+  height: 32px;
+  text-align: center;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  justify-self: center;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-rate-group input[type="text"] {
+  width: 80px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  justify-self: start;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-input input[type="text"] {
+  width: 80px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Right side booking/rates section */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-booking-rates-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-booking-rates-row {
+  display: flex;
+  gap: 15px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-booking-rates-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Vessel info section */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-vessel-info-section {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-vessel-info-section
+  .fc-controller-instructions-form-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-vessel-info-section
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Shipment and task row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-shipment-task-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-shipment-task-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Location row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-location-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-location-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Time and date row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-time-date-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-time-date-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Stack and deadline row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-stack-deadline-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-stack-deadline-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Checkbox section - centered */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-section {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 8px 0;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-group label {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Vessel information bottom row */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-vessel-bottom-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-vessel-bottom-row
+  .fc-controller-instructions-form-field {
+  flex: 1;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-vessel-bottom-row
+  .fc-controller-instructions-form-field:last-child {
+  flex: 2; /* Description field wider */
+}
+
+/* Button container */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  margin-top: 5px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-add-container-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-add-container-button:hover {
+  background-color: #3a80d2;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-add-container-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Form elements */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-input,
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-dropdown,
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-textarea {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-form-textarea {
+  min-height: 80px;
+  resize: vertical;
+  height: auto;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-input-wrapper {
+  position: relative;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-textarea-wrapper {
+  position: relative;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-input-group {
+  position: relative;
+  display: flex;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-calendar-button {
+  background: transparent;
+  border: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+/* Error handling */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-error-field {
+  border-color: #ff4d4f;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-error-tooltip {
+  position: absolute;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-error-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #ff4d4f;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-error-message {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Checkbox container styles */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-container {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-container input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.fc-controller-instructions-unique-wrapper
+  .fc-controller-instructions-checkbox-container
+  .fc-controller-instructions-checkmark {
+  margin-left: 8px;
+}
+
+/* Small field styles */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-small-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-small {
+  max-width: 120px;
+}
+
+/* Date time group */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-time-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-time-row-1,
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-time-row-2 {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+/* Booking vertical group */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-booking-vertical-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 220px;
+}
+
+/* Description field */
+.fc-controller-instructions-unique-wrapper .fc-controller-instructions-description-field {
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 180px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .fc-controller-instructions-unique-wrapper
+    .fc-controller-instructions-client-info-section
+    .fc-controller-instructions-form-row,
+  .fc-controller-instructions-unique-wrapper
+    .fc-controller-instructions-vessel-info-section
+    .fc-controller-instructions-form-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-shipment-task-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-location-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-time-date-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-stack-deadline-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-vessel-bottom-row,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-time-row-1,
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-date-time-row-2 {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-section {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-booking-rates-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-checkbox-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-container-input {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .fc-controller-instructions-unique-wrapper .fc-controller-instructions-booking-vertical-group {
+    max-width: 100%;
+  }
+}
+
+/* View Controller Instructions - Unique wrapper for Viewcontrollerinstructions component only */
+.view-controller-instructions-unique-wrapper {
+  padding: 0px 20px 10px !important;
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0px !important;
+  position: relative;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-header {
+  margin-bottom: 0px;
+  margin-top: 0px;
+  width: 100%;
+  max-width: 1500px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-back-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-logout-button {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+}
+
+/* Form container */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-container {
+  margin-top: 40px !important;
+  background-color: #e6f2ff;
+  border-radius: 8px;
+  overflow: visible;
+  max-width: 1800px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 20px !important;
+  padding: 15px;
+  position: relative;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-section {
+  padding: 4px 0;
+  background-color: #e6f2ff;
+  border: none;
+  margin-bottom: 4px;
+}
+
+/* Hide any <hr> elements that might persist */
+.view-controller-instructions-unique-wrapper hr {
+  display: none;
+  height: 0;
+  margin: 0;
+  border: none;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-section:last-child {
+  border-bottom: none;
+}
+
+/* Client information section - top row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-client-info-section {
+  border-bottom: none;
+  margin-bottom: 8px;
+  background-color: #e6f2ff !important;
+  padding: 0 !important;
+  position: relative;
+}
+
+/* Black line below client information */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-client-info-section::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: -15px;
+  right: -15px;
+  height: 2px;
+  background-color: #cccccc;
+  width: calc(100% + 30px);
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-client-info-section
+  .view-controller-instructions-form-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-client-info-section
+  .view-controller-instructions-form-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Container and booking section */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-section {
+  display: flex;
+  flex-direction: row;
+  gap: 30px;
+  padding: 4px 0;
+  margin-bottom: 4px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-group {
+  flex: 1;
+  max-width: 350px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-label {
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-trailer-size-label {
+  font-size: 14px;
+  font-weight: 600;
+  display: block;
+  margin: 4px 0 8px 0;
+  text-align: center;
+}
+
+/* Container table-like layout */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-input {
+  display: grid;
+  grid-template-columns: 80px 70px 90px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-input label {
+  font-weight: 500;
+  text-align: left;
+  justify-self: start;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-rate-group {
+  display: contents;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-input input[type="number"] {
+  width: 60px;
+  height: 32px;
+  text-align: center;
+  padding: 4px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  justify-self: center;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-rate-group input[type="text"] {
+  width: 80px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  justify-self: start;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-input input[type="text"] {
+  width: 80px;
+  height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Right side booking/rates section */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-booking-rates-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-booking-rates-row {
+  display: flex;
+  gap: 15px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-booking-rates-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Vessel info section */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-vessel-info-section {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-vessel-info-section
+  .view-controller-instructions-form-row {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-vessel-info-section
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Shipment and task row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-shipment-task-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-shipment-task-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Location row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-location-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-location-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Time and date row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-time-date-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-time-date-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Stack and deadline row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-stack-deadline-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-stack-deadline-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+/* Checkbox section - centered */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-section {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin: 8px 0;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-group input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-group label {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Vessel information bottom row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-vessel-bottom-row {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 4px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-vessel-bottom-row
+  .view-controller-instructions-form-field {
+  flex: 1;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-vessel-bottom-row
+  .view-controller-instructions-form-field:last-child {
+  flex: 2; /* Description field wider */
+}
+
+/* Button container */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-button-container {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  margin-top: 5px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-add-container-button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px 24px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-add-container-button:hover {
+  background-color: #3a80d2;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-add-container-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Form elements */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-input,
+.view-controller-instructions-unique-wrapper .view-controller-instructions-dropdown,
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-textarea {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  height: 36px;
+  box-sizing: border-box;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-form-textarea {
+  min-height: 80px;
+  resize: vertical;
+  height: auto;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-input-wrapper {
+  position: relative;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-textarea-wrapper {
+  position: relative;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-date-input-group {
+  position: relative;
+  display: flex;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-calendar-button {
+  background: transparent;
+  border: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+/* Error handling */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-error-field {
+  border-color: #ff4d4f;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-error-tooltip {
+  position: absolute;
+  background-color: #ff4d4f;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  z-index: 10;
+  top: calc(100% + 5px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-error-tooltip::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 5px solid #ff4d4f;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-container-error-message {
+  color: #ff4d4f;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Checkbox container styles */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-container {
+  display: flex;
+  align-items: center;
+  margin: 5px 0;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-container input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+}
+
+.view-controller-instructions-unique-wrapper
+  .view-controller-instructions-checkbox-container
+  .view-controller-instructions-checkmark {
+  margin-left: 8px;
+}
+
+/* Small field styles */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-small-field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-small {
+  max-width: 120px;
+}
+
+/* Date time group */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-date-time-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.view-controller-instructions-unique-wrapper .view-controller-instructions-date-time-row-1,
+.view-controller-instructions-unique-wrapper .view-controller-instructions-date-time-row-2 {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 8px;
+}
+
+/* Booking vertical group */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-booking-vertical-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 220px;
+}
+
+/* Description field */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-description-field {
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 180px;
+}
+
+/* Rate input */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-rate-input {
+  position: relative;
+}
+
+/* Trailer container */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-trailer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Vessel info row */
+.view-controller-instructions-unique-wrapper .view-controller-instructions-vessel-info-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .view-controller-instructions-unique-wrapper
+    .view-controller-instructions-client-info-section
+    .view-controller-instructions-form-row,
+  .view-controller-instructions-unique-wrapper
+    .view-controller-instructions-vessel-info-section
+    .view-controller-instructions-form-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-shipment-task-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-location-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-time-date-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-stack-deadline-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-vessel-bottom-row,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-date-time-row-1,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-date-time-row-2,
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-vessel-info-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-container-section {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-booking-rates-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-checkbox-section {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-container-input {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .view-controller-instructions-unique-wrapper .view-controller-instructions-booking-vertical-group {
+    max-width: 100%;
+  }
+}

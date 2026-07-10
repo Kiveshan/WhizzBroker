@@ -1,0 +1,329 @@
+/* ViewClientInstruction - Unique CSS with wrappers to avoid conflicts */
+
+.view-client-instruction-wrapper {
+  font-family: Arial, sans-serif;
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* Header Styles */
+.view-client-instruction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.view-client-instruction-back-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.view-client-instruction-back-button:hover {
+  background-color: #45a049;
+}
+
+/* Table Container */
+.view-client-instruction-table-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  margin-top: -70px;
+}
+
+.view-client-instruction-table-wrapper {
+  background-color: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: hidden;
+  width: 100%;
+  max-width: 1200px;
+}
+
+/* Table Styles */
+.view-client-instruction-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background-color: transparent !important;
+}
+
+.view-client-instruction-table thead {
+  background-color: #93c5fd; /* bg-blue-300 equivalent */
+}
+
+.view-client-instruction-table th {
+  padding: 8px;
+  text-align: left;
+  font-weight: bold;
+  color: #1f2937;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.view-client-instruction-table td {
+  padding: 8px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  background-color: transparent !important;
+}
+
+.view-client-instruction-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.view-client-instruction-table tbody tr.border-t {
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Centered cell styling */
+.view-client-instruction-centered-cell {
+  text-align: center;
+}
+
+/* Bell icon header container */
+.view-client-instruction-bell-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+/* View button styles */
+.view-client-instruction-view-button {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.view-client-instruction-view-button:hover {
+  background-color: #2563eb;
+}
+
+.view-client-instruction-view-button.bg-red-500 {
+  background-color: #ef4444;
+}
+
+.view-client-instruction-view-button.bg-red-500:hover {
+  background-color: #dc2626;
+}
+
+/* Loading and Error States */
+.view-client-instruction-loading {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.view-client-instruction-error {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #dc2626;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  margin: 20px;
+}
+
+.view-client-instruction-no-data {
+  text-align: center;
+  padding: 40px;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+/* Container Search */
+.view-client-instruction-search-bar {
+  display: flex;
+  justify-content: center;
+  margin: 10px 0 12px;
+}
+
+.view-client-instruction-search-input {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  min-width: 220px;
+  font-size: 14px;
+  font-family: Arial, sans-serif;
+}
+
+/* Pagination Styles */
+.view-client-instruction-pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 0;
+  padding: 0;
+}
+
+/* Tighten shared Pagination spacing on this page so controls sit higher */
+.view-client-instruction-pagination-container .client-payment-dashboard-wrapper .pagination-container {
+  margin-top: 0;
+  gap: 8px;
+}
+
+.view-client-instruction-pagination-container .client-payment-dashboard-wrapper .pagination-info {
+  display: none;
+}
+
+.view-client-instruction-pagination-container .client-payment-dashboard-wrapper .pagination-summary {
+  display: none;
+}
+
+.view-client-instruction-pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.view-client-instruction-pagination-button {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  background-color: white;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.view-client-instruction-pagination-button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.view-client-instruction-pagination-button.active {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.view-client-instruction-pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.view-client-instruction-pagination-info {
+  font-size: 14px;
+  color: #6b7280;
+  margin-right: 16px;
+}
+
+/* Bell Animation Keyframes */
+@keyframes view-client-instruction-bell-shake {
+  0% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(5deg);
+  }
+  30% {
+    transform: rotate(-5deg);
+  }
+  45% {
+    transform: rotate(4deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  75% {
+    transform: rotate(2deg);
+  }
+  85% {
+    transform: rotate(-2deg);
+  }
+  92% {
+    transform: rotate(1deg);
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+
+.view-client-instruction-bell-icon {
+  display: inline-block;
+  position: relative;
+}
+
+.view-client-instruction-bell-icon.shake {
+  animation: view-client-instruction-bell-shake 2s infinite;
+}
+
+.view-client-instruction-bell-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 12px;
+  font-weight: bold;
+  color: black;
+}
+
+.view-client-instruction-row-bell-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 10px;
+  font-weight: bold;
+  color: black;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .view-client-instruction-header {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .view-client-instruction-table-container {
+    padding: 0 10px;
+  }
+
+  .view-client-instruction-table {
+    font-size: 12px;
+  }
+
+  .view-client-instruction-table th,
+  .view-client-instruction-table td {
+    padding: 8px 4px;
+  }
+
+  .view-client-instruction-pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .view-client-instruction-pagination-button {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .view-client-instruction-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .view-client-instruction-table {
+    min-width: 600px;
+  }
+}

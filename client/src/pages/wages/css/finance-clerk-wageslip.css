@@ -1,0 +1,231 @@
+.wageslip-page-wrapper {
+    padding-bottom: 60px;
+  }
+  
+  .wageslip-container {
+    max-width: 600px;
+    margin: 0 auto;
+    margin-top: 20px;
+    padding: 5px 10px 10px 10px;
+  }
+  
+  .wageslip-slip-container {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    background-color: #fff;
+  }
+  
+  .wageslip-header {
+    background-color: #b8d1f3;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .wageslip-company-info {
+    text-align: right;
+  }
+  
+  .wageslip-company-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0 0 2px 0;
+  }
+  
+  .wageslip-company-contact {
+    font-size: 14px;
+    margin: 0 0 1px 0;
+  }
+  
+  .wageslip-content {
+    padding: 10px 12px;
+  }
+  
+  .wageslip-title {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    margin: 0 0 8px 0;
+    color: #333;
+  }
+  
+  .wageslip-pay-period-section {
+    background-color: #f9fafb;
+    padding: 6px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  
+  .wageslip-pay-period-text {
+    font-size: 14px;
+    margin: 0;
+  }
+  
+  .wageslip-employee-section {
+    background-color: #f9fafb;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  
+  .wageslip-employee-text {
+    font-size: 14px;
+    margin: 0;
+  }
+  
+  .wageslip-employee-info-row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 4px;
+    gap: 20px;
+  }
+  
+  .wageslip-employee-info-column {
+    width: 45%;
+    display: flex;
+    align-items: center;
+  }
+  
+  .wageslip-employee-label {
+    min-width: 60px;
+    font-weight: bold;
+  }
+  
+  .wageslip-table-container {
+    margin-bottom: 8px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  }
+  
+  .wageslip-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .wageslip-table-header {
+    background-color: #b8d1f3;
+    padding: 5px 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .wageslip-table-cell {
+    padding: 5px 10px;
+    font-size: 14px;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .wageslip-table-cell-left {
+    text-align: left;
+  }
+  
+  .wageslip-table-cell-right {
+    text-align: right;
+  }
+  
+  .wageslip-footer {
+    text-align: center;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 5px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 5px;
+  }
+  
+  .wageslip-back-button {
+    background-color: #8ee4a6;
+    color: black;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-right: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .wageslip-print-button {
+    background-color: #8ee4a6;
+    color: black;
+    padding: 6px 50px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-right: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .wageslip-download-button {
+    background-color: #87CEEB;
+    color: black;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    margin-top: 10px;
+    margin-left: 10px;
+    transition: background-color 0.2s;
+  }
+  
+  .wageslip-loading-container {
+    text-align: center;
+    padding: 20px;
+    font-size: 16px;
+    color: #666;
+  }
+  
+  .wageslip-error-container {
+    text-align: center;
+    padding: 20px;
+    font-size: 16px;
+    color: red;
+  }
+  
+  .wageslip-combined-tables-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  
+  .wageslip-button-container {
+    display: flex;
+    justify-content: flex-start;
+    margin-top: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .wageslip-month-year-info {
+    background-color: #f9fafb;
+    padding: 6px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    text-align: center;
+  }
+  
+  .wageslip-month-year-text {
+    font-size: 14px;
+    margin: 0;
+  }
+  
+  .wageslip-print-button:hover {
+    background-color: #a3c2e8;
+  }
+  
+  .wageslip-download-button:hover {
+    background-color: #5cacee;
+  }
+  
+  .wageslip-back-button:hover {
+    background-color: #a3c2e8;
+  }

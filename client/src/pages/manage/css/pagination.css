@@ -1,0 +1,354 @@
+/* Table Layout Styles */
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  flex-shrink: 0;
+}
+
+.table-header h2 {
+  margin: 0;
+  color: #495057;
+}
+
+/* Search Filter positioned at top */
+.table-filters {
+  flex-shrink: 0;
+  border-bottom: 1px solid #e9ecef;
+}
+
+/* Table Content - main scrollable area */
+.table-content {
+  flex: 1;
+  overflow-x: auto;
+  min-height: 400px;
+}
+
+/* Pagination positioned at bottom */
+.table-pagination {
+  flex-shrink: 0;
+  border-top: 1px solid #e9ecef;
+}
+
+/* Loading and Error States */
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 60px 20px;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.error {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin: 20px;
+}
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-radius: 0;
+  border: none;
+  border-top: 1px solid #e9ecef;
+  margin-top: 40px;
+
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.items-per-page {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.items-per-page-select {
+  padding: 4px 24px 4px 8px; /* Increased right padding to accommodate arrow */
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 70px; /* Set desired width */
+  appearance: none; /* Remove default browser dropdown arrow */
+  -webkit-appearance: none; /* For Safari */
+  -moz-appearance: none; /* For Firefox */
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23333" d="M6 9L3 6h6z"/></svg>') no-repeat right 8px center; /* Custom arrow */
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.pagination-btn {
+  padding: 8px 12px;
+  border: 1px solid #dee2e6;
+  background: white;
+  color: #495057;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #adb5bd;
+}
+
+.pagination-btn:disabled {
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.pagination-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.pagination-btn.ellipsis {
+  cursor: default;
+  background: transparent;
+  border: none;
+}
+
+.pagination-btn.ellipsis:hover {
+  background: transparent;
+  border: none;
+}
+
+/* Search Filter Styles */
+.search-filter-container {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin: 0;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid #e9ecef;
+  flex-wrap: wrap;
+}
+
+.search-input-group {
+  display: flex;
+  gap: 10px;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.search-btn {
+  padding: 8px 16px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.search-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.status-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.status-select {
+  padding: 4px 24px 4px 8px; /* Increased right padding to accommodate arrow */
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  width: 70px; /* Set desired width */
+  appearance: none; /* Remove default browser dropdown arrow */
+  -webkit-appearance: none; /* For Safari */
+  -moz-appearance: none; /* For Firefox */
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12"><path fill="%23333" d="M6 9L3 6h6z"/></svg>') no-repeat right 8px center; /* Custom arrow */
+}
+
+
+.clear-filters-btn {
+  padding: 8px 16px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.clear-filters-btn:hover:not(:disabled) {
+  background: #5a6268;
+}
+
+.clear-filters-btn:disabled {
+  background: #adb5bd;
+  cursor: not-allowed;
+}
+
+/* Status Badge Styles */
+.status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.inactive {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* No Data Styles */
+.no-data {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .pagination-container {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .pagination-info {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .search-filter-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-input-group {
+    min-width: auto;
+  }
+
+  .table-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .table-content {
+    min-height: 300px;
+  }
+}
+
+/* Ensure tables are responsive */
+.manage-employees-table1,
+.manage-clients-table1,
+.manage-trucks-table1,
+.manage-DriverRates-table1,
+.manage-subcontractor-table1 {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.manage-employees-table1 table,
+.manage-clients-table1 table,
+.manage-trucks-table1 table,
+.manage-DriverRates-table1 table,
+.manage-subcontractor-table1 table {
+  width: 100%;
+  min-width: 800px;
+  border-collapse: collapse;
+}
+
+.manage-employees-table1 th,
+.manage-employees-table1 td,
+.manage-clients-table1 th,
+.manage-clients-table1 td,
+.manage-trucks-table1 th,
+.manage-trucks-table1 td,
+.manage-DriverRates-table1 th,
+.manage-DriverRates-table1 td,
+.manage-subcontractor-table1 th,
+.manage-subcontractor-table1 td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.manage-employees-table1 th,
+.manage-clients-table1 th,
+.manage-trucks-table1 th,
+.manage-DriverRates-table1 th,
+.manage-subcontractor-table1 th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #495057;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}

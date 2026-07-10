@@ -1,0 +1,200 @@
+/* Director Financial Documents View Wrapper */
+.director-financial-docs-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: "Arial", sans-serif;
+  box-sizing: border-box;
+}
+
+.director-financial-docs-wrapper *,
+.director-financial-docs-wrapper *::before,
+.director-financial-docs-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Buttons */
+.director-financial-docs-wrapper .button-section,
+.director-financial-docs-wrapper .logout-section {
+  margin: 20px;
+}
+
+.director-financial-docs-wrapper .back-btn,
+.director-financial-docs-wrapper .back-button {
+  background-color: #4caf50; /* Green to match the screenshot */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  margin-top: 132px;
+}
+
+.director-financial-docs-wrapper .logout-btn {
+  background-color: #f9a6a6;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Table */
+.director-financial-docs-wrapper .t1 {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-left: auto;
+  margin-right: auto;
+  font-family: inherit;
+}
+
+.director-financial-docs-wrapper .clientinstructiontable {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-top: -35px;
+  align-items: center;
+}
+
+.director-financial-docs-wrapper thead {
+  background-color: #9ecbf3;
+}
+
+.director-financial-docs-wrapper th,
+.director-financial-docs-wrapper td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.director-financial-docs-wrapper .view-butn {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.director-financial-docs-wrapper .loading-message,
+.director-financial-docs-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.director-financial-docs-wrapper .error-message {
+  color: #d32f2f;
+}
+
+/* Financial Documents View Wrapper */
+.financial-docs-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  box-sizing: border-box;
+}
+
+.financial-docs-wrapper *,
+.financial-docs-wrapper *::before,
+.financial-docs-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Buttons */
+.financial-docs-wrapper .button-section,
+.financial-docs-wrapper .logout-section {
+  margin: 20px;
+}
+
+.financial-docs-wrapper .back-btn,
+.financial-docs-wrapper .back-button {
+  background-color: #4caf50; /* Green to match the screenshot */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 14px;
+  margin-top: 132px;
+}
+
+.financial-docs-wrapper .logout-btn {
+  background-color: #f9a6a6;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.financial-docs-wrapper th {
+  font-weight: bold;
+}
+
+/* Table */
+.financial-docs-wrapper .t1 {
+  width: 1000px;
+  border-collapse: collapse;
+  font-family: inherit;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.financial-docs-wrapper .clientinstructiontable {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-top: -35px;
+  align-items: center;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.financial-docs-wrapper thead {
+  background-color: #9ecbf3;
+}
+
+.financial-docs-wrapper th,
+.financial-docs-wrapper td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.financial-docs-wrapper .view-butn {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.financial-docs-wrapper .loading-message,
+.financial-docs-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.financial-docs-wrapper .error-message {
+  color: #d32f2f;
+}
+
+/* Dropdown container styling */
+.financial-docs-wrapper .dropdown-container1,
+.director-financial-docs-wrapper .dropdown-container1 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 20px;
+  justify-content: center;
+  margin-bottom: 20px;
+}

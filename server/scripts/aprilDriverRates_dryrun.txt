@@ -1,0 +1,828 @@
+Database connection configured with: {
+  user: 'postgres',
+  host: 'localhost',
+  database: 'Whizz-Away',
+  port: '5433'
+}
+
+=== Fix April driver rates — 4/2026 — mode: DRY-RUN (no writes) ===
+
+Database connected successfully at: 2026-06-10T07:20:46.376Z
+Legs on instructions created in 4/2026: 3453
+
+Summary:  MISMATCH=387  MATCH=2666  ROUTE_MISSING=394  NO_FIELD_RATE=3  SKIPPED=3
+
+--- MISMATCH (will be fixed when run with --apply) ---
+┌─────────┬────────┬───────┬──────────────────────────────────────────────────────────────────────┬──────────────┬──────────┬───────────┬──────────────┬──────────────┬───────────────┐
+│ (index) │ legkey │ m1key │ route                                                                │ date         │ role     │ container │ stored       │ expected     │ delta         │
+├─────────┼────────┼───────┼──────────────────────────────────────────────────────────────────────┼──────────────┼──────────┼───────────┼──────────────┼──────────────┼───────────────┤
+│ 0       │ 180838 │ 1187  │ 'AGL To Empty Depot -> Empty Depot'                                  │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,23'   │ 'R 50,03'     │
+│ 1       │ 179273 │ 1201  │ 'Empty Depot To ALS Pinetown To Terminal (Zaheer) -> Terminal'       │ '2026-04-08' │ 'subbie' │ '12m'     │ 'R 4 205,52' │ 'R 3 650,00' │ 'R -555,52'   │
+│ 2       │ 175167 │ 1265  │ 'AGL To Empty Depot -> Empty Depot'                                  │ '2026-04-13' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 3       │ 175168 │ 1265  │ 'AGL To Empty Depot -> Empty Depot'                                  │ '2026-04-14' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 4       │ 175162 │ 1302  │ 'AGL To Empty Depot (1 x 6m Container) -> Empty Depot'               │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 530,40'   │ 'R 551,63'   │ 'R 21,23'     │
+│ 5       │ 175163 │ 1302  │ 'AGL To Empty Depot -> Empty Depot'                                  │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,23'   │ 'R 50,03'     │
+│ 6       │ 175166 │ 1302  │ 'AGL To Empty Depot -> Empty Depot'                                  │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,23'   │ 'R 50,03'     │
+│ 7       │ 152001 │ 1318  │ 'Terminal To Yard -> Yard'                                           │ '2026-04-22' │ 'subbie' │ '6m'      │ 'R 140,00'   │ 'R 1 094,63' │ 'R 954,63'    │
+│ 8       │ 181024 │ 1318  │ 'Yard To AGL Springfield Park To Empty Depot -> Empty Depot'         │ '2026-04-28' │ 'subbie' │ '6m'      │ 'R 173,00'   │ 'R 2 839,16' │ 'R 2 666,16'  │
+│ 9       │ 181029 │ 1318  │ 'Yard To AGL Springfield Park To Empty Depot -> Empty Depot'         │ '2026-04-30' │ 'subbie' │ '6m'      │ 'R 173,00'   │ 'R 2 839,16' │ 'R 2 666,16'  │
+│ 10      │ 181441 │ 1328  │ 'Yard To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'           │ '2026-04-07' │ 'subbie' │ '12m'     │ 'R 5 806,37' │ 'R 5 479,20' │ 'R -327,17'   │
+│ 11      │ 156289 │ 1347  │ 'Yard To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'           │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 5 806,37' │ 'R 5 479,20' │ 'R -327,17'   │
+│ 12      │ 156303 │ 1347  │ 'Terminal To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'       │ '2026-04-15' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 901,00' │ 'R 6 491,00'  │
+│ 13      │ 156593 │ 1347  │ 'Yard To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'           │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 5 806,37' │ 'R 5 479,20' │ 'R -327,17'   │
+│ 14      │ 194016 │ 1348  │ 'Yard To IFG PMB To Empty Depot (6M & 12M) -> Empty Depot'           │ '2026-04-17' │ 'subbie' │ '12m'     │ 'R 5 265,20' │ 'R 5 465,20' │ 'R 200,00'    │
+│ 15      │ 133212 │ 1375  │ 'Yard To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'           │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 5 806,37' │ 'R 5 479,20' │ 'R -327,17'   │
+│ 16      │ 122837 │ 1376  │ 'Empty Depot To Yard -> Yard'                                        │ '2026-04-13' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 17      │ 132166 │ 1381  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 18      │ 132284 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 19      │ 132285 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 20      │ 132286 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 21      │ 132287 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 22      │ 132288 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 23      │ 132289 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 24      │ 132290 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 25      │ 132291 │ 1382  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 26      │ 122735 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 27      │ 122774 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 28      │ 122775 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 29      │ 122776 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 30      │ 122777 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 31      │ 122778 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 32      │ 122779 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 33      │ 122780 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 34      │ 122781 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 35      │ 122782 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 36      │ 122783 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 37      │ 122784 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 38      │ 122785 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 39      │ 122786 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 40      │ 122787 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 41      │ 122788 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 42      │ 122789 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 43      │ 122790 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 44      │ 122791 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 45      │ 122792 │ 1383  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 46      │ 129112 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 47      │ 180819 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 48      │ 180820 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 49      │ 180821 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 50      │ 180822 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 51      │ 180823 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 52      │ 180824 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 53      │ 180825 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 54      │ 180826 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 55      │ 180827 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 56      │ 180828 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 57      │ 180829 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 58      │ 180830 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 59      │ 180831 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 60      │ 180832 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 61      │ 180833 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 62      │ 180834 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 63      │ 180835 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 64      │ 180836 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 65      │ 180837 │ 1384  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-02' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 66      │ 124268 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 67      │ 124377 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 68      │ 124378 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 69      │ 124379 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 70      │ 124380 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 71      │ 124381 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 72      │ 124382 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 73      │ 124383 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 74      │ 124384 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 75      │ 124385 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 76      │ 124386 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 77      │ 124387 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 78      │ 124388 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 79      │ 124389 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 80      │ 124390 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 81      │ 124391 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 82      │ 124392 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 83      │ 124393 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 84      │ 124394 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 85      │ 124395 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 86      │ 124396 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 87      │ 124397 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 88      │ 124398 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 89      │ 124399 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 90      │ 124400 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 91      │ 124401 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 92      │ 124402 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 93      │ 124403 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 94      │ 124404 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 95      │ 124405 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 96      │ 124406 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 97      │ 124407 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 98      │ 124408 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 99      │ 124409 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 100     │ 124410 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 101     │ 124411 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 102     │ 124412 │ 1385  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 103     │ 156290 │ 1393  │ 'Yard To IFG PMB To Empty Depot (Lovedale) -> Empty Depot'           │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 5 806,37' │ 'R 5 479,20' │ 'R -327,17'   │
+│ 104     │ 132060 │ 1416  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 105     │ 132061 │ 1416  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 106     │ 132062 │ 1416  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 107     │ 132063 │ 1416  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 108     │ 132067 │ 1416  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'                │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 382,20'   │ 'R 432,33'   │ 'R 50,13'     │
+│ 109     │ 176751 │ 1431  │ 'Yard To Terminal -> Terminal'                                       │ '2026-04-27' │ 'subbie' │ '12m'     │ 'R 1 234,00' │ 'R 1 421,80' │ 'R 187,80'    │
+│ 110     │ 176799 │ 1435  │ 'Yard To Terminal -> Terminal'                                       │ '2026-04-26' │ 'subbie' │ '12m'     │ 'R 1 234,00' │ 'R 1 421,80' │ 'R 187,80'    │
+│ 111     │ 176267 │ 1442  │ 'Macdonalds To Terminal -> Terminal'                                 │ '2026-05-10' │ 'subbie' │ '6m'      │ 'R 1 176,00' │ 'R 1 423,75' │ 'R 247,75'    │
+│ 112     │ 176268 │ 1442  │ 'Macdonalds To Terminal -> Terminal'                                 │ '2026-05-10' │ 'subbie' │ '6m'      │ 'R 1 176,00' │ 'R 1 423,75' │ 'R 247,75'    │
+│ 113     │ 178669 │ 1443  │ 'Empty Depot To MacDonalds -> Macdonalds'                            │ '2026-04-01' │ 'subbie' │ '6m'      │ 'R 70,00'    │ 'R 382,20'   │ 'R 312,20'    │
+│ 114     │ 178670 │ 1443  │ 'Empty Depot To MacDonalds -> Macdonalds'                            │ '2026-04-01' │ 'subbie' │ '6m'      │ 'R 70,00'    │ 'R 382,20'   │ 'R 312,20'    │
+│ 115     │ 177972 │ 1462  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 116     │ 177973 │ 1462  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 117     │ 154122 │ 1467  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 118     │ 154123 │ 1467  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 119     │ 154124 │ 1467  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 120     │ 154125 │ 1467  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 121     │ 147617 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 122     │ 175959 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 123     │ 175960 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 124     │ 175961 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 125     │ 175962 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 126     │ 175963 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 127     │ 175964 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 128     │ 175965 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 129     │ 175966 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 130     │ 175967 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 131     │ 175968 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 132     │ 175969 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 133     │ 175970 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 134     │ 175971 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 135     │ 175972 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 136     │ 175973 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 137     │ 175974 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 138     │ 175975 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 139     │ 175976 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 140     │ 175977 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 141     │ 175978 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 142     │ 175979 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 143     │ 175980 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-20' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 144     │ 175981 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 145     │ 175982 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 146     │ 175983 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 147     │ 175984 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 148     │ 175985 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 149     │ 175986 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 150     │ 175987 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 151     │ 175988 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-07' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 152     │ 175989 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-05' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 153     │ 175990 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-05' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 154     │ 175991 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 155     │ 175992 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 156     │ 175993 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 157     │ 175994 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 158     │ 175995 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-20' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 159     │ 175996 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 160     │ 175997 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 161     │ 175998 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-17' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 162     │ 175999 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 163     │ 176000 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 164     │ 176001 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 165     │ 176002 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 166     │ 176003 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 167     │ 176004 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 168     │ 176005 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 169     │ 176006 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-07' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 170     │ 176007 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 171     │ 176008 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 172     │ 176009 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 173     │ 176010 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 174     │ 176011 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 175     │ 176012 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 176     │ 176013 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 177     │ 176014 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 178     │ 176015 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 179     │ 176016 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 180     │ 176017 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 181     │ 176018 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 182     │ 176019 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 183     │ 176020 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 184     │ 176021 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-07' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 185     │ 176022 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 186     │ 176023 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 187     │ 176024 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 188     │ 176025 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 189     │ 176026 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 140,00'   │ 'R 0,00'     │ 'R -140,00'   │
+│ 190     │ 176027 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 191     │ 176028 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 192     │ 176029 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 193     │ 176030 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 194     │ 176031 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'driver' │ '6m'      │ 'R 350,00'   │ 'R 0,00'     │ 'R -350,00'   │
+│ 195     │ 176032 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-20' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 196     │ 176033 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 197     │ 176034 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 198     │ 176035 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 199     │ 176036 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 200     │ 176037 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 201     │ 176038 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 202     │ 176039 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 203     │ 176040 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 204     │ 176041 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 205     │ 176042 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 206     │ 176043 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 207     │ 176044 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 208     │ 176045 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 209     │ 176046 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 210     │ 176047 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 211     │ 176048 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 212     │ 176049 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 213     │ 176050 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 214     │ 176051 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 215     │ 176052 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 216     │ 176053 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 217     │ 176054 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 218     │ 176055 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 219     │ 176056 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 220     │ 176057 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 221     │ 176058 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 222     │ 176059 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 223     │ 176060 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 224     │ 176061 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 225     │ 176062 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 226     │ 176063 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 227     │ 176064 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 228     │ 176065 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-17' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 229     │ 176066 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 230     │ 176067 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 231     │ 176068 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 232     │ 176069 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 233     │ 176070 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 234     │ 176071 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 235     │ 176072 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 236     │ 176073 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 237     │ 176074 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 238     │ 176075 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 239     │ 176076 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 240     │ 176077 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 241     │ 176078 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 242     │ 176079 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 243     │ 176080 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 244     │ 176081 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 245     │ 176082 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 246     │ 176083 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 247     │ 176084 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 248     │ 176085 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 249     │ 176086 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 250     │ 176087 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 251     │ 176088 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 252     │ 176089 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 253     │ 176090 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 254     │ 176091 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 255     │ 176092 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 256     │ 176093 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 257     │ 176094 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 258     │ 176095 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 259     │ 176096 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 260     │ 176097 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 261     │ 176098 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 262     │ 176099 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 263     │ 176100 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 264     │ 176101 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 265     │ 176102 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 266     │ 176103 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 267     │ 176104 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-17' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 268     │ 176105 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 269     │ 176106 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 270     │ 176107 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 271     │ 176108 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 272     │ 176109 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 273     │ 176110 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 274     │ 176111 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 275     │ 176112 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 276     │ 176113 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-07' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 277     │ 176114 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 278     │ 176115 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 279     │ 176116 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 280     │ 176117 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 281     │ 176118 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 282     │ 176119 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 283     │ 176120 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-09' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 284     │ 176121 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 285     │ 176122 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 286     │ 176123 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-08' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 287     │ 176124 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 288     │ 176125 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 289     │ 176126 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-10' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 290     │ 176127 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 291     │ 176128 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 292     │ 176129 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-11' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 293     │ 176130 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 294     │ 176131 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 295     │ 176132 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-12' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 296     │ 176133 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 297     │ 176134 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 298     │ 176135 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 299     │ 176136 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-13' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 300     │ 176137 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 301     │ 176138 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-14' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 302     │ 176139 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 303     │ 176140 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 304     │ 176141 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 305     │ 176142 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-15' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 306     │ 176143 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-16' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 307     │ 176144 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 308     │ 176145 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-18' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 309     │ 176146 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-19' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 310     │ 176147 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 311     │ 176148 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-06' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 312     │ 176149 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 313     │ 176150 │ 1471  │ 'SACD To Terminal (Breakbulk) -> Terminal'                           │ '2026-04-04' │ 'subbie' │ '6m'      │ 'R 1 687,50' │ 'R 0,00'     │ 'R -1 687,50' │
+│ 314     │ 196031 │ 1475  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-17' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 315     │ 188168 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 316     │ 188169 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 317     │ 188174 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-24' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 318     │ 188175 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-24' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 319     │ 188176 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 320     │ 188177 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 321     │ 188182 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 322     │ 188183 │ 1476  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-23' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 323     │ 194021 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 324     │ 194022 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 325     │ 194032 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 326     │ 194033 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-12' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 327     │ 194034 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-17' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 328     │ 194035 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 329     │ 194036 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 330     │ 194037 │ 1489  │ 'SACD To Empty Depot -> Empty Depot'                                 │ '2026-04-17' │ 'subbie' │ '12m'     │ 'R 742,56'   │ 'R 839,94'   │ 'R 97,38'     │
+│ 331     │ 145933 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 332     │ 207886 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'subbie' │ '6m'      │ 'R 432,33'   │ 'R 1 546,93' │ 'R 1 114,60'  │
+│ 333     │ 207889 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'subbie' │ '6m'      │ 'R 432,33'   │ 'R 1 546,93' │ 'R 1 114,60'  │
+│ 334     │ 207890 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 335     │ 207891 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 336     │ 207892 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 337     │ 207893 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 338     │ 207894 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 339     │ 207895 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 340     │ 207896 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 341     │ 207897 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 342     │ 207898 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 343     │ 207899 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 344     │ 207900 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 345     │ 207901 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 346     │ 207902 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 347     │ 207903 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 348     │ 207904 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 349     │ 207905 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 350     │ 207906 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 351     │ 207907 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 352     │ 207908 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 353     │ 207909 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 354     │ 207910 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 355     │ 207911 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 356     │ 207912 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 357     │ 207913 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 358     │ 207914 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 359     │ 207915 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 360     │ 207916 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 361     │ 207917 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-29' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 362     │ 207918 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 363     │ 207919 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 364     │ 207920 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 365     │ 207921 │ 1503  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-28' │ 'driver' │ '6m'      │ 'R 70,00'    │ 'R 147,00'   │ 'R 77,00'     │
+│ 366     │ 146120 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-09' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 367     │ 179354 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-10' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 368     │ 179356 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-08' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 369     │ 179357 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-08' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 370     │ 179358 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-21' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 371     │ 179359 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-17' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 372     │ 179360 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-20' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 373     │ 179361 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-18' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 374     │ 179362 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-17' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 375     │ 179363 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 376     │ 179364 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-18' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 377     │ 179365 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-18' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 378     │ 179366 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-20' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 379     │ 179367 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-16' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 380     │ 179368 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-25' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 381     │ 179369 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-23' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 382     │ 179370 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-24' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 383     │ 179371 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-25' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 384     │ 179372 │ 1504  │ 'Terminal To Summerday PMB To Empty Depot (Lovedale) -> Empty Depot' │ '2026-04-25' │ 'subbie' │ '12m'     │ 'R 410,00'   │ 'R 6 700,00' │ 'R 6 290,00'  │
+│ 385     │ 155252 │ 1506  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-24' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+│ 386     │ 155253 │ 1506  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'                      │ '2026-04-24' │ 'subbie' │ '6m'      │ 'R 147,00'   │ 'R 1 546,93' │ 'R 1 399,93'  │
+└─────────┴────────┴───────┴──────────────────────────────────────────────────────────────────────┴──────────────┴──────────┴───────────┴──────────────┴──────────────┴───────────────┘
+Total Rand delta if applied: R -60 337,08
+
+--- ROUTE_MISSING (no rate period covers route/date — NOT touched) ---
+┌─────────┬────────┬───────┬────────────────────────────────────────────────────────────┬──────────────┬──────────┬──────────────┐
+│ (index) │ legkey │ m1key │ route                                                      │ date         │ role     │ stored_rate  │
+├─────────┼────────┼───────┼────────────────────────────────────────────────────────────┼──────────────┼──────────┼──────────────┤
+│ 0       │ 119727 │ 1279  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-01' │ 'driver' │ 'R 95,00'    │
+│ 1       │ 122810 │ 1279  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-01' │ 'driver' │ 'R 95,00'    │
+│ 2       │ 122811 │ 1279  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-01' │ 'driver' │ 'R 95,00'    │
+│ 3       │ 119833 │ 1285  │ 'Terminal To Yard -> Yard'                                 │ '2026-03-26' │ 'driver' │ 'R 140,00'   │
+│ 4       │ 119843 │ 1294  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'subbie' │ 'R 968,81'   │
+│ 5       │ 119847 │ 1294  │ 'Yard To IFG PMB To Empty ( Crosshaul x 1) -> Empty Depot' │ '2026-04-09' │ 'driver' │ 'R 270,00'   │
+│ 6       │ 124466 │ 1294  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'subbie' │ 'R 968,81'   │
+│ 7       │ 156305 │ 1294  │ 'Yard To IFG PMB To Empty ( Crosshaul x 1) -> Empty Depot' │ '2026-04-10' │ 'subbie' │ 'R 5 592,37' │
+│ 8       │ 119849 │ 1295  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-10' │ 'driver' │ 'R 270,00'   │
+│ 9       │ 119834 │ 1303  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-10' │ 'driver' │ 'R 95,00'    │
+│ 10      │ 132296 │ 1319  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-08' │ 'subbie' │ 'R 1 234,00' │
+│ 11      │ 132300 │ 1319  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-09' │ 'subbie' │ 'R 1 234,00' │
+│ 12      │ 132301 │ 1319  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-09' │ 'subbie' │ 'R 1 234,00' │
+│ 13      │ 132302 │ 1319  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-08' │ 'subbie' │ 'R 1 234,00' │
+│ 14      │ 132303 │ 1319  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-08' │ 'driver' │ 'R 132,00'   │
+│ 15      │ 132310 │ 1319  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-09' │ 'driver' │ 'R 132,00'   │
+│ 16      │ 132311 │ 1319  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-08' │ 'subbie' │ 'R 742,56'   │
+│ 17      │ 132312 │ 1319  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-09' │ 'driver' │ 'R 132,00'   │
+│ 18      │ 119702 │ 1329  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'driver' │ 'R 95,00'    │
+│ 19      │ 119703 │ 1329  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'subbie' │ 'R 3 053,28' │
+│ 20      │ 119718 │ 1329  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'driver' │ 'R 95,00'    │
+│ 21      │ 119719 │ 1329  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'driver' │ 'R 95,00'    │
+│ 22      │ 119720 │ 1329  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-07' │ 'driver' │ 'R 95,00'    │
+│ 23      │ 119724 │ 1329  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'driver' │ 'R 189,00'   │
+│ 24      │ 119725 │ 1329  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'subbie' │ 'R 3 053,28' │
+│ 25      │ 119726 │ 1329  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'driver' │ 'R 189,00'   │
+│ 26      │ 176308 │ 1330  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-13' │ 'subbie' │ 'R 1 354,94' │
+│ 27      │ 176312 │ 1330  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-13' │ 'subbie' │ 'R 1 354,94' │
+│ 28      │ 176313 │ 1330  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-13' │ 'subbie' │ 'R 1 354,94' │
+│ 29      │ 176314 │ 1330  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-13' │ 'subbie' │ 'R 1 354,94' │
+│ 30      │ 119731 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 31      │ 194351 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 32      │ 194352 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-09' │ 'driver' │ 'R 95,00'    │
+│ 33      │ 194353 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-09' │ 'driver' │ 'R 95,00'    │
+│ 34      │ 194354 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 35      │ 194355 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 36      │ 194356 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'subbie' │ 'R 968,81'   │
+│ 37      │ 194357 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'subbie' │ 'R 968,81'   │
+│ 38      │ 194358 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 39      │ 194359 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 40      │ 194360 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 41      │ 194361 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 42      │ 194362 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 43      │ 194363 │ 1332  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-06' │ 'driver' │ 'R 95,00'    │
+│ 44      │ 119842 │ 1334  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-09' │ 'driver' │ 'R 270,00'   │
+│ 45      │ 132313 │ 1335  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-13' │ 'driver' │ 'R 140,00'   │
+│ 46      │ 132314 │ 1335  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-10' │ 'driver' │ 'R 132,00'   │
+│ 47      │ 132316 │ 1335  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-10' │ 'driver' │ 'R 140,00'   │
+│ 48      │ 152229 │ 1335  │ 'AGL To Jaicube -> Jaicube'                                │ '2026-04-15' │ 'driver' │ 'R 70,00'    │
+│ 49      │ 175123 │ 1335  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-16' │ 'subbie' │ 'R 742,56'   │
+│ 50      │ 132329 │ 1336  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-13' │ 'driver' │ 'R 140,00'   │
+│ 51      │ 132330 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-15' │ 'driver' │ 'R 132,00'   │
+│ 52      │ 132364 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-14' │ 'driver' │ 'R 132,00'   │
+│ 53      │ 132365 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-14' │ 'subbie' │ 'R 742,56'   │
+│ 54      │ 132366 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-14' │ 'driver' │ 'R 132,00'   │
+│ 55      │ 132367 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-14' │ 'driver' │ 'R 132,00'   │
+│ 56      │ 132368 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-13' │ 'driver' │ 'R 132,00'   │
+│ 57      │ 132369 │ 1336  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-15' │ 'driver' │ 'R 132,00'   │
+│ 58      │ 143571 │ 1336  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-12' │ 'driver' │ 'R 140,00'   │
+│ 59      │ 176289 │ 1338  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-17' │ 'subbie' │ 'R 1 354,94' │
+│ 60      │ 176275 │ 1339  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-14' │ 'driver' │ 'R 140,00'   │
+│ 61      │ 176276 │ 1339  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-17' │ 'subbie' │ 'R 1 354,94' │
+│ 62      │ 176528 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 63      │ 176685 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 64      │ 176686 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 65      │ 176687 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 66      │ 176688 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 67      │ 176689 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'subbie' │ 'R 1 354,94' │
+│ 68      │ 176690 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 69      │ 176691 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 70      │ 176692 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 71      │ 176693 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 72      │ 176694 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 73      │ 176695 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 74      │ 176696 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 75      │ 176697 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'subbie' │ 'R 1 354,94' │
+│ 76      │ 176698 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 77      │ 176699 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 78      │ 176700 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 79      │ 176701 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 80      │ 176702 │ 1344  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 81      │ 119839 │ 1346  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-10' │ 'driver' │ 'R 95,00'    │
+│ 82      │ 133024 │ 1347  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-21' │ 'driver' │ 'R 270,00'   │
+│ 83      │ 135573 │ 1347  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-20' │ 'driver' │ 'R 270,00'   │
+│ 84      │ 135574 │ 1347  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-20' │ 'driver' │ 'R 270,00'   │
+│ 85      │ 135575 │ 1347  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-21' │ 'driver' │ 'R 270,00'   │
+│ 86      │ 119697 │ 1349  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-04' │ 'driver' │ 'R 95,00'    │
+│ 87      │ 119698 │ 1349  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-04' │ 'driver' │ 'R 95,00'    │
+│ 88      │ 119699 │ 1349  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'driver' │ 'R 189,00'   │
+│ 89      │ 119701 │ 1349  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-08' │ 'subbie' │ 'R 3 053,28' │
+│ 90      │ 133155 │ 1350  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-21' │ 'driver' │ 'R 189,00'   │
+│ 91      │ 133157 │ 1350  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-21' │ 'subbie' │ 'R 3 053,28' │
+│ 92      │ 133158 │ 1350  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-21' │ 'subbie' │ 'R 3 053,28' │
+│ 93      │ 132371 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-15' │ 'driver' │ 'R 140,00'   │
+│ 94      │ 132396 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-16' │ 'driver' │ 'R 140,00'   │
+│ 95      │ 132397 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-16' │ 'driver' │ 'R 140,00'   │
+│ 96      │ 132398 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-16' │ 'driver' │ 'R 140,00'   │
+│ 97      │ 132399 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-15' │ 'driver' │ 'R 140,00'   │
+│ 98      │ 132400 │ 1353  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-16' │ 'driver' │ 'R 140,00'   │
+│ 99      │ 132401 │ 1353  │ 'Yard To Jaicube -> Jaicube'                               │ '2026-04-17' │ 'driver' │ 'R 70,00'    │
+│ 100     │ 132402 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-16' │ 'driver' │ 'R 132,00'   │
+│ 101     │ 132428 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-17' │ 'driver' │ 'R 132,00'   │
+│ 102     │ 132429 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-18' │ 'driver' │ 'R 132,00'   │
+│ 103     │ 132430 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-17' │ 'driver' │ 'R 132,00'   │
+│ 104     │ 132431 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-16' │ 'driver' │ 'R 132,00'   │
+│ 105     │ 132432 │ 1353  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-18' │ 'driver' │ 'R 132,00'   │
+│ 106     │ 121136 │ 1366  │ 'Terminal To IFG PMB To Empty Depot -> Empty Depot'        │ '2026-03-30' │ 'driver' │ 'R 410,00'   │
+│ 107     │ 176796 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 108     │ 179196 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 109     │ 179197 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 110     │ 179198 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 111     │ 179199 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 112     │ 179200 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 113     │ 179201 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 114     │ 179202 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 115     │ 179203 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 116     │ 179204 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 117     │ 179205 │ 1368  │ 'Macdonalds to Empty Depot -> Terminal'                    │ '2026-04-21' │ 'driver' │ 'R 0,00'     │
+│ 118     │ 138961 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 119     │ 142835 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'driver' │ 'R 140,00'   │
+│ 120     │ 142836 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'driver' │ 'R 140,00'   │
+│ 121     │ 142837 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 122     │ 142838 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 123     │ 142839 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 124     │ 142840 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 125     │ 142841 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 126     │ 142842 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 127     │ 142843 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-28' │ 'driver' │ 'R 140,00'   │
+│ 128     │ 142844 │ 1370  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-26' │ 'subbie' │ 'R 1 234,00' │
+│ 129     │ 139062 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-24' │ 'driver' │ 'R 140,00'   │
+│ 130     │ 139063 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-25' │ 'driver' │ 'R 0,00'     │
+│ 131     │ 142721 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-24' │ 'driver' │ 'R 140,00'   │
+│ 132     │ 142722 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 133     │ 142723 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 134     │ 142724 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 135     │ 142725 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 136     │ 142726 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 137     │ 142727 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 138     │ 142728 │ 1372  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-25' │ 'subbie' │ 'R 1 234,00' │
+│ 139     │ 142730 │ 1372  │ 'Yard To Jaicube -> Jaicube'                               │ '2026-04-26' │ 'subbie' │ 'R 550,00'   │
+│ 140     │ 142731 │ 1372  │ 'Yard To Jaicube -> Jaicube'                               │ '2026-04-26' │ 'subbie' │ 'R 550,00'   │
+│ 141     │ 188268 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-26' │ 'driver' │ 'R 0,00'     │
+│ 142     │ 188269 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-25' │ 'driver' │ 'R 0,00'     │
+│ 143     │ 188270 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-25' │ 'subbie' │ 'R 0,00'     │
+│ 144     │ 188271 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-25' │ 'driver' │ 'R 0,00'     │
+│ 145     │ 188272 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-27' │ 'subbie' │ 'R 0,00'     │
+│ 146     │ 188273 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-27' │ 'driver' │ 'R 0,00'     │
+│ 147     │ 188274 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-26' │ 'driver' │ 'R 0,00'     │
+│ 148     │ 188275 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-26' │ 'subbie' │ 'R 0,00'     │
+│ 149     │ 188276 │ 1372  │ 'Jaicube To Empty Depot -> Empty Depot'                    │ '2026-04-27' │ 'subbie' │ 'R 0,00'     │
+│ 150     │ 119850 │ 1380  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-01' │ 'subbie' │ 'R 968,81'   │
+│ 151     │ 119853 │ 1380  │ 'Yard To Metcan PMB To Empty Depot -> Empty Depot'         │ '2026-04-07' │ 'driver' │ 'R 270,00'   │
+│ 152     │ 119857 │ 1380  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-01' │ 'subbie' │ 'R 968,81'   │
+│ 153     │ 156779 │ 1380  │ 'Yard To Metcan PMB To Empty Depot -> Empty Depot'         │ '2026-04-08' │ 'driver' │ 'R 270,00'   │
+│ 154     │ 123500 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 155     │ 156893 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 156     │ 156894 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 157     │ 156895 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 158     │ 156896 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 159     │ 156897 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 160     │ 156898 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 161     │ 156899 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 162     │ 156900 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 163     │ 156901 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 164     │ 156902 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 165     │ 156903 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 166     │ 156904 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 167     │ 156905 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 168     │ 156906 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 169     │ 156907 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 170     │ 156908 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 171     │ 156909 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 172     │ 156910 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 173     │ 156911 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 174     │ 156912 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 175     │ 156913 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 176     │ 156914 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 177     │ 156915 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 178     │ 156916 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 179     │ 156917 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 180     │ 156918 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 181     │ 156919 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 182     │ 156920 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 183     │ 156921 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 184     │ 156922 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 185     │ 156923 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 186     │ 156924 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 187     │ 156925 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 188     │ 156926 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 189     │ 156927 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 190     │ 156928 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 191     │ 156929 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 192     │ 156930 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 193     │ 156931 │ 1386  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-19' │ 'subbie' │ 'R 513,20'   │
+│ 194     │ 122854 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 195     │ 123721 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 196     │ 123722 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 197     │ 123723 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 198     │ 123724 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 199     │ 123725 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 200     │ 123726 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 201     │ 123727 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 202     │ 123728 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 203     │ 123729 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 204     │ 123730 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 205     │ 123731 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 206     │ 123732 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 207     │ 123733 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 208     │ 123734 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 209     │ 123735 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 210     │ 123736 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 211     │ 123737 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 212     │ 123738 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 213     │ 123739 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 214     │ 123740 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 215     │ 123741 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 216     │ 123742 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 217     │ 123743 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 218     │ 123744 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 219     │ 123745 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 220     │ 123746 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 221     │ 123747 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 222     │ 123748 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 223     │ 123749 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 224     │ 123750 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 225     │ 123751 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 226     │ 123752 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 227     │ 123753 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 228     │ 123754 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 229     │ 123755 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 230     │ 123756 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 231     │ 123757 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 232     │ 123758 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 233     │ 123759 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 234     │ 123760 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 235     │ 123761 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 236     │ 123762 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 237     │ 123763 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 238     │ 123764 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 239     │ 123765 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 240     │ 123766 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 241     │ 123767 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 242     │ 123768 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 243     │ 123769 │ 1390  │ 'Empty Depot To AGL Paisly (Outer Depot) -> AGL Paisley'   │ '2026-03-27' │ 'subbie' │ 'R 513,20'   │
+│ 244     │ 121138 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 245     │ 180864 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 246     │ 180865 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 247     │ 180866 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 248     │ 180867 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 249     │ 180868 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 250     │ 180869 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 251     │ 180870 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 252     │ 180871 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 253     │ 180872 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 254     │ 180873 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 255     │ 180874 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 256     │ 180875 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 257     │ 180876 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 258     │ 180877 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 259     │ 180878 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-27' │ 'driver' │ 'R 70,00'    │
+│ 260     │ 180879 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-27' │ 'driver' │ 'R 70,00'    │
+│ 261     │ 180880 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-27' │ 'driver' │ 'R 70,00'    │
+│ 262     │ 180881 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-27' │ 'driver' │ 'R 70,00'    │
+│ 263     │ 180882 │ 1395  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-27' │ 'subbie' │ 'R 382,20'   │
+│ 264     │ 121728 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 265     │ 180753 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 266     │ 180754 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 267     │ 180755 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 268     │ 180756 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 269     │ 180757 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 270     │ 180758 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 271     │ 180759 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 272     │ 180760 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 273     │ 180761 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 274     │ 180762 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 275     │ 180763 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 276     │ 180764 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 277     │ 180765 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 278     │ 180766 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 279     │ 180767 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 280     │ 180768 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 281     │ 180769 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 282     │ 180770 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 283     │ 180771 │ 1396  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 284     │ 133195 │ 1402  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-22' │ 'driver' │ 'R 270,00'   │
+│ 285     │ 123570 │ 1403  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-20' │ 'driver' │ 'R 95,00'    │
+│ 286     │ 123572 │ 1403  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-20' │ 'driver' │ 'R 95,00'    │
+│ 287     │ 135604 │ 1403  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-22' │ 'driver' │ 'R 189,00'   │
+│ 288     │ 135607 │ 1403  │ 'Yard To Jameson Briadene To Empty Depot -> Empty Depot'   │ '2026-04-22' │ 'driver' │ 'R 189,00'   │
+│ 289     │ 133164 │ 1407  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-25' │ 'driver' │ 'R 95,00'    │
+│ 290     │ 138997 │ 1407  │ 'Yard To Metcan PMB To Empty Depot -> Empty Depot'         │ '2026-04-28' │ 'driver' │ 'R 270,00'   │
+│ 291     │ 138998 │ 1407  │ 'Yard To Metcan PMB To Empty Depot -> Empty Depot'         │ '2026-04-28' │ 'driver' │ 'R 270,00'   │
+│ 292     │ 138999 │ 1407  │ 'Terminal To Yard (Carrying 2 Container) -> Yard'          │ '2026-04-25' │ 'driver' │ 'R 95,00'    │
+│ 293     │ 139000 │ 1408  │ 'Yard To Metcan PMB To Empty Depot -> Empty Depot'         │ '2026-04-28' │ 'driver' │ 'R 270,00'   │
+│ 294     │ 123777 │ 1409  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-13' │ 'driver' │ 'R 270,00'   │
+│ 295     │ 133023 │ 1413  │ 'Yard To IFG PMB To Empty Depot -> Empty Depot'            │ '2026-04-16' │ 'driver' │ 'R 270,00'   │
+│ 296     │ 135602 │ 1419  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-26' │ 'driver' │ 'R 95,00'    │
+│ 297     │ 135603 │ 1419  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-25' │ 'driver' │ 'R 95,00'    │
+│ 298     │ 135591 │ 1420  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-26' │ 'driver' │ 'R 95,00'    │
+│ 299     │ 179287 │ 1420  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-26' │ 'driver' │ 'R 95,00'    │
+│ 300     │ 179288 │ 1420  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-27' │ 'driver' │ 'R 95,00'    │
+│ 301     │ 179289 │ 1420  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-27' │ 'driver' │ 'R 95,00'    │
+│ 302     │ 176260 │ 1424  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-22' │ 'driver' │ 'R 140,00'   │
+│ 303     │ 179153 │ 1424  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 304     │ 176284 │ 1425  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 305     │ 176285 │ 1425  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'driver' │ 'R 140,00'   │
+│ 306     │ 177842 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'subbie' │ 'R 1 176,00' │
+│ 307     │ 177939 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 308     │ 177940 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'subbie' │ 'R 1 176,00' │
+│ 309     │ 177941 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 310     │ 177942 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 311     │ 177943 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 312     │ 177944 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-08' │ 'subbie' │ 'R 1 176,00' │
+│ 313     │ 177945 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 314     │ 177946 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-26' │ 'subbie' │ 'R 1 176,00' │
+│ 315     │ 177947 │ 1426  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-27' │ 'subbie' │ 'R 1 176,00' │
+│ 316     │ 129547 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 317     │ 178886 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 70,00'    │
+│ 318     │ 178887 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 70,00'    │
+│ 319     │ 178888 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 320     │ 178889 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 321     │ 178892 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 70,00'    │
+│ 322     │ 178893 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 70,00'    │
+│ 323     │ 178894 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 324     │ 178895 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 325     │ 178896 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'driver' │ 'R 70,00'    │
+│ 326     │ 178897 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 327     │ 178898 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 328     │ 178899 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 329     │ 178900 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-29' │ 'subbie' │ 'R 382,20'   │
+│ 330     │ 178901 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 331     │ 178902 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 332     │ 178903 │ 1439  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley'      │ '2026-03-30' │ 'subbie' │ 'R 382,20'   │
+│ 333     │ 178712 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 334     │ 178777 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-08' │ 'driver' │ 'R 140,00'   │
+│ 335     │ 178778 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-08' │ 'subbie' │ 'R 140,00'   │
+│ 336     │ 178779 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-08' │ 'driver' │ 'R 140,00'   │
+│ 337     │ 178780 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 338     │ 178781 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 339     │ 178782 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 340     │ 178783 │ 1443  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 341     │ 177950 │ 1444  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-07' │ 'subbie' │ 'R 1 354,94' │
+│ 342     │ 177982 │ 1445  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-11' │ 'subbie' │ 'R 1 354,94' │
+│ 343     │ 178039 │ 1445  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-11' │ 'subbie' │ 'R 1 354,94' │
+│ 344     │ 178040 │ 1445  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-11' │ 'subbie' │ 'R 1 354,94' │
+│ 345     │ 178041 │ 1445  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-11' │ 'subbie' │ 'R 1 354,94' │
+│ 346     │ 178042 │ 1445  │ 'Macdonalds To Terminal -> Terminal'                       │ '2026-04-11' │ 'subbie' │ 'R 1 354,94' │
+│ 347     │ 143561 │ 1497  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-28' │ 'driver' │ 'R 140,00'   │
+│ 348     │ 175298 │ 1497  │ 'Yard To Jaicube -> Jaicube'                               │ '2026-04-28' │ 'driver' │ 'R 70,00'    │
+│ 349     │ 181038 │ 1497  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-29' │ 'driver' │ 'R 140,00'   │
+│ 350     │ 181039 │ 1497  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-28' │ 'driver' │ 'R 140,00'   │
+│ 351     │ 181040 │ 1497  │ 'Terminal To Jaicube -> Jaicube'                           │ '2026-04-30' │ 'driver' │ 'R 140,00'   │
+│ 352     │ 144383 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 353     │ 205910 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 354     │ 205911 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 355     │ 205912 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 356     │ 205913 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 357     │ 205914 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 358     │ 205915 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 359     │ 205916 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 360     │ 205917 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 361     │ 205918 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 362     │ 205919 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 363     │ 205920 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 364     │ 205921 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 365     │ 205922 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 366     │ 205923 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 367     │ 205924 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 368     │ 205925 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 369     │ 205926 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 370     │ 205927 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 371     │ 205928 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 372     │ 205929 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 373     │ 205930 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 374     │ 205931 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-25' │ 'driver' │ 'R 95,00'    │
+│ 375     │ 205932 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-25' │ 'driver' │ 'R 95,00'    │
+│ 376     │ 205933 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 377     │ 205934 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 378     │ 205935 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 379     │ 205936 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 380     │ 205937 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 381     │ 205938 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 382     │ 205939 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 383     │ 205940 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 384     │ 205941 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 385     │ 205942 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 386     │ 205943 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 387     │ 205944 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'driver' │ 'R 95,00'    │
+│ 388     │ 205945 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 389     │ 205946 │ 1498  │ 'Yard To Teminal (Carrying 2 Cont) -> Terminal'            │ '2026-04-24' │ 'subbie' │ 'R 840,84'   │
+│ 390     │ 208033 │ 1498  │ 'AGL Paisley to Terminal (Adelene) -> Terminal'            │ '2026-06-24' │ 'subbie' │ 'R 0,00'     │
+│ 391     │ 176316 │ 1522  │ 'Terminal To SACD (1 Container) -> SACD'                   │ '2026-04-07' │ 'driver' │ 'R 140,00'   │
+│ 392     │ 176319 │ 1523  │ 'Terminal To SACD (1 Container) -> SACD'                   │ '2026-04-09' │ 'subbie' │ 'R 1 234,00' │
+│ 393     │ 179324 │ 1523  │ 'Terminal To SACD (1 Container) -> SACD'                   │ '2026-04-09' │ 'driver' │ 'R 140,00'   │
+└─────────┴────────┴───────┴────────────────────────────────────────────────────────────┴──────────────┴──────────┴──────────────┘
+
+--- NO_FIELD_RATE (period exists but needed field is blank — NOT touched) ---
+┌─────────┬────────┬───────┬──────────────────────────────────────────────────────────────────┬──────────────┬──────────┬───────────┬────────────────────────┬─────────────┐
+│ (index) │ legkey │ m1key │ route                                                            │ date         │ role     │ container │ field                  │ stored_rate │
+├─────────┼────────┼───────┼──────────────────────────────────────────────────────────────────┼──────────────┼──────────┼───────────┼────────────────────────┼─────────────┤
+│ 0       │ 153719 │ 1318  │ 'Terminal To AGL Springfield Park To Empty Depot -> Empty Depot' │ '2026-04-24' │ 'subbie' │ '6m'      │ 'subie_six_meter_rate' │ 'R 0,00'    │
+│ 1       │ 153721 │ 1318  │ 'Terminal To AGL Springfield Park To Empty Depot -> Empty Depot' │ '2026-04-23' │ 'subbie' │ '6m'      │ 'subie_six_meter_rate' │ 'R 0,00'    │
+│ 2       │ 194053 │ 1489  │ 'Terminal To SACD -> SACD'                                       │ '2026-04-11' │ 'subbie' │ '6m'      │ 'subie_six_meter_rate' │ 'R 0,00'    │
+└─────────┴────────┴───────┴──────────────────────────────────────────────────────────────────┴──────────────┴──────────┴───────────┴────────────────────────┴─────────────┘
+
+--- SKIPPED (no date / no driver — NOT touched) ---
+┌─────────┬────────┬───────┬───────────────────────────────────────────────────────┬──────────┬───────────────┬─────────────┐
+│ (index) │ legkey │ m1key │ route                                                 │ date     │ reason        │ stored_rate │
+├─────────┼────────┼───────┼───────────────────────────────────────────────────────┼──────────┼───────────────┼─────────────┤
+│ 0       │ 114090 │ 1209  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley' │ '(none)' │ 'no leg date' │ 'R 0,00'    │
+│ 1       │ 133312 │ 1410  │ 'Empty Depot To AGL Paisley (Adelene) -> AGL Paisley' │ '(none)' │ 'no leg date' │ 'R 0,00'    │
+│ 2       │ 145184 │ 1418  │ 'Yard To Jaicube -> Jaicube'                          │ '(none)' │ 'no leg date' │ 'R 0,00'    │
+└─────────┴────────┴───────┴───────────────────────────────────────────────────────┴──────────┴───────────────┴─────────────┘
+
+Dry-run only. No rows changed. Re-run with --apply to write the 387 fix(es).
+

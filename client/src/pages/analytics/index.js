@@ -1,0 +1,1 @@
+export { default as DirectorAnalytics } from "./views/DirectorAnalytics.jsx";

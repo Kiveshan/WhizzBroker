@@ -1,0 +1,111 @@
+/* View Client Statements Wrapper */
+.view-client-statements-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.view-client-statements-wrapper *,
+.view-client-statements-wrapper *::before,
+.view-client-statements-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.view-client-statements-wrapper th {
+  font-weight: bold;
+}
+
+/* Buttons */
+.view-client-statements-wrapper .button-section,
+.view-client-statements-wrapper .logout-section {
+  margin: 20px;
+}
+
+.view-client-statements-wrapper .back-btn,
+.view-client-statements-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.view-client-statements-wrapper .logout-btn {
+  background-color: #f9a6a6;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Container */
+.view-client-statements-wrapper .client-payments-header {
+  margin-bottom: 20px;
+}
+
+/* Table */
+.view-client-statements-wrapper .t1 {
+  margin-left: 208px;
+}
+
+.view-client-statements-wrapper .clientstatementtable {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-top: -35px;
+  align-items: center;
+  margin : auto
+}
+
+.view-client-statements-wrapper thead {
+  background-color: #9ecbf3;
+}
+
+.view-client-statements-wrapper th,
+.view-client-statements-wrapper td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.view-client-statements-wrapper .view-butn {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.view-client-statements-wrapper .view-butn:hover {
+  background-color: #2980b9;
+}
+
+/* Dropdown container styling */
+.view-client-statements-wrapper .dropdown-container1 {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 20px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.view-client-statements-wrapper p {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+  margin: 0;
+}
+
+.view-client-statements-wrapper .error-message {
+  color: #d32f2f;
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}

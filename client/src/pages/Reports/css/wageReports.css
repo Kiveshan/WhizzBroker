@@ -1,0 +1,142 @@
+.wage-reports-wrapper {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; /* Modern font stack */
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background: linear-gradient(135deg, #f7f9fc 0%, #e9ecef 100%); /* Subtle gradient background */
+  min-height: 100vh;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); /* Soft shadow for depth */
+}
+
+.wage-reports-wrapper .dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px;
+}
+
+.wage-reports-wrapper .header-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+
+
+.wage-reports-wrapper .dropdown-container74 {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.wage-reports-wrapper .dropdown {
+  padding: 12px 16px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db; /* Light gray border */
+  background-color: #ffffff;
+  width: 100%;
+  max-width: 240px;
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  appearance: none; /* Remove default browser styling */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%236b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>'); /* Custom arrow */
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.wage-reports-wrapper .dropdown:focus {
+  outline: none;
+  border-color: #3b82f6; /* Blue focus border */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); /* Focus ring */
+}
+
+.wage-reports-wrapper .dropdown:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.wage-reports-wrapper .dashboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.wage-reports-wrapper .button-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 200px;
+  max-width: 280px;
+}
+
+.wage-reports-wrapper .filter-button {
+  padding: 14px 20px;
+  background: linear-gradient(90deg, #5192fb 0%, #5f90f9 100%); /* Blue gradient */
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.wage-reports-wrapper .filter-button:hover {
+  background: linear-gradient(90deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15);
+}
+
+.wage-reports-wrapper .filter-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.wage-reports-wrapper .filter-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.wage-reports-wrapper .loading-text {
+  text-align: center;
+  font-size: 16px;
+  color: #4b5563;
+  margin-top: 24px;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .wage-reports-wrapper {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .wage-reports-wrapper .dashboard-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .wage-reports-wrapper .button-column {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .wage-reports-wrapper .dropdown {
+    max-width: 100%;
+  }
+
+  .wage-reports-wrapper .filter-button {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}

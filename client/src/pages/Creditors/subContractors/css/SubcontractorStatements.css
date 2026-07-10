@@ -1,0 +1,151 @@
+/* Subcontractor Statements Wrapper */
+.subcontractor-statements-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.subcontractor-statements-wrapper *,
+.subcontractor-statements-wrapper *::before,
+.subcontractor-statements-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.subcontractor-statements-wrapper .back-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  margin-bottom: 20px;
+}
+
+.subcontractor-statements-wrapper .back-button:hover {
+  background-color: #45a049;
+}
+
+/* Page Title */
+.subcontractor-statements-wrapper .page-title {
+  text-align: center;
+  margin: 20px 0;
+}
+
+.subcontractor-statements-wrapper .page-title h2 {
+  color: #333;
+  font-family: inherit;
+  margin: 0;
+}
+
+/* Action Bar */
+.subcontractor-statements-wrapper .action-bar {
+  margin-bottom: 20px;
+}
+
+.subcontractor-statements-wrapper .filter-section {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+}
+
+.subcontractor-statements-wrapper .dropdown-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.subcontractor-statements-wrapper .dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-family: inherit;
+  background-color: white;
+}
+
+/* Table */
+.subcontractor-statements-wrapper .statements-table {
+  width: 1200px;
+  margin: 20px auto;
+  border-collapse: collapse;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+  font-family: inherit;
+}
+
+.subcontractor-statements-wrapper .statements-table thead {
+  background-color: #e6f2f8;
+}
+
+.subcontractor-statements-wrapper .statements-table th,
+.subcontractor-statements-wrapper .statements-table td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.subcontractor-statements-wrapper .statements-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.subcontractor-statements-wrapper .statements-table tbody tr:hover {
+  background-color: #f0f8ff;
+}
+
+/* Status Badges */
+.subcontractor-statements-wrapper .status-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.subcontractor-statements-wrapper .status-badge.paid {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.subcontractor-statements-wrapper .status-badge.pending {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.subcontractor-statements-wrapper .status-badge.overdue {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Buttons */
+.subcontractor-statements-wrapper .view-btn {
+  padding: 8px 16px;
+  background-color: #5cb4ef;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.subcontractor-statements-wrapper .view-btn:hover {
+  background-color: #4a9fd1;
+}
+
+/* Loading and Error States */
+.subcontractor-statements-wrapper div {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.subcontractor-statements-wrapper .error-message {
+  color: #d32f2f;
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}

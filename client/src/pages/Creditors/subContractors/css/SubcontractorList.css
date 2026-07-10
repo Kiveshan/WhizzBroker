@@ -1,0 +1,106 @@
+/* Subcontractor List Wrapper */
+.subcontractor-list-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: Arial, sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.subcontractor-list-wrapper *,
+.subcontractor-list-wrapper *::before,
+.subcontractor-list-wrapper *::after {
+  box-sizing: inherit;
+}
+
+/* Header */
+.subcontractor-list-wrapper .subcontractor-header {
+  margin-bottom: 20px;
+}
+
+.subcontractor-list-wrapper .back-button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.subcontractor-list-wrapper .back-button:hover {
+  background-color: #45a049;
+}
+
+/* Table Container */
+.subcontractor-list-wrapper .subcontractor-table-container {
+  width: 1200px;
+  margin: 20px auto;
+  overflow-x: auto;
+}
+
+/* Table */
+.subcontractor-list-wrapper .subcontractor-table {
+  width: 100%;
+  border-collapse: collapse;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+  font-family: inherit;
+}
+
+.subcontractor-list-wrapper .subcontractor-table thead {
+  background-color: #9ecbf3;
+}
+
+.subcontractor-list-wrapper .subcontractor-table th,
+.subcontractor-list-wrapper .subcontractor-table td {
+  text-align: center;
+  padding: 12px;
+  border-bottom: 1px solid #ddd;
+  font-family: inherit;
+}
+
+.subcontractor-list-wrapper .subcontractor-table th {
+  font-weight: bold;
+  color: #333;
+}
+
+.subcontractor-list-wrapper .subcontractor-table tbody tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.subcontractor-list-wrapper .subcontractor-table tbody tr:hover {
+  background-color: #f0f8ff;
+}
+
+/* Buttons */
+.subcontractor-list-wrapper .view-btn {
+  background-color: #339af0;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.subcontractor-list-wrapper .view-btn:hover {
+  background-color: #2980b9;
+}
+
+/* Loading and Error States */
+.subcontractor-list-wrapper p {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+  margin: 0;
+}
+
+.subcontractor-list-wrapper .error-message {
+  color: #d32f2f;
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}

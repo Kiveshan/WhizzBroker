@@ -1,0 +1,634 @@
+.addon-form-wrapper {
+  min-height: 100vh;
+  background-color: #f5f6f5;
+  padding: 15px;
+  font-family: "Helvetica", "Arial", sans-serif;
+}
+
+.addon-form-wrapper .addon-form-container {
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: white;
+  border-radius: 6px;
+  box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Invoice Header Styling */
+.addon-form-wrapper .invoice-header {
+  background: linear-gradient(135deg, #1a3c5e 0%, #2e5a88 100%);
+  color: white;
+  padding: 15px;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 3px solid #3498db;
+}
+
+.addon-form-wrapper .company-details {
+  flex: 1;
+}
+
+.addon-form-wrapper .company-details h2 {
+  font-size: 22px;
+  font-weight: bold;
+  margin: 0 0 6px 0;
+  color: #ecf0f1;
+}
+
+.addon-form-wrapper .company-details p {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 3px 0;
+  opacity: 0.9;
+}
+
+.addon-form-wrapper .invoice-details {
+  text-align: right;
+  flex: 1;
+}
+
+.addon-form-wrapper .invoice-number,
+.addon-form-wrapper .invoice-date {
+  font-size: 12px;
+  margin: 3px 0;
+  opacity: 0.9;
+}
+
+/* Client Section Styling */
+.addon-form-wrapper .client-section {
+  padding: 15px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: #fafafa;
+}
+
+.addon-form-wrapper .bill-to {
+  flex: 1;
+}
+
+.addon-form-wrapper .bill-to h3 {
+  color: #1a3c5e;
+  font-size: 14px;
+  margin: 0 0 6px 0;
+  font-weight: 600;
+}
+
+.addon-form-wrapper .bill-to p {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 3px 0;
+  color: #2c3e50;
+}
+
+.addon-form-wrapper .client-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.addon-form-wrapper .invoice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addon-form-wrapper .back-button {
+  padding: 8px 16px;
+  background-color: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.addon-form-wrapper .back-button:hover {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+}
+
+.addon-form-wrapper .print-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #3498db 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+}
+
+.addon-form-wrapper .print-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.2);
+}
+
+.addon-form-wrapper .print-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Invoice Form Section Styling */
+.addon-form-wrapper .invoice-form-section {
+  padding: 15px;
+  background-color: white;
+}
+
+.addon-form-wrapper .invoice-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.addon-form-wrapper .invoice-items-header h3 {
+  color: #1a3c5e;
+  font-size: 16px;
+  margin: 0;
+  font-weight: 600;
+  border-bottom: 2px solid #3498db;
+  padding-bottom: 6px;
+}
+
+.addon-form-wrapper .add-item-button {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.addon-form-wrapper .add-item-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #003087 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 123, 255, 0.2);
+}
+
+.addon-form-wrapper .item-row {
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+
+.addon-form-wrapper .remove-item-button {
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  margin-top: 6px;
+  display: block;
+  width: fit-content;
+}
+
+.addon-form-wrapper .remove-item-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b02a37 0%, #7a1c27 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.2);
+}
+
+.addon-form-wrapper .remove-item-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.addon-form-wrapper .invoice-items-table {
+  background-color: #f9fafb;
+  border-radius: 5px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.addon-form-wrapper .form-row {
+  display: grid;
+  grid-template-columns: 1fr 3fr;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.addon-form-wrapper .form-row.form-row-calc {
+  grid-template-columns: 1fr 1fr 1fr;
+  margin-bottom: 0;
+  padding-top: 8px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.addon-form-wrapper .calc-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #3498db;
+  background: #ebf5fb;
+  border: 1px solid #aed6f1;
+  border-radius: 3px;
+  padding: 0 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.addon-form-wrapper .form-group {
+  margin-bottom: 6px;
+}
+
+.addon-form-wrapper .form-group.date-group {
+  max-width: 160px;
+}
+
+.addon-form-wrapper .form-group label {
+  display: block;
+  margin-bottom: 3px;
+  font-weight: 600;
+  color: #1a3c5e;
+  font-size: 12px;
+}
+
+.addon-form-wrapper .form-input,
+.addon-form-wrapper .form-textarea {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  background-color: white;
+  font-family: inherit;
+}
+
+.addon-form-wrapper .form-input:focus,
+.addon-form-wrapper .form-textarea:focus {
+  outline: none;
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.addon-form-wrapper .form-input:read-only,
+.addon-form-wrapper .form-textarea:read-only {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.addon-form-wrapper .form-textarea {
+  resize: vertical;
+  min-height: 32px;
+  font-family: inherit;
+}
+
+/* VAT Toggle Styling */
+.addon-form-wrapper .vat-toggle {
+  margin: 10px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.addon-form-wrapper .vat-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a3c5e;
+  cursor: pointer;
+}
+
+.addon-form-wrapper .vat-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.addon-form-wrapper .vat-toggle .vat-toggle-slider {
+  width: 36px;
+  height: 20px;
+  background-color: #d1d5db;
+  border-radius: 10px;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.addon-form-wrapper .vat-toggle .vat-toggle-slider::before {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.2s ease;
+}
+
+.addon-form-wrapper
+  .vat-toggle
+  input[type="checkbox"]:checked
+  + .vat-toggle-slider {
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+}
+
+.addon-form-wrapper
+  .vat-toggle
+  input[type="checkbox"]:checked
+  + .vat-toggle-slider::before {
+  transform: translateX(16px);
+}
+
+.addon-form-wrapper
+  .vat-toggle
+  input[type="checkbox"]:disabled
+  + .vat-toggle-slider {
+  background-color: #e5e7eb;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Invoice Summary Styling */
+.addon-form-wrapper .invoice-summary {
+  margin-top: 12px;
+  background-color: white;
+  border-radius: 5px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.addon-form-wrapper .summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.addon-form-wrapper .summary-row:last-child {
+  border-bottom: none;
+}
+
+.addon-form-wrapper .summary-row.subtotal {
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.addon-form-wrapper .summary-row.vat {
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.addon-form-wrapper .summary-row.total {
+  font-weight: bold;
+  font-size: 14px;
+  color: #1a3c5e;
+  border-top: 2px solid #3498db;
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.addon-form-wrapper .summary-label {
+  font-size: 13px;
+}
+
+.addon-form-wrapper .summary-amount {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.addon-form-wrapper .amount-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: white;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.addon-form-wrapper .amount-input-wrapper:focus-within {
+  border-color: #3498db;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.addon-form-wrapper .currency-symbol {
+  background-color: #e5e7eb;
+  padding: 6px 10px;
+  font-weight: bold;
+  color: #1a3c5e;
+  border-right: 1px solid #d1d5db;
+  font-size: 13px;
+}
+
+.addon-form-wrapper .amount-input {
+  border: none;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  background-color: transparent;
+  flex: 1;
+  font-family: inherit;
+}
+
+.addon-form-wrapper .amount-input:focus {
+  outline: none;
+}
+
+.addon-form-wrapper .amount-input:read-only {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+/* Invoice Actions Footer Styling */
+.addon-form-wrapper .invoice-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.addon-form-wrapper .create-invoice-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.15);
+}
+
+.addon-form-wrapper .create-invoice-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.2);
+}
+
+.addon-form-wrapper .create-invoice-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Error Message */
+.addon-form-wrapper .error-message {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+  border-radius: 5px;
+  color: #b91c1c;
+  padding: 8px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  text-align: center;
+  font-size: 13px;
+}
+
+.addon-form-wrapper .success-message {
+  text-align: center;
+  padding: 20px;
+}
+
+.addon-form-wrapper .success-message h2 {
+  color: #16a34a;
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+
+.addon-form-wrapper .success-message p {
+  color: #4b5563;
+  font-size: 14px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .addon-form-wrapper {
+    padding: 10px;
+  }
+
+  .addon-form-wrapper .addon-form-container {
+    max-width: 100%;
+  }
+
+  .addon-form-wrapper .invoice-header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .addon-form-wrapper .invoice-details {
+    text-align: left;
+  }
+
+  .addon-form-wrapper .client-section {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .addon-form-wrapper .client-actions {
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .addon-form-wrapper .form-group.date-group {
+    max-width: none;
+    width: 100%;
+  }
+
+  .addon-form-wrapper .form-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .addon-form-wrapper .vat-toggle {
+    justify-content: flex-start;
+  }
+
+  .addon-form-wrapper .invoice-summary {
+    padding: 10px;
+  }
+
+  .addon-form-wrapper .invoice-actions-footer {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .addon-form-wrapper .company-details h2 {
+    font-size: 18px;
+  }
+
+  .addon-form-wrapper .invoice-number,
+  .addon-form-wrapper .invoice-date {
+    font-size: 11px;
+  }
+
+  .addon-form-wrapper .form-input,
+  .addon-form-wrapper .form-textarea,
+  .addon-form-wrapper .amount-input {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+
+  .addon-form-wrapper .currency-symbol {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  .addon-form-wrapper .summary-label,
+  .addon-form-wrapper .summary-amount {
+    font-size: 12px;
+  }
+
+  .addon-form-wrapper .create-invoice-button,
+  .addon-form-wrapper .back-button,
+  .addon-form-wrapper .print-button,
+  .addon-form-wrapper .add-item-button,
+  .addon-form-wrapper .remove-item-button {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .addon-form-wrapper .vat-toggle-label {
+    font-size: 12px;
+  }
+
+  .addon-form-wrapper .vat-toggle .vat-toggle-slider {
+    width: 32px;
+    height: 18px;
+  }
+
+  .addon-form-wrapper .vat-toggle .vat-toggle-slider::before {
+    width: 14px;
+    height: 14px;
+    top: 2px;
+    left: 2px;
+  }
+
+  .addon-form-wrapper
+    .vat-toggle
+    input[type="checkbox"]:checked
+    + .vat-toggle-slider::before {
+    transform: translateX(14px);
+  }
+}

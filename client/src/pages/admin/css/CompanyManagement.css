@@ -1,0 +1,90 @@
+.company-management h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.companies-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.companies-table th,
+.companies-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.companies-table th {
+  background-color: #f8f8f8;
+  font-weight: bold;
+  color: #333;
+}
+
+.companies-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.disabled-row {
+  background-color: #f9f9f9;
+  color: #999;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-badge.active {
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+.status-badge.inactive {
+  background-color: #f2dede;
+  color: #a94442;
+}
+
+.disable-button,
+.enable-button {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.disable-button {
+  background-color: #f0ad4e;
+  color: white;
+}
+
+.disable-button:hover {
+  background-color: #ec971f;
+}
+
+.enable-button {
+  background-color: #5bc0de;
+  color: white;
+}
+
+.enable-button:hover {
+  background-color: #46b8da;
+}
+
+.loading,
+.error,
+.no-companies {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.error {
+  color: #d9534f;
+}
+

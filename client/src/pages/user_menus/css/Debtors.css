@@ -1,0 +1,38 @@
+.debtors-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+  background-color: #f8f9fa;
+}
+
+.header-actions {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 10;
+}
+
+.debtors-grid {
+  display: flex;
+  gap: 40px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 0;
+  margin-bottom: 450px;
+}
+
+/* Ensure cards are responsive */
+@media (max-width: 768px) {
+  .debtors-grid {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .debtors-container {
+    padding: 10px;
+  }
+}

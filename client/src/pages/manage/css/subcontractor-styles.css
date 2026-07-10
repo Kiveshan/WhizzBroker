@@ -1,0 +1,92 @@
+/* Subcontractor specific styles */
+.driver-count-badge {
+  background: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  display: inline-block;
+  min-width: 20px;
+}
+
+.truck-entry {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: #f8f9fa;
+}
+
+.truck-entry:hover {
+  background: #e9ecef;
+}
+
+.truck-entry .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 15px;
+  align-items: end;
+}
+
+.add-truck-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.add-truck-button:hover {
+  background: #218838;
+}
+
+.remove-truck-button {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.remove-truck-button:hover {
+  background: #c82333;
+}
+
+/* Form validation styles */
+.invalid-truck {
+  border-color: #dc3545;
+  background-color: #fff5f5;
+}
+
+.truck-validation-message {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+/* Responsive improvements for subcontractor table */
+@media (max-width: 1200px) {
+  .manage-subcontractor-table1 table {
+    min-width: 1200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .truck-entry .form-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .driver-count-badge {
+    font-size: 11px;
+    padding: 3px 6px;
+  }
+}

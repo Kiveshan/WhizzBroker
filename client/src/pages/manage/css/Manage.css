@@ -1,0 +1,2411 @@
+/* === Global Form Input Styling for Consistency === */
+.client-form input,
+.client-form select,
+.manage-form-grid input,
+.manage-form-grid select,
+.manage-truck-form-grid input,
+.manage-driver-rate-form .form-field input,
+.manage-subcontractor-form input,
+.manage-subcontractor-form select,
+.manage-add-employee-form input,
+.manage-add-employee-form select {
+  width: 100%;
+  padding: 10px;
+  font-size: 14px;
+  box-sizing: border-box; /* Ensures padding doesn't affect width */
+  line-height: 1.5; /* Consistent height */
+  height: 40px; /* Fixed height for uniformity */
+}
+
+/* === ClientForm Styles === */
+.client-form {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+  border-radius: 10px;
+  box-shadow: 0 6px 14px rgba(65, 105, 225, 0.15);
+  border: 1px solid #4169e1;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: #4169e1;
+}
+
+.client-form h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #2c3e50;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.client-form .client-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.client-form .client-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.client-form .client-form-group label {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 6px;
+  font-size: 14px;
+  transition: color 0.3s ease;
+}
+
+.client-form .client-form-group label:hover {
+  color: #4169e1;
+}
+
+.client-form .client-form-group label strong {
+  font-weight: 700;
+}
+
+.client-form .client-form-group input,
+.client-form .client-form-group select {
+  border: 2px solid #dfe4ff;
+  border-radius: 6px;
+  outline: none;
+  background-color: #fff;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.client-form .client-form-group input:focus,
+.client-form .client-form-group select:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 6px rgba(65, 105, 225, 0.3);
+  transform: translateY(-2px);
+}
+
+.client-form .client-form-group input:hover,
+.client-form .client-form-group select:hover {
+  border-color: #6b89e9;
+}
+
+.client-form .client-form-group select.client-dropdown {
+  appearance: none;
+  background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%232c3e50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>') no-repeat right 12px center;
+  cursor: pointer;
+}
+
+.client-form .client-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.client-form .client-save-button,
+.client-form .client-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.client-form .client-save-button::after,
+.client-form .client-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.client-form .client-save-button:hover::after,
+.client-form .client-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.client-form .client-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.client-form .client-save-button:hover {
+  background: #27ae60;
+  transform: TranslateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.client-form .client-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.client-form .client-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.client-form .client-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* === Other Form Styles (Updated for Input Size Consistency) === */
+.manage-add-client-form {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+.manage-add-client-form h2,
+.manage-add-truck-form h2,
+.manage-add-employee-form h2,
+.manage-driver-rate-form h2,
+.manage-subcontractor-form h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.manage-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  width: 100%;
+}
+
+.manage-truck-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  width: 100%;
+}
+
+.manage-truck-form-grid .manage-full-width {
+  grid-column: span 2;
+}
+
+.manage-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.manage-form-group label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.manage-form-group label strong {
+  font-weight: 600;
+}
+
+.manage-form-grid input,
+.manage-form-grid select,
+.manage-truck-form-grid input {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.manage-form-grid input:focus,
+.manage-form-grid select:focus,
+.manage-truck-form-grid input:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 0 2px rgba(65, 105, 225, 0.2);
+}
+.manage-button-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 15px;
+}
+
+
+.manage-save-button,
+.manage-cancel-button {
+  width: 8%;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.manage-add-client-rate-form .manage-button-container {
+  display: flex;
+  justify-content: flex-start; 
+  /* justify-content: center;   */
+  gap: 8px; /* Adjust this value to control the gap  */
+  width: 100%;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.manage-add-client-rate-form .manage-save-button,
+.add-rate-button { /* Updated to include add-rate-button */
+  width: 8%;
+  padding: 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.manage-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.manage-save-button:hover {
+  background: #27ae60;
+}
+
+.manage-cancel-button {
+  background: #e74c3c;
+  color: white; /* Updated to white for consistency */
+}
+
+.manage-cancel-button:hover {
+  background: #c0392b;
+}
+
+.manage-driver-rate-form {
+  max-width: 800px;
+  margin: auto;
+  padding: 24px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+  border-radius: 10px;
+  border: 1px solid #dfe4ff;
+  border-left: 4px solid #4169e1;
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.manage-driver-rate-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.manage-driver-rate-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.manage-driver-rate-form .form-field label {
+  font-weight: 500;
+  color: #333;
+  font-size: 14px;
+  margin-bottom: 5px;
+}
+
+.manage-driver-rate-form .form-field label strong {
+  font-weight: 600;
+}
+
+.manage-driver-rate-form .form-field input {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.manage-driver-rate-form .form-field input:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 5px rgba(65, 105, 225, 0.2);
+}
+
+.manage-driver-rate-form .form-field input:hover {
+  border-color: #b3c0ff;
+}
+
+.manage-driver-rate-form .form-field input::placeholder {
+  color: #9ca3af;
+}
+
+.manage-driver-rate-form .manage-form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.manage-driver-rate-form .manage-save-button,
+.manage-driver-rate-form .manage-cancel-button {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.manage-driver-rate-form .manage-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.manage-driver-rate-form .manage-save-button:hover {
+  background: #27ae60;
+  box-shadow: 0 3px 8px rgba(46, 204, 113, 0.2);
+}
+
+.manage-driver-rate-form .manage-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.manage-driver-rate-form .manage-cancel-button:hover {
+  background: #c0392b;
+  box-shadow: 0 3px 8px rgba(231, 76, 60, 0.2);
+}
+
+.manage-subcontractor-form {
+  max-width: 800px;
+  margin: auto;
+  padding: 20px;
+  background: #f9fafb;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.manage-subform-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* === Existing Non-Form Styles (Unchanged) === */
+.manage-container {
+  width: 100%;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: -20px;
+}
+
+.manage-button-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 40px;
+}
+
+.manage-button {
+  background-color: #4169e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.manage-button:hover {
+  background-color: #3158c9;
+}
+
+.manage-button.active {
+  background-color: #2ecc71;
+}
+
+.manage-tabs-container {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+}
+
+.manage-tab-button {
+  background-color: #e6e6fa;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.3s;
+}
+
+.manage-tab-button.active {
+  background-color: #4169e1;
+  color: white;
+}
+
+.manage-employees-table,
+.manage-clients-table,
+.manage-trucks-table,
+.manage-DriverRates-table,
+.manage-subcontractor-table {
+  overflow-x: auto;
+  margin-bottom: 20px;
+  margin-top: -30px;
+}
+
+/* Routes table override — wider than the 800px global default */
+.manage-DriverRates-table1 {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.manage-DriverRates-table1 table {
+  width: 100%;
+  min-width: 600px;
+}
+
+table {
+  width: 800px;
+  border-collapse: collapse;
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+th,
+td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+th {
+  background-color: #e6e6fa;
+  font-weight: 500;
+  color: #333;
+}
+
+tr:hover {
+  background-color: #f5f5f5;
+}
+
+.manage-view-button,
+.manage-edit-button {
+  background-color: #4169e1;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.manage-delete-button {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.manage-delete-button:hover {
+  background-color: #c0392b;
+  transform: scale(1.05);
+}
+
+.manage-delete-button:active {
+  background-color: #a93226;
+  transform: scale(0.95);
+}
+
+.manage-enable-button {
+  background-color: green;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.manage-enable-button:hover {
+  background-color: #2bc04b;
+  transform: scale(1.05);
+}
+
+.manage-enable-button:active {
+  background-color: #26a928;
+  transform: scale(0.95);
+}
+
+.trash-icon {
+  font-size: 18px;
+}
+
+.manage-add-employee-button,
+.manage-add-client-button,
+.manage-add-truck-button,
+.manage-add-subcontractor-button,
+.manage-add-driver-rate-button {
+  background-color: #4169e1;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 15px;
+  align-self: center;
+  width: fit-content;
+  margin: 20px auto;
+  display: block;
+}
+
+.manage-add-employee-button:hover,
+.manage-add-client-button:hover,
+.manage-add-truck-button:hover,
+.manage-add-subcontractor-button:hover,
+.manage-add-driver-rate-button:hover {
+  background-color: #3158c9;
+}
+
+.manage-add-truck-form,
+.manage-add-employee-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 5px;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.loading {
+  text-align: center;
+  padding: 16px;
+  font-size: 16px;
+  color: #6b7280;
+  animation: pulse 1.5s infinite;
+}
+
+.error {
+  text-align: center;
+  padding: 16px;
+  font-size: 16px;
+  color: #dc2626;
+}
+
+.rates-section {
+  margin-bottom: 20px;
+}
+
+.rates-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.rates-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.fuel-surcharge-all {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background-color: #f0f4ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 6px;
+}
+
+.fuel-surcharge-all label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  white-space: nowrap;
+}
+
+.fuel-surcharge-all input {
+  width: 100px;
+  padding: 10px;
+  height: 40px;
+  font-size: 14px;
+  box-sizing: border-box;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.fuel-surcharge-all input:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 0 2px rgba(65, 105, 225, 0.2);
+}
+
+.fuel-surcharge-all .fuel-surcharge-apply-btn {
+  padding: 10px 16px;
+  height: 40px;
+  background-color: #4169e1;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.3s, transform 0.2s, box-shadow 0.3s;
+}
+
+.fuel-surcharge-all .fuel-surcharge-apply-btn:hover {
+  background-color: #3457c8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(65, 105, 225, 0.3);
+}
+
+.fuel-surcharge-all .fuel-surcharge-apply-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.add-rate-button {
+  padding: 6px 12px;
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+
+.add-rate-button:hover {
+  background-color: #1d4ed8;
+}
+
+.rate-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+@media (min-width: 1024px) {
+  .rate-row {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+.rate-entry {
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background-color: #f9fafb;
+}
+
+.rate-entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.rate-entry-header h4 {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.remove-rate-button {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.remove-rate-button:hover {
+  color: #b91c1c;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-left: 30px;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  width: 20px;
+  background-color: white;
+  border: 2px solid #007bff;
+  border-radius: 4px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.custom-checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.custom-checkbox .checkmark:after {
+  left: 4px;
+  top: -1px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.document-upload-section {
+  margin-top: 30px;
+}
+
+.document-upload-section h4 {
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+.document-upload-section input[type="file"] {
+  display: block;
+  margin-bottom: 12px;
+  font-size: 14px;
+  height: auto; /* File inputs don't need fixed height */
+}
+
+.document-upload-section .file-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.document-upload-section .file-entry a.download-link {
+  color: #007bff;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.document-upload-section .file-entry button.delete-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.document-upload-section .file-entry button.delete-btn:hover {
+  background-color: #c82333;
+}
+
+.file-upload-wrapper {
+  border: 2px dashed #ccc;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s ease;
+}
+
+.file-upload-wrapper:hover {
+  border-color: #888;
+}
+
+.file-upload-wrapper input[type="file"] {
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.file-upload-info {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.uploaded-file-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #fff;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.uploaded-file-entry span {
+  flex-grow: 1;
+  overflow-wrap: break-word;
+}
+
+.uploaded-file-entry a,
+.uploaded-file-entry button {
+  margin-left: 10px;
+  font-size: 0.85rem;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.uploaded-file-entry a {
+  background-color: #4caf50;
+  color: white;
+}
+
+.uploaded-file-entry button {
+  background-color: #f44336;
+  color: white;
+}
+
+#custom-alert {
+  background-color: #f44336;
+  color: white;
+  padding: 15px 20px;
+  border-radius: 5px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  display: none;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alert-visible {
+  display: block;
+}
+
+.alert-hidden {
+  display: none;
+}
+
+.custom-alert {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f44336;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 9999;
+}
+
+.alert-content {
+  display: flex;
+  align-items: center;
+}
+
+.alert-message {
+  font-size: 16px;
+  margin-right: 10px;
+}
+
+.alert-close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.alert-close-btn:hover {
+  color: #ddd;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .client-form .client-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .client-form .client-form-grid,
+  .manage-form-grid,
+  .manage-truck-form-grid,
+  .manage-driver-rate-form .form-row,
+  .manage-subform-group {
+    grid-template-columns: 1fr;
+  }
+
+  .client-form,
+  .manage-add-client-form,
+  .manage-add-truck-form,
+  .manage-add-employee-form,
+  .manage-driver-rate-form,
+  .manage-subcontractor-form {
+    padding: 15px;
+  }
+
+  .client-form .client-button-container,
+  .manage-button-container,
+  .manage-driver-rate-form .manage-form-actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .client-form .client-save-button,
+  .client-form .client-cancel-button,
+  .manage-save-button,
+  .manage-cancel-button,
+  .manage-driver-rate-form .manage-save-button,
+  .manage-driver-rate-form .manage-cancel-button {
+    width: 100%;
+  }
+
+  .manage-button-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .manage-button {
+    width: 100%;
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.sub-tab-navigation {
+  margin-bottom: 1.5rem; /* Equivalent to Tailwind's mb-6 (6 * 0.25rem = 1.5rem) */
+}
+
+.tab-container {
+  display: flex;
+  gap: 1rem; /* Equivalent to Tailwind's space-x-4 (4 * 0.25rem = 1rem) */
+  border-bottom: 1px solid #e5e7eb; /* Equivalent to Tailwind's border-gray-200 */
+}
+
+.tab {
+  padding: 0.5rem 1rem; /* Equivalent to Tailwind's py-2 px-4 */
+  font-weight: 500; /* Equivalent to Tailwind's font-medium */
+  font-size: 0.875rem; /* Equivalent to Tailwind's text-sm */
+  color: #6b7280; /* Equivalent to Tailwind's text-gray-500 */
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tab:hover {
+  color: #4b5563; /* Equivalent to Tailwind's hover:text-gray-700 */
+}
+
+.tab.active {
+  color: #2563eb; /* Equivalent to Tailwind's text-blue-600 */
+  border-bottom: 2px solid #3b82f6; /* Equivalent to Tailwind's border-b-2 border-blue-500 */
+}
+
+/* Client Rate Trash button style */
+.remove-rate-button {
+  color: red;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+.remove-rate-button:hover {
+  color: darkred;
+}
+
+/* Employee form css */
+/* Employee Form Button Styles */
+.employee-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.employee-save-button,
+.employee-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.employee-save-button::after,
+.employee-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.employee-save-button:hover::after,
+.employee-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.employee-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.employee-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.employee-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.employee-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.employee-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .employee-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .employee-save-button,
+  .employee-cancel-button {
+    width: 100%;
+  }
+}
+
+/* Driver rate button styles */
+/* Driver Rate Form Button Styles */
+.driver-rate-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.driver-rate-save-button,
+.driver-rate-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.driver-rate-save-button::after,
+.driver-rate-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.driver-rate-save-button:hover::after,
+.driver-rate-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.driver-rate-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.driver-rate-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.driver-rate-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.driver-rate-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.driver-rate-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .driver-rate-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .driver-rate-save-button,
+  .driver-rate-cancel-button {
+    width: 100%;
+  }
+}
+
+/* Subcontractor form button styles */
+/* Subcontractor Form Button Styles */
+.subcontractor-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.subcontractor-save-button,
+.subcontractor-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.subcontractor-save-button::after,
+.subcontractor-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.subcontractor-save-button:hover::after,
+.subcontractor-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.subcontractor-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.subcontractor-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.subcontractor-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.subcontractor-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.subcontractor-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .subcontractor-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .subcontractor-save-button,
+  .subcontractor-cancel-button {
+    width: 100%;
+  }
+}
+
+/* Supplier form button styles */
+/* Supplier Form Button Styles */
+.supplier-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.supplier-save-button,
+.supplier-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.supplier-save-button::after,
+.supplier-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.supplier-save-button:hover::after,
+.supplier-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.supplier-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.supplier-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.supplier-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.supplier-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.supplier-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .supplier-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .supplier-save-button,
+  .supplier-cancel-button {
+    width: 100%;
+  }
+}
+
+/* === Truck Form Styles (Updated) === */
+
+/* Truck Form Button Styles */
+.truck-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.truck-save-button,
+.truck-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.truck-save-button::after,
+.truck-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.truck-save-button:hover::after,
+.truck-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.truck-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.truck-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.truck-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.truck-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.truck-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .truck-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .truck-save-button,
+  .truck-cancel-button {
+    width: 100%;
+  }
+}
+
+/* Trailer Form Button Styles */
+.trailer-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.trailer-save-button,
+.trailer-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.trailer-save-button::after,
+.trailer-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.trailer-save-button:hover::after,
+.trailer-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.trailer-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.trailer-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.trailer-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.trailer-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.trailer-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .trailer-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .trailer-save-button,
+  .trailer-cancel-button {
+    width: 100%;
+  }
+}
+
+/* Company Form Button Styles */
+.company-button-container {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.company-save-button,
+.company-cancel-button {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.company-save-button::after,
+.company-cancel-button::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform 0.4s ease;
+}
+
+.company-save-button:hover::after,
+.company-cancel-button:hover::after {
+  transform: translate(-50%, -50%) scale(1.5);
+}
+
+.company-save-button {
+  background: #2ecc71;
+  color: white;
+}
+
+.company-save-button:hover {
+  background: #27ae60;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3);
+}
+
+.company-save-button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.company-cancel-button {
+  background: #e74c3c;
+  color: white;
+}
+
+.company-cancel-button:hover {
+  background: #c0392b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .company-button-container {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .company-save-button,
+  .company-cancel-button {
+    width: 100%;
+  }
+}
+
+/* ── Driver Rate Period Badge (routes table) ─────────────────────────────── */
+.drf-period-badge {
+  display: inline-block;
+  background: #e6e6fa;
+  color: #4169e1;
+  border: 1px solid #b3c0ff;
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+/* ── Driver Rate Periods Form ─────────────────────────────────────────────── */
+.drf-wrapper {
+  width: 100%;
+  padding: 0 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Page header: route breadcrumb + action buttons */
+.drf-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #ffffff 100%);
+  border: 1px solid #b3c0ff;
+  border-left: 4px solid #4169e1;
+  border-radius: 8px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 6px rgba(65, 105, 225, 0.08);
+}
+
+.drf-route-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.drf-route-point {
+  background: #e6e6fa;
+  color: #4169e1;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.drf-route-arrow {
+  color: #9ca3af;
+  font-size: 1.1rem;
+}
+
+.drf-route-input {
+  background: #eef0fb;
+  border: 1.5px solid #c5cbf5;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #2c3e50;
+  width: 180px;
+  transition: border-color 0.15s, background 0.15s;
+  outline: none;
+}
+
+.drf-route-input:focus {
+  border-color: #4169e1;
+  background: #fff;
+}
+
+.drf-route-rename-badge {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+  border-radius: 10px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.drf-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Cards grid */
+.drf-cards-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+/* Individual period card */
+.drf-card {
+  background: #ffffff;
+  border: 1px solid #dfe4ff;
+  border-radius: 10px;
+  min-width: 260px;
+  flex: 1 1 260px;
+  max-width: 320px;
+  box-shadow: 0 2px 6px rgba(65, 105, 225, 0.07);
+  overflow: hidden;
+  transition: box-shadow 0.2s ease;
+}
+
+.drf-card:hover {
+  box-shadow: 0 4px 12px rgba(65, 105, 225, 0.15);
+}
+
+.drf-card--error {
+  border-color: #e74c3c;
+  box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.18);
+}
+
+.drf-card--error .drf-card-header {
+  background: #fde8e8;
+  border-bottom-color: #f5c6c6;
+}
+
+.drf-card--error .drf-period-label {
+  color: #c0392b;
+}
+
+.drf-card-errors {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.drf-card-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #fde8e8;
+  border: 1px solid #f5c6c6;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 0.78rem;
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.drf-card-error-msg .drf-warning-icon {
+  font-size: 0.72rem;
+  flex-shrink: 0;
+}
+
+.drf-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #e6e6fa;
+  padding: 8px 14px;
+  border-bottom: 1px solid #dfe4ff;
+}
+
+.drf-period-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4169e1;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.drf-remove-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #e74c3c;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 2px 4px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drf-remove-btn:hover {
+  background: #fde8e8;
+  color: #c0392b;
+}
+
+.drf-card-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Dates row inside card */
+.drf-dates-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Rate fields 2×2 grid */
+.drf-rates-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.drf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.drf-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.drf-required {
+  color: #e74c3c;
+  margin-left: 2px;
+}
+
+.drf-hint {
+  font-size: 0.68rem;
+  color: #9ca3af;
+  margin-top: 1px;
+}
+
+/* R prefix on rate inputs */
+.drf-input-prefix-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.drf-prefix {
+  position: absolute;
+  left: 9px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.drf-rate-input {
+  padding-left: 22px !important;
+}
+
+/* Override form-input inside cards to be compact */
+.drf-card-body .form-input {
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  height: 34px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.drf-card-body .form-input:focus {
+  border-color: #4169e1;
+  box-shadow: 0 0 0 2px rgba(65, 105, 225, 0.15);
+}
+
+/* Overlap warning inside card */
+.drf-overlap-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 0.75rem;
+  color: #856404;
+  line-height: 1.4;
+}
+
+.drf-warning-icon {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+}
+
+/* Coverage gap — compact banner strip */
+.drf-coverage-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff3cd;
+  border-left: 4px solid #e67e22;
+  border-radius: 6px;
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  font-size: 0.82rem;
+  color: #7a4f00;
+  line-height: 1.4;
+}
+
+.drf-coverage-warning .drf-warning-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.drf-coverage-summary {
+  flex: 1;
+}
+
+.drf-coverage-details-btn {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid #e67e22;
+  border-radius: 4px;
+  color: #7a4f00;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.drf-coverage-details-btn:hover {
+  background: #ffe8a1;
+}
+
+/* Coverage gap modal */
+.drf-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.drf-modal {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(65, 105, 225, 0.18);
+  padding: 24px 28px;
+  min-width: 340px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.drf-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.drf-modal-header .drf-warning-icon {
+  font-size: 1.2rem;
+  color: #e67e22;
+}
+
+.drf-modal-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.drf-modal-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #888;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.drf-modal-close:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.drf-modal-intro {
+  margin: 0;
+  font-size: 0.83rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.drf-coverage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drf-coverage-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  background: #fef9f0;
+  border: 1px solid #fde8bb;
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 0.82rem;
+  color: #7a4f00;
+}
+
+.drf-coverage-instr {
+  flex-shrink: 0;
+}
+
+.drf-coverage-dates {
+  color: #a05c00;
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.drf-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+
+/* Save confirmation modal */
+.drf-save-modal {
+  max-width: 480px;
+}
+
+.drf-save-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.drf-save-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.drf-save-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6b7280;
+}
+
+.drf-save-route-current {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #2c3e50;
+  background: #f0f3ff;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.drf-save-rename {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drf-save-route-old {
+  font-size: 0.88rem;
+  color: #9ca3af;
+  text-decoration: line-through;
+  padding: 4px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.drf-save-rename-arrow {
+  font-size: 0.72rem;
+  color: #6b7280;
+  padding-left: 4px;
+}
+
+.drf-save-route-new {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #4169e1;
+  background: #f0f3ff;
+  border-radius: 6px;
+  padding: 6px 12px;
+}
+
+.drf-save-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.83rem;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.drf-save-impact {
+  background: #f0f3ff;
+  border-left: 3px solid #4169e1;
+  border-radius: 6px;
+  padding: 10px 14px;
+}
+
+.drf-save-impact .drf-save-label {
+  color: #4169e1;
+}
+
+.drf-save-instr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.drf-save-instr-chip {
+  background: #4169e1;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 2px 10px;
+  letter-spacing: 0.2px;
+}
+
+.drf-save-warning {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+  background: #fff3cd;
+  border-left: 3px solid #e67e22;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #7a4f00;
+}
+
+/* Add Period tile */
+.drf-add-tile {
+  background: #ffffff;
+  border: 2px dashed #b3c0ff;
+  border-radius: 10px;
+  min-width: 260px;
+  flex: 1 1 260px;
+  max-width: 320px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #4169e1;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  user-select: none;
+}
+
+.drf-add-tile:hover {
+  background: #f0f4ff;
+  border-color: #4169e1;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.12);
+}
+
+.drf-add-icon {
+  font-size: 1.6rem;
+  font-weight: 300;
+  line-height: 1;
+  color: #4169e1;
+}
+
+.drf-add-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4169e1;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .drf-dates-row,
+  .drf-rates-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .drf-card {
+    max-width: 100%;
+  }
+
+  .drf-add-tile {
+    max-width: 100%;
+  }
+
+  .drf-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .drf-header-actions {
+    width: 100%;
+  }
+}
+
+.errorPopup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #f8d7da;
+  color: #721c24;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  z-index: 1000;
+  max-width: 400px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 auto;
+}
+
+.errorPopupContent {
+  flex-grow: 1;
+}
+
+.closePopup {
+  background: none;
+  border: none;
+  color: #721c24;
+  font-size: 18px;
+  cursor: pointer;
+  margin-left: 10px;
+  padding: 0;
+}
+
+/* ── Route autocomplete dropdown ─────────────────────────────────────────── */
+
+.route-autocomplete {
+  position: relative;
+}
+
+.route-autocomplete-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  z-index: 200;
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #b3c0ff;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(65, 105, 225, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.route-autocomplete-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.route-autocomplete-list::-webkit-scrollbar-track {
+  background: #f0f4ff;
+  border-radius: 3px;
+}
+
+.route-autocomplete-list::-webkit-scrollbar-thumb {
+  background: #b3c0ff;
+  border-radius: 3px;
+}
+
+.route-autocomplete-item {
+  padding: 9px 14px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.route-autocomplete-item:hover {
+  background: #f0f4ff;
+  color: #4169e1;
+}

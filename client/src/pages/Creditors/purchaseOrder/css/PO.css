@@ -1,0 +1,398 @@
+/* Purchase Order Form Styles */
+.po-form-wrapper .po-form-container {
+  max-width: 900px; /* Increased width for more columns */
+  margin: 10px auto;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  font-family: "Roboto", Arial, sans-serif;
+}
+
+.po-form-wrapper .po-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #a1d4f7, #bae6fd);
+  padding: 12px;
+  border-radius: 8px 8px 0 0;
+  margin: -12px -12px 10px -12px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.po-form-wrapper .po-header:hover {
+  transform: translateY(-1px);
+}
+
+.po-form-wrapper .po-header-left {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.po-form-wrapper .po-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: #1a3c5e;
+  margin: 4px 0 0 0;
+  text-transform: none;
+}
+
+.po-form-wrapper .po-logo {
+  height: 36px;
+  margin-right: 10px;
+}
+
+.po-form-wrapper .po-title-container {
+  flex-grow: 1;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.po-form-wrapper .po-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a3c5e;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.po-form-wrapper .company-details {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px;
+  background: linear-gradient(135deg, #f9f9f9, #ffffff);
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.po-form-wrapper .company-address,
+.po-form-wrapper .company-contact {
+  width: 48%;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #333;
+}
+
+.po-form-wrapper .company-address {
+  font-weight: 500;
+  background-color: #f5f7fa;
+}
+
+.po-form-wrapper .company-contact {
+  font-weight: 400;
+  background-color: #f5f7fa;
+}
+
+.po-form-wrapper .company-contact::before {
+  content: "Contact Information:";
+  display: block;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #1a3c5e;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.po-form-wrapper .company-registration {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 10px;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.po-form-wrapper .form-section {
+  margin-bottom: 8px;
+}
+
+.po-form-wrapper .form-row {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.po-form-wrapper .form-group {
+  flex: 1;
+}
+
+.po-form-wrapper .form-group label {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 13px;
+  color: #444;
+  font-weight: 500;
+}
+
+.po-form-wrapper .form-control {
+  width: 100%;
+  height: 34px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.2;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.po-form-wrapper .dropdown-field {
+  width: 100%;
+  padding: 6px 7px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  line-height: 1.2;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.po-form-wrapper .form-control:focus,
+.po-form-wrapper .dropdown-field:focus {
+  border-color: #4169e1;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(65, 105, 225, 0.15);
+}
+
+.po-form-wrapper .line-items {
+  margin-bottom: 8px;
+  border-top: 1px solid #ddd;
+  padding-top: 6px;
+}
+
+.po-form-wrapper .line-items-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.po-form-wrapper .line-items-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #1a3c5e;
+}
+
+.po-form-wrapper .add-item-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: linear-gradient(135deg, #4169e1, #3b5bdb);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.po-form-wrapper .add-item-btn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #3b5bdb, #364fc7);
+}
+
+.po-form-wrapper .line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.po-form-wrapper .line-items-table th {
+  background-color: #f5f7fa;
+  padding: 8px 5px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1a3c5e;
+  border-bottom: 2px solid #ddd;
+}
+
+.po-form-wrapper .line-items-table th:nth-child(1) {
+  width: 15%;
+}
+.po-form-wrapper .line-items-table th:nth-child(2) {
+  width: 25%;
+}
+.po-form-wrapper .line-items-table th:nth-child(3) {
+  width: 15%;
+}
+.po-form-wrapper .line-items-table th:nth-child(4) {
+  width: 15%;
+}
+.po-form-wrapper .line-items-table th:nth-child(5) {
+  width: 15%;
+}
+.po-form-wrapper .line-items-table th:nth-child(6) {
+  width: 10%;
+}
+
+.po-form-wrapper .line-items-table td {
+  padding: 5px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+.po-form-wrapper .line-items-table input {
+  width: 100%;
+  height: 34px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.po-form-wrapper .delete-item-btn {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.po-form-wrapper .delete-item-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #c82333, #bd2130);
+}
+
+.po-form-wrapper .delete-item-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.po-form-wrapper .back-button {
+  background: linear-gradient(135deg, #6c757d, #5a6268);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 15px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.po-form-wrapper .back-button:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #5a6268, #495057);
+}
+
+.po-form-wrapper .totals-section {
+  margin-top: 8px;
+  width: 100%;
+}
+
+.po-form-wrapper .totals-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.po-form-wrapper .totals-table td {
+  padding: 5px;
+  border-bottom: 1px solid #eee;
+}
+
+.po-form-wrapper .totals-table tr:last-child td {
+  border-bottom: none;
+  font-weight: 700;
+}
+
+.po-form-wrapper .label-cell {
+  width: 50%;
+  text-align: left;
+  font-weight: 600;
+}
+
+.po-form-wrapper .amount-cell {
+  width: 50%;
+}
+
+.po-form-wrapper .amount-cell input {
+  width: 100%;
+  height: 34px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: right;
+  box-sizing: border-box;
+}
+
+.po-form-wrapper .submit-section {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.po-form-wrapper .submit-btn {
+  background: linear-gradient(135deg, #8dd28e, #7bc17c);
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 5px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.po-form-wrapper .submit-btn:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, #7bc17c, #6aa66b);
+}
+
+.po-form-wrapper .error-message {
+  color: #d32f2f;
+  font-size: 13px;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .po-form-wrapper .po-form-container {
+    padding: 8px;
+    max-width: 100%;
+  }
+
+  .po-form-wrapper .line-items-table {
+    font-size: 12px;
+  }
+
+  .po-form-wrapper .line-items-table th,
+  .po-form-wrapper .line-items-table td {
+    padding: 4px 2px;
+  }
+
+  .po-form-wrapper .line-items-table input {
+    height: 30px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .po-form-wrapper .add-item-btn,
+  .po-form-wrapper .delete-item-btn {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}

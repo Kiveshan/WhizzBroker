@@ -1,0 +1,401 @@
+/* Director Client Documents Wrapper */
+.director-client-docs-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: "Arial", sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.director-client-docs-wrapper *,
+.director-client-docs-wrapper *::before,
+.director-client-docs-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.director-client-docs-wrapper .client-documents-container {
+  padding: 20px;
+  width: 100%;
+}
+
+.director-client-docs-wrapper .header-actions {
+  margin-bottom: 20px;
+}
+
+.director-client-docs-wrapper .documents-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.director-client-docs-wrapper .table-header {
+  display: flex;
+  background-color: #e6e6fa;
+  padding: 10px 0;
+}
+
+.director-client-docs-wrapper .table-row {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+}
+
+.director-client-docs-wrapper .header-cell,
+.director-client-docs-wrapper .table-cell {
+  flex: 1;
+  padding: 8px 16px;
+}
+
+.director-client-docs-wrapper .view-button {
+  background-color: #4169e1;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.director-client-docs-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.director-client-docs-wrapper .filter-section9 {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 40px;
+  margin-top: -50px;
+}
+
+.director-client-docs-wrapper .filter-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.director-client-docs-wrapper .dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  background-color: white;
+}
+
+.director-client-docs-wrapper .filter-button {
+  padding: 8px 16px;
+  border: 1px solid #fdfeff;
+  border-radius: 4px;
+  background-color: rgb(19, 94, 253);
+  cursor: pointer;
+  font-family: inherit;
+  color: white;
+}
+
+.director-client-docs-wrapper .filter-button.active {
+  background-color: #4169e1;
+  color: white;
+  border-color: #4169e1;
+}
+
+.director-client-docs-wrapper .instructions-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.director-client-docs-wrapper .instructions-table th,
+.director-client-docs-wrapper .instructions-table td {
+  padding: 20px;
+  text-align: left;
+  font-size: 14px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.director-client-docs-wrapper .instructions-table th {
+  background-color: #f4f4f4;
+}
+
+.director-client-docs-wrapper .instructions-table td {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.director-client-docs-wrapper .pending-status {
+  color: #f59e0b;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.director-client-docs-wrapper .loading-message,
+.director-client-docs-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.director-client-docs-wrapper .error-message {
+  color: #d32f2f;
+}
+
+.director-client-docs-wrapper .monitor-instructions-container {
+  font-family: inherit;
+}
+
+/* Client Documents Wrapper */
+.client-docs-wrapper {
+  /* Reset any inherited styles */
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  box-sizing: border-box;
+  display: block;
+}
+
+.client-docs-wrapper *,
+.client-docs-wrapper *::before,
+.client-docs-wrapper *::after {
+  box-sizing: inherit;
+}
+
+.client-docs-wrapper .client-documents-container {
+  padding: 20px;
+  width: 100%;
+}
+
+.client-docs-wrapper .header-actions {
+  margin-bottom: 20px;
+}
+
+.client-docs-wrapper .documents-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.client-docs-wrapper .table-header {
+  display: flex;
+  background-color: #e6e6fa;
+  padding: 10px 0;
+}
+
+.client-docs-wrapper .table-row {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+}
+
+.client-docs-wrapper .header-cell,
+.client-docs-wrapper .table-cell {
+  flex: 1;
+  padding: 8px 16px;
+}
+
+.client-docs-wrapper .view-button {
+  background-color: #4169e1;
+  color: white;
+  border: none;
+  padding: 6px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-docs-wrapper .back-button {
+  background-color: #4caf50;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.client-docs-wrapper .filter-section9 {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  width: 100%;
+  margin-bottom: 40px;
+  margin-top: -50px;
+}
+
+.client-docs-wrapper .filter-group {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.client-docs-wrapper .dropdown {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+  background-color: white;
+}
+
+.client-docs-wrapper .filter-button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: rgb(52, 102, 236);
+  cursor: pointer;
+  font-family: inherit;
+  color: white;
+}
+
+.client-docs-wrapper .filter-button.active {
+  background-color: #0039e2;
+  color: white;
+  border-color: #4169e1;
+}
+
+.client-docs-wrapper .instructions-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.client-docs-wrapper .instructions-table th,
+.client-docs-wrapper .instructions-table td {
+  padding: 20px;
+  text-align: left;
+  font-size: 14px;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.client-docs-wrapper .instructions-table th {
+  background-color: #f4f4f4;
+}
+
+.client-docs-wrapper .instructions-table td {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.client-docs-wrapper .pending-status {
+  color: #f59e0b;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.client-docs-wrapper .loading-message,
+.client-docs-wrapper .error-message {
+  text-align: center;
+  padding: 20px;
+  font-family: inherit;
+}
+
+.client-docs-wrapper .error-message {
+  color: #d32f2f;
+}
+
+.client-docs-wrapper .monitor-instructions-container {
+  font-family: inherit;
+}
+
+/* Document View Styles - Shared */
+.director-client-docs-wrapper .document-view,
+.client-docs-wrapper .document-view {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.director-client-docs-wrapper .invoice-container,
+.director-client-docs-wrapper .statement-container,
+.client-docs-wrapper .invoice-container,
+.client-docs-wrapper .statement-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.director-client-docs-wrapper .invoice-header,
+.director-client-docs-wrapper .statement-header,
+.client-docs-wrapper .invoice-header,
+.client-docs-wrapper .statement-header {
+  background-color: #e6e6fa;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 4px;
+}
+
+.director-client-docs-wrapper .invoice-content,
+.director-client-docs-wrapper .statement-content,
+.client-docs-wrapper .invoice-content,
+.client-docs-wrapper .statement-content {
+  padding: 20px;
+}
+
+.director-client-docs-wrapper .company-details,
+.client-docs-wrapper .company-details {
+  margin-top: 10px;
+}
+
+.director-client-docs-wrapper .company-details p,
+.client-docs-wrapper .company-details p {
+  margin: 5px 0;
+}
+
+.director-client-docs-wrapper .invoice-info,
+.client-docs-wrapper .invoice-info {
+  margin-top: 20px;
+}
+
+.director-client-docs-wrapper .vessel-details,
+.client-docs-wrapper .vessel-details {
+  margin-top: 20px;
+}
+
+.director-client-docs-wrapper .vessel-details table,
+.client-docs-wrapper .vessel-details table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.director-client-docs-wrapper .vessel-details td,
+.client-docs-wrapper .vessel-details td {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+.director-client-docs-wrapper .client-info,
+.client-docs-wrapper .client-info {
+  margin-bottom: 30px;
+}
+
+.director-client-docs-wrapper .client-info p,
+.client-docs-wrapper .client-info p {
+  margin: 5px 0;
+}
+
+.director-client-docs-wrapper .statement-table,
+.client-docs-wrapper .statement-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.director-client-docs-wrapper .statement-table th,
+.director-client-docs-wrapper .statement-table td,
+.client-docs-wrapper .statement-table th,
+.client-docs-wrapper .statement-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.director-client-docs-wrapper .statement-table th,
+.client-docs-wrapper .statement-table th {
+  background-color: #bae6fd;
+}

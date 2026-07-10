@@ -1,0 +1,281 @@
+body {
+  background-color: #f5f5f5;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Adjust the company name heading with back button in original position */
+.client-payments-header {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  padding: 0 20px;
+}
+
+.back-button {
+  padding: 8px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 20px;
+}
+
+.client-name {
+  font-size: 24px;
+  font-weight: bold;
+  flex-grow: 1;
+  text-align: center;
+  margin-right: 20px;
+}
+
+/* Center and align the month and year filters */
+.dropdown-container74 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: -15px;
+}
+
+.dropdown74 {
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  min-width: 150px;
+}
+
+.button-group {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.btn {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+}
+
+.btn-green {
+  background-color: #28a745;
+  color: white;
+}
+
+.btn-blue {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-red {
+  background-color: #dc3545;
+  color: white;
+}
+
+.btn.active {
+  background-color: #0056b3;
+  color: white;
+  font-weight: bold;
+}
+
+.btn:hover {
+  opacity: 0.8;
+}
+
+.table-container {
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+  padding: 0 10px;
+  align-items: center;
+  overflow: visible;
+}
+
+.tables-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  overflow: visible;
+}
+
+table th,
+table td {
+  text-align: left;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+  padding: 12px 5px 5px 10px;
+  text-align: left;
+}
+
+.t2 {
+  margin-left: 0;
+}
+
+table {
+  width: 1000px;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.05);
+  border-radius: 6px;
+  overflow: visible;
+  background-color: white;
+}
+
+table th {
+  background-color: #bae6fd;
+  color: #333;
+  font-weight: normal;
+}
+
+table tr:nth-child(even) {
+  background-color: #fcfcfc;
+}
+
+table tr:hover {
+  background-color: #f9f9f9;
+}
+
+.view-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.view-btn:hover {
+  background-color: #0056b3;
+}
+
+.view-btn.disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Tooltip styling */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-block;
+  cursor: not-allowed; /* Added to show warning cursor */
+}
+
+.tooltip-wrapper .tooltip-text {
+  visibility: hidden;
+  width: 220px;
+  background-color: #2c3e50;
+  color: #ffffff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 1000;
+  top: -40px;
+  left: 20%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Add an arrow pointing to the button */
+.tooltip-wrapper .tooltip-text::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #2c3e50 transparent transparent transparent;
+}
+
+/* Show tooltip on hover */
+.tooltip-wrapper:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(-5px);
+}
+
+@media screen and (max-width: 768px) {
+  .container {
+    width: 100%;
+    padding: 10px;
+  }
+
+  .client-payments-header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .client-name {
+    margin-right: 0;
+  }
+
+  .dropdown-container74 {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .button-group {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .filter-buttons {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    width: 100%;
+    max-width: 1000px;
+    border-radius: 6px;
+    margin: 0 auto;
+    overflow: visible;
+  }
+
+  th,
+  td {
+    padding: 15px;
+    font-size: 12px;
+  }
+
+  .btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  /* Adjust tooltip for smaller screens */
+  .tooltip-wrapper .tooltip-text {
+    width: 180px;
+    font-size: 12px;
+    left: 50%;
+    top: -35px;
+  }
+}
