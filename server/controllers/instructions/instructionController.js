@@ -20,6 +20,7 @@ import {
   searchInstructions,
   saveInstructionGroup,
   getInstructionGroupById,
+  addInstructionToGroup,
 } from "../../models/instructions/instructionModel.js"
 import { auditFromReq } from "../../utils/auditLogger.js"
 
@@ -352,6 +353,48 @@ export const saveInstructionGroupHandler = async (req, res) => {
   } catch (error) {
     console.error("Error in save-instruction-group endpoint:", error)
     res.status(500).json({ error: error.message })
+  }
+}
+
+export const addInstructionToGroupHandler = async (req, res) => {
+  try {
+    const groupKey = req.params.id
+    const controllerData = req.body.controllerData || {}
+    const containerData = Array.isArray(req.body.containerData) ? req.body.containerData : []
+    const weightData = Array.isArray(req.body.weightData) ? req.body.weightData : []
+
+    // Same server-authoritative pricing as the standalone/group saves.
+    const shipmentTypeStr = String(controllerData.shipmentTypeId || controllerData.shipment_type || "")
+    const finalTotalCost = calculateTotalCost(controllerData, containerData, weightData)
+    const clientTotalCost = Number(controllerData.total_cost)
+    if (!Number.isNaN(clientTotalCost) && Math.abs(clientTotalCost - finalTotalCost) > 0.01) {
+      console.warn(
+        `add-instruction-to-group: client total_cost ${clientTotalCost} differs from server-calculated ${finalTotalCost}; using server value`
+      )
+    }
+
+    const result = await addInstructionToGroup(groupKey, {
+      controllerData: {
+        ...controllerData,
+        total_cost: shipmentTypeStr === "5" ? 0 : finalTotalCost,
+      },
+      containerData,
+      weightData,
+    })
+
+    auditFromReq(req, {
+      actionType: "INSTRUCTION_GROUP_UPDATED",
+      entityType: "instruction_group",
+      targetId: groupKey,
+      targetName: `group ${groupKey}`,
+      details: `Instruction ${result.m1key} added to instruction group ${groupKey}`,
+    })
+
+    res.json({ success: true, groupKey, m1key: result.m1key })
+  } catch (error) {
+    console.error("Error in add-instruction-to-group endpoint:", error)
+    const status = error.message === "Instruction group not found" ? 404 : 500
+    res.status(status).json({ error: error.message })
   }
 }
 

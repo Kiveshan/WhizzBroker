@@ -41,6 +41,10 @@ export function useInstructionActions({
   selectedMonth,
   selectedYear,
   activeFilter,
+  // When embedded (group page), the host handles navigation instead of
+  // this hook sending the user back to the instructions list.
+  onAfterSave = null,
+  onAfterDelete = null,
 }) {
   const [isInvoiced, setIsInvoiced] = useState(false);
 
@@ -135,6 +139,10 @@ export function useInstructionActions({
       recalculateTotalCost(formData, containersRef.current, weightRowsRef.current);
 
       setTimeout(() => {
+        if (onAfterSave) {
+          onAfterSave();
+          return;
+        }
         navigate("/instructions", {
           state: { clientId, clientName, selectedMonth, selectedYear, activeFilter },
         });
@@ -175,6 +183,7 @@ export function useInstructionActions({
     selectedMonth,
     selectedYear,
     activeFilter,
+    onAfterSave,
   ]);
 
   // ─── handle save (with validation + mismatch check) ─────────────────────────
@@ -225,6 +234,10 @@ export function useInstructionActions({
       await deleteInstructionService(instructionId);
       setContainerSuccessMessage("Instruction deleted successfully!");
       setTimeout(() => {
+        if (onAfterDelete) {
+          onAfterDelete();
+          return;
+        }
         navigate("/instructions", {
           state: { clientId, clientName, selectedMonth, selectedYear, activeFilter },
         });
@@ -251,6 +264,7 @@ export function useInstructionActions({
     selectedMonth,
     selectedYear,
     activeFilter,
+    onAfterDelete,
   ]);
 
   // ─── invoice ─────────────────────────────────────────────────────────────────

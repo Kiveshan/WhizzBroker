@@ -45,14 +45,23 @@ describe("ClientInfoSection — rendering", () => {
     expect(screen.getByDisplayValue("jane@acme.com")).toBeInTheDocument();
   });
 
-  it("renders creation date when showCreationDate=true (default)", () => {
+  it("hides Pick-Up / Drop-Off when showLocations is not set", () => {
     render(<ClientInfoSection {...defaultProps} />);
-    expect(screen.getByDisplayValue("2024-01-15")).toBeInTheDocument();
+    expect(screen.queryByText("Pick-Up Location")).not.toBeInTheDocument();
+    expect(screen.queryByText("Drop-Off Location")).not.toBeInTheDocument();
   });
 
-  it("hides creation date when showCreationDate=false", () => {
-    render(<ClientInfoSection {...defaultProps} showCreationDate={false} />);
-    expect(screen.queryByDisplayValue("2024-01-15")).not.toBeInTheDocument();
+  it("renders Pick-Up / Drop-Off when showLocations=true", () => {
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        showLocations={true}
+        startingPoints={[{ id: 1, startingpoint: "Cape Town" }]}
+        destinations={[{ id: 1, destination: "Durban" }]}
+      />
+    );
+    expect(screen.getByText("Pick-Up Location")).toBeInTheDocument();
+    expect(screen.getByText("Drop-Off Location")).toBeInTheDocument();
   });
 });
 
@@ -65,12 +74,6 @@ describe("ClientInfoSection — disabled state", () => {
   it("client dropdown is enabled when clientLocked=false and not readOnly", () => {
     render(<ClientInfoSection {...defaultProps} clientLocked={false} />);
     expect(screen.getByRole("combobox")).not.toBeDisabled();
-  });
-
-  it("creation date input is disabled when isReadOnly", () => {
-    render(<ClientInfoSection {...defaultProps} isReadOnly={true} />);
-    const dateInput = screen.getByDisplayValue("2024-01-15");
-    expect(dateInput).toBeDisabled();
   });
 });
 
@@ -88,12 +91,20 @@ describe("ClientInfoSection — callbacks", () => {
     expect(onClientChange).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onChange when creation date changes", () => {
-    const onChange = jest.fn();
-    render(<ClientInfoSection {...defaultProps} onChange={onChange} />);
-    const dateInput = screen.getByDisplayValue("2024-01-15");
-    fireEvent.change(dateInput, { target: { value: "2024-02-01" } });
-    expect(onChange).toHaveBeenCalledTimes(1);
+  it("calls onPickupChange when pickup select changes", () => {
+    const onPickupChange = jest.fn();
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        showLocations={true}
+        startingPoints={[{ id: 1, startingpoint: "Cape Town" }]}
+        destinations={[{ id: 1, destination: "Durban" }]}
+        onPickupChange={onPickupChange}
+      />
+    );
+    const pickup = screen.getByDisplayValue("Select Pick-Up Location");
+    fireEvent.change(pickup, { target: { value: "Cape Town" } });
+    expect(onPickupChange).toHaveBeenCalledTimes(1);
   });
 });
 

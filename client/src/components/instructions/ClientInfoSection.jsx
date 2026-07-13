@@ -1,22 +1,32 @@
 /**
- * ClientInfoSection — Client dropdown, Representative, Contact Details, Email,
- * and (update form only) Creation Date.
+ * ClientInfoSection — the "Instruction Information" card.
  *
- * Update form: `clientLocked={true}` keeps the Client dropdown always disabled.
- * Create form: `clientLocked={false}` and `showCreationDate={false}`.
+ * Mirrors the controller create form's first card exactly:
+ *   Row 1: Client, Representative, Contact Details, Email
+ *   Row 2: Pick-Up Location, Drop-Off Location
  *
- * @param {object}   props
+ * Locations are optional (pass showLocations) so callers that render the route
+ * elsewhere can omit them. FC's route-mismatch lock is supported via
+ * pickupLocked + onLockedRouteClick (renders read-only inputs that open the
+ * unlock confirmation on click).
+ *
  * @param {object}   props.formData
  * @param {Array}    props.clients
  * @param {object}   props.fieldErrors
- * @param {object}   props.fieldRefs          Refs for clientId and createdAt fields
+ * @param {object}   props.fieldRefs           Refs for clientId / pickup / dropoff
  * @param {boolean}  props.isReadOnly
- * @param {boolean}  [props.clientLocked]     Permanently disable the client dropdown
+ * @param {boolean}  [props.clientLocked]      Permanently disable the client dropdown
  * @param {object}   [props.readOnlyStyle]
  * @param {object}   [props.nonEditableStyle]
  * @param {function} props.onClientChange
  * @param {function} props.onChange            Generic input change handler
- * @param {boolean}  [props.showCreationDate]  Show the Creation Date field
+ * @param {boolean}  [props.showLocations]     Render the Pick-Up / Drop-Off row
+ * @param {Array}    [props.startingPoints]    [{ id, startingpoint }]
+ * @param {Array}    [props.destinations]      [{ id, destination }]
+ * @param {function} [props.onPickupChange]
+ * @param {function} [props.onDropoffChange]
+ * @param {boolean}  [props.pickupLocked]      FC route-mismatch: lock the route inputs
+ * @param {function} [props.onLockedRouteClick]
  */
 import { ErrorTooltip } from "./ErrorTooltip";
 
@@ -31,7 +41,13 @@ export function ClientInfoSection({
   nonEditableStyle = {},
   onClientChange,
   onChange,
-  showCreationDate = true,
+  showLocations = false,
+  startingPoints = [],
+  destinations = [],
+  onPickupChange,
+  onDropoffChange,
+  pickupLocked = false,
+  onLockedRouteClick,
 }) {
   return (
     <div className="controller-instructions-form-section controller-instructions-client-info-section">
@@ -51,9 +67,7 @@ export function ClientInfoSection({
             <select
               style={isReadOnly ? readOnlyStyle : nonEditableStyle}
               className={`dropdown ${
-                fieldErrors.clientId
-                  ? "controller-instructions-error-field"
-                  : ""
+                fieldErrors.clientId ? "controller-instructions-error-field" : ""
               }`}
               name="clientId"
               value={formData.clientId || ""}
@@ -113,22 +127,95 @@ export function ClientInfoSection({
             disabled={isReadOnly}
           />
         </div>
-        {showCreationDate && (
-          <div className="controller-instructions-form-field">
-            <label>Creation Date</label>
-            <input
-              type="date"
-              className="controller-instructions-form-input"
-              name="createdAt"
-              value={formData.createdAt || ""}
-              onChange={onChange}
-              disabled={isReadOnly}
-              style={isReadOnly ? readOnlyStyle : {}}
-              ref={fieldRefs?.createdAt}
-            />
-          </div>
-        )}
       </div>
+      {showLocations && (
+        <div className="controller-instructions-form-row">
+          <div className="controller-instructions-form-field">
+            <label>Pick-Up Location</label>
+            <div
+              className="controller-instructions-select-wrapper"
+              ref={fieldRefs?.pickup}
+            >
+              {pickupLocked ? (
+                <input
+                  type="text"
+                  className="controller-instructions-form-input"
+                  value={formData.pickup || ""}
+                  readOnly
+                  style={readOnlyStyle}
+                  onClick={onLockedRouteClick}
+                />
+              ) : (
+                <select
+                  className={`dropdown ${
+                    fieldErrors.pickup ? "controller-instructions-error-field" : ""
+                  }`}
+                  name="pickup"
+                  value={formData.pickup || ""}
+                  onChange={onPickupChange}
+                  disabled={isReadOnly}
+                  style={isReadOnly ? readOnlyStyle : {}}
+                >
+                  <option value="" disabled>
+                    Select Pick-Up Location
+                  </option>
+                  {startingPoints.map((point, index) => (
+                    <option
+                      key={point.id ?? index}
+                      value={point.startingpoint ?? point.value}
+                    >
+                      {point.startingpoint ?? point.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <ErrorTooltip message={fieldErrors.pickup} />
+            </div>
+          </div>
+          <div className="controller-instructions-form-field">
+            <label>Drop-Off Location</label>
+            <div
+              className="controller-instructions-select-wrapper"
+              ref={fieldRefs?.dropoff}
+            >
+              {pickupLocked ? (
+                <input
+                  type="text"
+                  className="controller-instructions-form-input"
+                  value={formData.dropoff || ""}
+                  readOnly
+                  style={readOnlyStyle}
+                  onClick={onLockedRouteClick}
+                />
+              ) : (
+                <select
+                  className={`dropdown ${
+                    fieldErrors.dropoff ? "controller-instructions-error-field" : ""
+                  }`}
+                  name="dropoff"
+                  value={formData.dropoff || ""}
+                  onChange={onDropoffChange}
+                  disabled={isReadOnly}
+                  style={isReadOnly ? readOnlyStyle : {}}
+                >
+                  <option value="" disabled>
+                    Select Drop-Off Location
+                  </option>
+                  {destinations.map((dest, index) => (
+                    <option
+                      key={dest.id ?? index}
+                      value={dest.destination ?? dest.value}
+                    >
+                      {dest.destination ?? dest.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <ErrorTooltip message={fieldErrors.dropoff} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

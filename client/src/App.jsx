@@ -36,6 +36,7 @@ import {
   ControllerInstructionGroup,
   ControllerInstructionDetails,
   FCcontrollerinstructions,
+  FCcontrollerInstructionGroup,
   ViewClientInstruction,
   Viewcontrollerinstructions,
   FCcontrollerInstructionDetails,
@@ -180,6 +181,7 @@ function DynamicHeader() {
     "/DirectorExpenses": "Truck Expenses",
     "/ControllerDashboard": "Controller",
     "/FCcontrollerinstructions": "Instruction",
+    "/FCInstructionGroup": "Instruction",
     "/Viewcontrollerinstructions": "Instruction",
     "/ViewcontrollerInstructionDetails": "Container Details",
     "/AdminDashboard": "Admin",
@@ -454,6 +456,10 @@ function ContentWrapper() {
           element={<FCcontrollerinstructions />}
         />
         <Route
+          path="/FCInstructionGroup"
+          element={<FCcontrollerInstructionGroup />}
+        />
+        <Route
           path="/FCcontrollerInstructionDetails"
           element={<FCcontrollerInstructionDetails />}
         />
@@ -496,6 +502,7 @@ function App() {
     "/FDashboard": "Finance Clerk Dashboard",
     "/ViewClientInstruction": "View Client Instructions",
     "/FCcontrollerinstructions": "Finance Clerk Instructions",
+    "/FCInstructionGroup": "Finance Clerk Instructions",
     "/FCcontrollerInstructionDetails": "Finance Clerk Container Details",
     "/InstructionsList": "Instructions List",
     "/Viewcontrollerinstructions": "Viewcontrollerinstructions",

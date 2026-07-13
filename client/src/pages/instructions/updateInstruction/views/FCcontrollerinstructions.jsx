@@ -14,13 +14,21 @@ import { validateForm as validateFormUtil } from "../../../../utils/instructions
 import { checkRateCountMismatch as checkRateCountMismatchUtil } from "../../../../utils/instructions/rateCountMismatch";
 import { FCcontrollerinstructionsLayout } from "./FCcontrollerinstructionsLayout";
 
-const FCcontrollerinstructions = () => {
+// Renders standalone (route + location.state) by default. When embedded in the
+// FC instruction-group page, the group passes instructionId/groupMode as props
+// and handles post-save/post-delete navigation itself via the callbacks.
+const FCcontrollerinstructions = ({
+  instructionId: instructionIdProp = null,
+  groupMode = false,
+  onAfterSave = null,
+  onAfterDelete = null,
+} = {}) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const preservedFormData = location.state?.preservedFormData;
+  const preservedFormData = groupMode ? null : location.state?.preservedFormData;
   const containerCounts = location.state?.containerCounts;
-  const instructionId = location.state?.instructionId;
+  const instructionId = instructionIdProp ?? location.state?.instructionId;
   const clientId = location.state?.clientId;
   const clientName = location.state?.clientName;
   const selectedMonth = location.state?.selectedMonth;
@@ -361,6 +369,8 @@ const FCcontrollerinstructions = () => {
     selectedMonth,
     selectedYear,
     activeFilter,
+    onAfterSave,
+    onAfterDelete,
   });
 
   const {
@@ -558,6 +568,7 @@ const FCcontrollerinstructions = () => {
       setWarningModal={setWarningModal}
       // Navigation
       handleBackClick={handleBackClick}
+      groupMode={groupMode}
       // Form state
       formData={formData}
       setFormData={setFormData}

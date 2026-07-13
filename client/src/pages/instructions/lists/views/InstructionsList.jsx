@@ -323,11 +323,12 @@ const Instructions = () => {
     return status
   }
 
-  // Handle view instruction click - explicitly pass all state to FCcontrollerinstructions
-  const handleViewInstruction = (instructionId) => {
-    // Create state object with all necessary parameters
+  // Handle view instruction click. Grouped instructions open the whole group
+  // (tabbed form where more instructions can be added); legacy ungrouped
+  // instructions still open the single-instruction update form.
+  const handleViewInstruction = (item) => {
     const stateToPass = {
-      instructionId,
+      instructionId: item.m1key,
       clientId,
       clientName,
       selectedMonth,
@@ -335,9 +336,14 @@ const Instructions = () => {
       activeFilter,
     }
 
-    // Log the state being passed to FCcontrollerinstructions
-    console.log("Navigating to FCcontrollerinstructions with state:", stateToPass)
+    if (item.instruction_group_id) {
+      const groupState = { ...stateToPass, groupId: item.instruction_group_id }
+      console.log("Navigating to FCInstructionGroup with state:", groupState)
+      navigate("/FCInstructionGroup", { state: groupState })
+      return
+    }
 
+    console.log("Navigating to FCcontrollerinstructions with state:", stateToPass)
     navigate("/FCcontrollerinstructions", { state: stateToPass })
   }
   // Added this new function
@@ -506,7 +512,14 @@ const Instructions = () => {
 
       return (
         <tr key={item.m1controllerkey || item.m1key}>
-          <td>Instruction {item.m1controllerkey || item.m1key}</td>
+          <td>
+            Instruction {item.m1controllerkey || item.m1key}
+            {item.instruction_group_id && (
+              <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>
+                Group {item.group_ref || item.instruction_group_id}
+              </div>
+            )}
+          </td>
           <td>
             {item.shipment_type === 5 || item.shipment_type === "5" || (item.type_text || "").toLowerCase() === "add-on" || (item.type_text || "").toLowerCase() === "add on"
               ? (item.addon_invoice_number || "N/A")
@@ -538,7 +551,7 @@ const Instructions = () => {
           <td>
             <button
               className="view-btn"
-              onClick={() => handleViewInstruction(item.m1key)}
+              onClick={() => handleViewInstruction(item)}
             >
               View
             </button>

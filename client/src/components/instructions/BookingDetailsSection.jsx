@@ -1,25 +1,29 @@
 /**
- * BookingDetailsSection — Booking Reference, Client File Ref, KSM File Ref,
- * Last Free Date, VAT toggle, Stack/ETA Date, Vessel Name, and Description.
+ * BookingDetailsSection — the second "instruction details" card, mirroring the
+ * controller create form's layout:
+ *   Row 1: Shipment Type, Booking Ref, Client File Reference, Company File Reference
+ *   Row 2: Creation Date, ETA/Stack Date, Last Free Date
+ *   Row 3: VAT toggle, Vessel Name
+ *   Row 4: Description
  *
  * Stack/ETA Date is only shown for Import (type 1), Export (type 2), and
  * Add-on (type 5). Vessel Name is hidden for Cross-haul/Break-bulk (type 4).
  *
- * @param {object}   props
- * @param {object}   props.formData         bookingRef, clientFileRef, ksmFileRef,
- *                                          lastFreeDate, vat, stackDate, vesselName,
- *                                          description, shipmentTypeId
+ * @param {object}   props.formData
  * @param {object}   props.fieldErrors
- * @param {object}   props.fieldRefs        bookingRef, clientFileRef, ksmFileRef,
- *                                          lastFreeDate, stackDate, vesselName, description
+ * @param {object}   props.fieldRefs
  * @param {boolean}  props.isReadOnly
  * @param {boolean}  props.isAddOn
- * @param {string}   props.today            ISO date string used as min for date inputs
+ * @param {string}   props.today
  * @param {object}   [props.readOnlyStyle]
- * @param {object}   props.lastFreeDateRef  Ref forwarded to the last free date input
- * @param {object}   props.etaDateRef       Ref forwarded to the ETA/stack date input
- * @param {function} props.onInputChange    Generic input change handler
- * @param {function} props.onVatChange      Called with new VAT numeric value (0 or 15)
+ * @param {object}   props.lastFreeDateRef
+ * @param {object}   props.etaDateRef
+ * @param {function} props.onInputChange
+ * @param {function} props.onVatChange
+ * @param {Array}    [props.shipmentTypes]         Enables the Shipment Type select
+ * @param {function} [props.onShipmentTypeChange]
+ * @param {boolean}  [props.showCreationDate]      Render the Creation Date field
+ * @param {React.ReactNode} [props.children]       Extra controls (e.g. UnitPerSection)
  */
 import { ErrorTooltip } from "./ErrorTooltip";
 
@@ -35,6 +39,10 @@ export function BookingDetailsSection({
   etaDateRef,
   onInputChange,
   onVatChange,
+  shipmentTypes = null,
+  onShipmentTypeChange,
+  showCreationDate = false,
+  children,
 }) {
   const showStackDate =
     isAddOn ||
@@ -51,14 +59,45 @@ export function BookingDetailsSection({
     String(formData.shipmentTypeId) === "2";
 
   return (
-    <div className="controller-instructions-date-time-group">
-      {/* Row 1: Booking Reference + Client File Ref */}
-      <div
-        className="controller-instructions-shipment-task-row"
-        style={{ order: -1, marginBottom: "8px" }}
-      >
-        <div className="controller-instructions-form-field controller-instructions-small-field">
-          <label>Booking Reference</label>
+    <div className="controller-instructions-form-section">
+      {/* Row 1: Shipment Type + references */}
+      <div className="controller-instructions-form-row">
+        {shipmentTypes && (
+          <div className="controller-instructions-form-field">
+            <label>
+              Shipment Type <span className="wb-required">*</span>
+            </label>
+            <div
+              className="controller-instructions-select-wrapper"
+              ref={fieldRefs?.shipmentTypeId}
+            >
+              <select
+                className={`dropdown ${
+                  fieldErrors.shipmentTypeId
+                    ? "controller-instructions-error-field"
+                    : ""
+                }`}
+                name="shipmentTypeId"
+                value={formData.shipmentTypeId}
+                onChange={onShipmentTypeChange}
+                disabled={isReadOnly}
+                style={isReadOnly ? readOnlyStyle : {}}
+              >
+                <option value="" disabled>
+                  Select Shipment
+                </option>
+                {shipmentTypes.map((type) => (
+                  <option key={type.shipkey} value={type.shipkey}>
+                    {type.shipmenttype}
+                  </option>
+                ))}
+              </select>
+              <ErrorTooltip message={fieldErrors.shipmentTypeId} />
+            </div>
+          </div>
+        )}
+        <div className="controller-instructions-form-field">
+          <label>Booking Ref</label>
           <div
             className="controller-instructions-input-wrapper"
             ref={fieldRefs?.bookingRef}
@@ -78,8 +117,8 @@ export function BookingDetailsSection({
             <ErrorTooltip message={fieldErrors.bookingRef} />
           </div>
         </div>
-        <div className="controller-instructions-form-field controller-instructions-small-field">
-          <label>Client File Ref</label>
+        <div className="controller-instructions-form-field">
+          <label>Client File Reference</label>
           <div
             className="controller-instructions-input-wrapper"
             ref={fieldRefs?.clientFileRef}
@@ -99,15 +138,8 @@ export function BookingDetailsSection({
             <ErrorTooltip message={fieldErrors.clientFileRef} />
           </div>
         </div>
-      </div>
-
-      {/* Row 2: KSM File Ref + Last Free Date */}
-      <div
-        className="controller-instructions-shipment-task-row"
-        style={{ marginBottom: "8px" }}
-      >
-        <div className="controller-instructions-form-field controller-instructions-small-field">
-          <label>Ksm File Reference</label>
+        <div className="controller-instructions-form-field">
+          <label>Company File Reference</label>
           <div
             className="controller-instructions-input-wrapper"
             ref={fieldRefs?.ksmFileRef}
@@ -117,7 +149,7 @@ export function BookingDetailsSection({
               className={`controller-instructions-form-input ${
                 fieldErrors.ksmFileRef ? "controller-instructions-error-field" : ""
               }`}
-              placeholder="Input KSM File Reference"
+              placeholder="Enter company file reference"
               name="ksmFileRef"
               value={formData.ksmFileRef}
               onChange={onInputChange}
@@ -127,7 +159,55 @@ export function BookingDetailsSection({
             <ErrorTooltip message={fieldErrors.ksmFileRef} />
           </div>
         </div>
-        <div className="controller-instructions-form-field controller-instructions-small-field">
+      </div>
+
+      {/* Row 2: Creation Date + ETA/Stack Date + Last Free Date */}
+      <div className="controller-instructions-form-row">
+        {showCreationDate && (
+          <div className="controller-instructions-form-field">
+            <label>Creation Date</label>
+            <input
+              type="date"
+              className="controller-instructions-form-input"
+              name="createdAt"
+              value={formData.createdAt || ""}
+              onChange={onInputChange}
+              disabled={isReadOnly}
+              style={isReadOnly ? readOnlyStyle : {}}
+              ref={fieldRefs?.createdAt}
+            />
+          </div>
+        )}
+        {showStackDate && (
+          <div className="controller-instructions-form-field">
+            <label>
+              {stackDateLabel}{" "}
+              {stackDateRequired && <span className="wb-required">*</span>}
+            </label>
+            <div
+              className="controller-instructions-date-wrapper"
+              ref={fieldRefs?.stackDate}
+            >
+              <input
+                type="date"
+                className={`controller-instructions-form-input ${
+                  fieldErrors.stackDate ? "controller-instructions-error-field" : ""
+                }`}
+                name="stackDate"
+                value={formData.stackDate || ""}
+                onChange={onInputChange}
+                min={today}
+                ref={etaDateRef}
+                disabled={isReadOnly}
+                style={isReadOnly ? readOnlyStyle : {}}
+                required={stackDateRequired}
+                onKeyDown={(e) => e.preventDefault()}
+              />
+              <ErrorTooltip message={fieldErrors.stackDate} />
+            </div>
+          </div>
+        )}
+        <div className="controller-instructions-form-field">
           <label>Last Free Date</label>
           <div
             className="controller-instructions-date-wrapper"
@@ -152,14 +232,11 @@ export function BookingDetailsSection({
         </div>
       </div>
 
-      {/* Row 3: VAT toggle + Stack/ETA Date */}
-      <div
-        className="controller-instructions-shipment-task-row"
-        style={{ marginBottom: "8px" }}
-      >
+      {/* Row 3: VAT toggle + Vessel Name */}
+      <div className="controller-instructions-form-row">
         <div
-          className="controller-instructions-form-field controller-instructions-small-field"
-          style={{ maxWidth: "120px" }}
+          className="controller-instructions-form-field"
+          style={{ maxWidth: "140px" }}
         >
           <label>VAT</label>
           <div className="controller-instructions-input-wrapper">
@@ -210,90 +287,67 @@ export function BookingDetailsSection({
           </div>
         </div>
 
-        {showStackDate && (
-          <div className="controller-instructions-form-field controller-instructions-small-field">
+        {showVesselName && (
+          <div className="controller-instructions-form-field">
             <label>
-              {stackDateLabel}{" "}
-              {stackDateRequired && <span style={{ color: "red" }}>*</span>}
+              Vessel Name{" "}
+              {(formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2") && (
+                <span className="wb-required">*</span>
+              )}
             </label>
             <div
-              className="controller-instructions-date-wrapper"
-              ref={fieldRefs?.stackDate}
+              className="controller-instructions-input-wrapper"
+              ref={fieldRefs?.vesselName}
             >
               <input
-                type="date"
+                type="text"
                 className={`controller-instructions-form-input ${
-                  fieldErrors.stackDate ? "controller-instructions-error-field" : ""
+                  fieldErrors.vesselName ? "controller-instructions-error-field" : ""
                 }`}
-                name="stackDate"
-                value={formData.stackDate || ""}
+                placeholder="Enter vessel name"
+                name="vesselName"
+                value={formData.vesselName || ""}
                 onChange={onInputChange}
-                min={today}
-                ref={etaDateRef}
                 disabled={isReadOnly}
                 style={isReadOnly ? readOnlyStyle : {}}
-                required={stackDateRequired}
-                onKeyDown={(e) => e.preventDefault()}
+                required={
+                  formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2"
+                }
               />
-              <ErrorTooltip message={fieldErrors.stackDate} />
+              <ErrorTooltip message={fieldErrors.vesselName} />
             </div>
           </div>
         )}
       </div>
 
-      {/* Vessel Name (hidden for type 4) */}
-      {showVesselName && (
-        <div className="controller-instructions-form-field">
-          <label>
-            Vessel Name{" "}
-            {(formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2") && (
-              <span style={{ color: "red" }}>*</span>
-            )}
-          </label>
+      {/* Optional extra controls (e.g. Unit Per / set rate) */}
+      {children}
+
+      {/* Row 4: Description */}
+      <div className="controller-instructions-form-row">
+        <div
+          className="controller-instructions-form-field"
+          style={{ width: "100%" }}
+        >
+          <label>Description</label>
           <div
             className="controller-instructions-input-wrapper"
-            ref={fieldRefs?.vesselName}
+            ref={fieldRefs?.description}
           >
             <input
               type="text"
               className={`controller-instructions-form-input ${
-                fieldErrors.vesselName ? "controller-instructions-error-field" : ""
+                fieldErrors.description ? "controller-instructions-error-field" : ""
               }`}
-              placeholder="Enter vessel name"
-              name="vesselName"
-              value={formData.vesselName || ""}
+              placeholder="Enter description"
+              name="description"
+              value={formData.description}
               onChange={onInputChange}
               disabled={isReadOnly}
               style={isReadOnly ? readOnlyStyle : {}}
-              required={
-                formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2"
-              }
             />
-            <ErrorTooltip message={fieldErrors.vesselName} />
+            <ErrorTooltip message={fieldErrors.description} />
           </div>
-        </div>
-      )}
-
-      {/* Description */}
-      <div className="controller-instructions-form-field">
-        <label>Description</label>
-        <div
-          className="controller-instructions-input-wrapper"
-          ref={fieldRefs?.description}
-        >
-          <input
-            type="text"
-            className={`controller-instructions-form-input ${
-              fieldErrors.description ? "controller-instructions-error-field" : ""
-            }`}
-            placeholder="Enter description"
-            name="description"
-            value={formData.description}
-            onChange={onInputChange}
-            disabled={isReadOnly}
-            style={isReadOnly ? readOnlyStyle : {}}
-          />
-          <ErrorTooltip message={fieldErrors.description} />
         </div>
       </div>
     </div>

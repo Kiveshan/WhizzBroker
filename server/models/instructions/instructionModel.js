@@ -950,6 +950,36 @@ export const saveInstructionGroup = async ({ clientId, groupRef = null, instruct
 };
 
 /**
+ * Appends one instruction to an existing group. The child must belong to
+ * the group's client; container/weight/total-cost behaviour comes from
+ * saveInstruction, exactly like the children created with the group.
+ */
+export const addInstructionToGroup = async (
+  groupKey,
+  { controllerData, containerData = [], weightData = [] }
+) => {
+  const groupResult = await query(
+    `SELECT group_key, client FROM public.instruction_group WHERE group_key = $1`,
+    [groupKey]
+  );
+  if (groupResult.rows.length === 0) {
+    throw new Error("Instruction group not found");
+  }
+
+  const childClient = controllerData?.client || controllerData?.clientId;
+  if (String(childClient) !== String(groupResult.rows[0].client)) {
+    throw new Error("All instructions in a group must belong to the group's client");
+  }
+
+  return saveInstruction({
+    controllerData,
+    containerData,
+    weightData,
+    instructionGroupId: groupKey,
+  });
+};
+
+/**
  * Fetches a group with its children, each child in the same shape
  * getInstructionById returns (containers + weight_rows included).
  */
@@ -1115,7 +1145,9 @@ export const getInstructions = async (clientId) => {
         WHERE cn.m1key = m.m1key
       ) AS has_valid_containers,
       i.invoice_num,
-      ao.invoice_number AS addon_invoice_number
+      ao.invoice_number AS addon_invoice_number,
+      m.instruction_group_id,
+      g.group_ref
     FROM
       public.m1_controller m
     JOIN
@@ -1126,6 +1158,8 @@ export const getInstructions = async (clientId) => {
       public.invoice i ON m.m1key = i.m1key
     LEFT JOIN
       public.add_ons ao ON m.addon_id = ao.addon_id
+    LEFT JOIN
+      public.instruction_group g ON m.instruction_group_id = g.group_key
   `;
   const queryParams = [];
   if (clientId) {

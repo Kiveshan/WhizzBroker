@@ -95,3 +95,12 @@ export async function fetchInstructionGroup(groupKey) {
   const response = await api.get(`/api/instructions/group/${groupKey}`);
   return response.data;
 }
+
+export async function addInstructionToGroup(groupKey, controllerData, containerData, weightData) {
+  const response = await api.post(`/api/instructions/group/${groupKey}/instructions`, {
+    controllerData,
+    containerData,
+    weightData,
+  });
+  return response.data;
+}

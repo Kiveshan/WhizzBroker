@@ -2061,3 +2061,52 @@ Unique wrapper for ControllerInstructions component only
   height: 15px;
   accent-color: #1c7ed6;
 }
+
+/* Per-row delete + type select in the FC ContainersCard */
+.controller-instructions-unique-wrapper .wb-delete-btn {
+  padding: 4px 10px;
+  font-size: 11.5px;
+  border-radius: 6px;
+  border: 1px solid #f04438;
+  background: #ffffff;
+  color: #f04438;
+  cursor: pointer;
+}
+
+.controller-instructions-unique-wrapper .wb-delete-btn:hover {
+  background: #fef3f2;
+}
+
+.controller-instructions-unique-wrapper .wb-containers-table select {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 13px;
+  background: #ffffff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Read-only view page container table: match the redesigned table look. */
+.controller-instructions-unique-wrapper .controller-instructions-container-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-table th {
+  background: #f0f7fb;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  padding: 10px 12px;
+  border-bottom: none;
+  white-space: nowrap;
+}
+
+.controller-instructions-unique-wrapper .controller-instructions-container-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f3f7;
+  vertical-align: middle;
+}

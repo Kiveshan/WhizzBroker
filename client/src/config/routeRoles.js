@@ -69,6 +69,7 @@ export const ROUTE_ROLES = [
 
   // ---------- Instruction edit / assignment flows (⚠️ uncertain role mix) ----------
   { pattern: "/FCcontrollerinstructions", roles: [3, 2, 1, 4] },
+  { pattern: "/FCInstructionGroup", roles: [3, 2, 1, 4] },
   { pattern: "/FCcontrollerInstructionDetails", roles: [3, 2, 1, 4] },
   { pattern: "/instructions", roles: [3, 2, 1, 4] },
   { pattern: "/update-instructions", roles: [3, 2, 1, 4] },

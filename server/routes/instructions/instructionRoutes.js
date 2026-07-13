@@ -25,6 +25,7 @@ import {
   deleteInstructionHandler,
   saveInstructionGroupHandler,
   getInstructionGroupHandler,
+  addInstructionToGroupHandler,
 } from "../../controllers/instructions/instructionController.js"
 import { verifyToken } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js"
@@ -48,6 +49,7 @@ router.post("/save-instruction", verifyToken, validate(instructionSaveSchema), s
 // ========== Instruction Group Endpoints ==========
 router.post("/group", verifyToken, validate(instructionGroupSaveSchema), saveInstructionGroupHandler)
 router.get("/group/:id", getInstructionGroupHandler)
+router.post("/group/:id/instructions", verifyToken, validate(instructionSaveSchema), addInstructionToGroupHandler)
 router.get("/client-instruction-stats", getClientInstructionStatsHandler)
 router.get("/instructions", getInstructionsHandler)
 router.get("/search", searchInstructionsHandler)
