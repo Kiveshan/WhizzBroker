@@ -85,6 +85,7 @@ import {
 } from "./pages/payments";
 import {
   UpdateInstruction,
+  GroupAssignment,
   DirectorManagerViewAssignment,
   UploadInstructionDocuments,
   DirectorDocs,
@@ -394,6 +395,7 @@ function ContentWrapper() {
         {/* Finance Clerk Routes */}
         <Route path="/instructions" element={<InstructionsList />} />
         <Route path="/update-instructions" element={<UpdateInstruction />} />
+        <Route path="/GroupAssignment" element={<GroupAssignment />} />
         <Route
           path="/Upload-Instruction-Documents"
           element={<UploadInstructionDocuments />}

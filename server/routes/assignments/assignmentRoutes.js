@@ -32,10 +32,18 @@ import {
   getDriverLegsHandler,
   getDocumentsHandler,
   generateInvoiceHandler,
-  updateLegNumberHandler
+  updateLegNumberHandler,
+  getGroupForAssignmentHandler,
+  assignSubbieHandler,
+  finaliseGroupHandler,
 } from "../../controllers/assignments/assignmentController.js";
 
 const router = express.Router();
+
+// ── Instruction group assignments ──
+router.get("/group/:groupId", getGroupForAssignmentHandler);
+router.post("/instruction/:m1key/assign", assignSubbieHandler);
+router.post("/group/:groupId/finalise", finaliseGroupHandler);
 
 router.get("/drivers", getDriversHandler);
 router.get("/starting-points", getStartingPointsHandler);

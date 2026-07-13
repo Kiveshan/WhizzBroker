@@ -32,7 +32,10 @@ import {
   getDocuments,
   generateInvoice,
   fixInvoiceSequence,
-  updateLegNumber
+  updateLegNumber,
+  getGroupForAssignment,
+  assignSubbieToInstruction,
+  finaliseInstructionGroup,
 } from "../../models/assignments/assignmentModel.js";
 
 export const getDriversHandler = async (req, res) => {
@@ -669,5 +672,46 @@ export const updateLegNumberHandler = async (req, res) => {
       message: "Failed to update leg number",
       error: err.message,
     });
+  }
+};
+
+// ─── Instruction group assignments ────────────────────────────────────────────
+
+export const getGroupForAssignmentHandler = async (req, res) => {
+  try {
+    const group = await getGroupForAssignment(req.params.groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, message: "Instruction group not found" });
+    }
+    res.status(200).json(group);
+  } catch (error) {
+    console.error("Error fetching group for assignment:", error);
+    res.status(500).json({ success: false, message: "Failed to load group", error: error.message });
+  }
+};
+
+export const assignSubbieHandler = async (req, res) => {
+  try {
+    const { m1key } = req.params;
+    const { subbieId, truck } = req.body;
+    if (!subbieId || !truck) {
+      return res.status(400).json({ success: false, message: "Both subbieId and truck are required" });
+    }
+    const result = await assignSubbieToInstruction({ m1key, subbieId, truck });
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error("Error assigning subbie:", error);
+    res.status(500).json({ success: false, message: "Failed to assign", error: error.message });
+  }
+};
+
+export const finaliseGroupHandler = async (req, res) => {
+  try {
+    const result = await finaliseInstructionGroup(req.params.groupId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finalising group:", error);
+    const status = error.code === "GROUP_INCOMPLETE" ? 400 : 500;
+    res.status(status).json({ success: false, message: error.message, code: error.code });
   }
 };

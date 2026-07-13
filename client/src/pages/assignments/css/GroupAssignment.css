@@ -1,0 +1,387 @@
+/* Group assignment carousel — white cards on pale-cyan, matching the
+   WhizzBroker instruction redesign. */
+
+.wb-assign-wrapper {
+  min-height: 100vh;
+  background-color: #eef8fa;
+  font-family: "Segoe UI", Arial, sans-serif;
+  padding: 16px 20px 40px;
+  box-sizing: border-box;
+}
+
+.wb-assign-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.wb-assign-back {
+  background-color: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.wb-assign-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.08);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.wb-assign-card > h3 {
+  margin: 0 0 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+}
+
+/* Accordion (Instruction Information / Containers) */
+.wb-accordion {
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.wb-accordion-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: none;
+  padding: 16px 18px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wb-accordion-head:hover {
+  background: #fcfdfe;
+}
+
+.wb-accordion-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.wb-accordion-sub {
+  font-size: 12.5px;
+  color: #667085;
+  margin-top: 2px;
+}
+
+.wb-accordion-chevron {
+  color: #98a2b3;
+  transition: transform 0.2s ease;
+  font-size: 14px;
+}
+
+.wb-accordion-chevron.open {
+  transform: rotate(180deg);
+}
+
+.wb-accordion-body {
+  padding: 4px 18px 18px;
+  border-top: 1px solid #f2f4f7;
+}
+
+/* read-only info grid */
+.wb-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 20px;
+  padding-top: 14px;
+}
+
+.wb-info-item .wb-info-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #667085;
+  margin-bottom: 3px;
+}
+
+.wb-info-item .wb-info-value {
+  font-size: 13.5px;
+  color: #101828;
+}
+
+.wb-assign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+
+.wb-assign-table th {
+  background: #f0f7fb;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  padding: 8px 12px;
+}
+
+.wb-assign-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f3f7;
+  font-size: 13px;
+  color: #101828;
+}
+
+/* Subbie / Truck / Next row */
+.wb-assign-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.wb-assign-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+}
+
+.wb-assign-field label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #667085;
+  margin-bottom: 6px;
+}
+
+.wb-assign-field select {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  background: #fff;
+  color: #101828;
+}
+
+.wb-assign-spacer {
+  flex: 1;
+}
+
+.wb-next-btn {
+  background: #4aa8e0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-next-btn:disabled {
+  background: #bcd9ec;
+  cursor: not-allowed;
+}
+
+/* Carousel dots */
+.wb-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.wb-dot {
+  height: 5px;
+  width: 60px;
+  border-radius: 3px;
+  background: #dfe4ea;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wb-dot.active {
+  background: #4aa8e0;
+}
+
+.wb-dot.complete {
+  background: #34c759;
+}
+
+/* Documents */
+.wb-docs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.wb-docs-head .wb-docs-sub {
+  font-size: 12.5px;
+  color: #667085;
+  margin-top: 2px;
+}
+
+.wb-upload-btn {
+  background: #4aa8e0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-dropzone {
+  border: 2px dashed #d0d5dd;
+  border-radius: 12px;
+  padding: 34px;
+  text-align: center;
+  color: #667085;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wb-dropzone.drag {
+  border-color: #4aa8e0;
+  background: #f5fbfe;
+}
+
+.wb-dropzone .wb-drop-main {
+  font-size: 13.5px;
+  color: #344054;
+  margin-top: 8px;
+}
+
+.wb-dropzone .wb-drop-sub {
+  font-size: 12px;
+  color: #98a2b3;
+  margin-top: 2px;
+}
+
+.wb-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.wb-doc-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eaf5fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4aa8e0;
+  flex-shrink: 0;
+}
+
+.wb-doc-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-doc-name {
+  font-size: 13.5px;
+  color: #101828;
+  font-weight: 500;
+}
+
+.wb-doc-sub {
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+.wb-doc-check {
+  color: #34c759;
+}
+
+.wb-doc-remove {
+  background: none;
+  border: none;
+  color: #98a2b3;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* Footer action buttons */
+.wb-assign-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.wb-btn-outline {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #344054;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-outline:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.wb-btn-finalise {
+  background: #12b76a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-finalise:disabled {
+  background: #a6e3c6;
+  cursor: not-allowed;
+}
+
+.wb-assign-alert {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.wb-assign-alert.err {
+  background: #fef3f2;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.wb-assign-alert.ok {
+  background: #ecfdf3;
+  color: #027a48;
+  border: 1px solid #a6f4c5;
+}

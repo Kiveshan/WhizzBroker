@@ -1212,3 +1212,280 @@ export const fixInvoiceSequence = async () => {
     client.release();
   }
 };
+
+// ─── Instruction group assignments ────────────────────────────────────────────
+// In WhizzBroker an assignment is "one subcontractor + their truck per child
+// instruction" (single leg, legnumber = 1). The whole group is worked through a
+// carousel and finalised together, producing one combined invoice.
+
+/**
+ * Returns a group with every child instruction shaped for the assignment
+ * carousel: instruction info, containers, the current subbie/truck assignment,
+ * uploaded documents, and completion flags.
+ */
+export const getGroupForAssignment = async (groupId) => {
+  const groupResult = await pool.query(
+    `SELECT g.group_key, g.client, g.status, g.created_at, g.group_ref,
+            c.client AS client_name
+     FROM public.instruction_group g
+     LEFT JOIN public.m5_client c ON g.client = c.m5clientkey
+     WHERE g.group_key = $1`,
+    [groupId]
+  );
+  if (groupResult.rows.length === 0) return null;
+
+  const childRows = await pool.query(
+    `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
+            m.shipment_type, s.shipmenttype, m.pickup, m.dropoff,
+            m.vessel_name, m.stackdate, m."lastFreeDate", m.status,
+            m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
+            m.total_cost, m.vat
+     FROM public.m1_controller m
+     LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
+     WHERE m.instruction_group_id = $1
+     ORDER BY m.m1key`,
+    [groupId]
+  );
+
+  const instructions = [];
+  for (const row of childRows.rows) {
+    const containers = await pool.query(
+      `SELECT containerkey, containernum, container_type, weight, cargo_description
+       FROM public.container WHERE m1key = $1 ORDER BY containerkey`,
+      [row.m1key]
+    );
+
+    // Current assignment: the single leg (legnumber = 1) for this instruction.
+    const legResult = await pool.query(
+      `SELECT l.legkey, l.driverid, l.truckregnumber, l.driverrate,
+              e.name AS driver_name, e.surname AS driver_surname
+       FROM public.legs_m2 l
+       LEFT JOIN public.m5_employee e ON e.userid = l.driverid
+       WHERE l.m1key = $1 AND l.legnumber = 1
+       ORDER BY l.legkey DESC LIMIT 1`,
+      [row.m1key]
+    );
+    const leg = legResult.rows[0] || null;
+
+    const docsResult = await pool.query(
+      `SELECT document_id, name, type, upload_date, s3key
+       FROM public.documents WHERE m1key = $1 ORDER BY document_id`,
+      [row.m1key]
+    );
+
+    const hasAssignment = !!(leg && leg.driverid && leg.truckregnumber);
+    const hasDocuments = docsResult.rows.length > 0;
+
+    instructions.push({
+      ...row,
+      containers: containers.rows,
+      assignment: leg
+        ? {
+            legkey: leg.legkey,
+            subbieId: leg.driverid,
+            truck: leg.truckregnumber,
+            subbieName: leg.driver_name
+              ? `${leg.driver_name} ${leg.driver_surname || ""}`.trim()
+              : null,
+            driverrate: leg.driverrate,
+          }
+        : null,
+      documents: docsResult.rows.map((d) => ({
+        id: d.document_id,
+        name: d.name,
+        type: d.type,
+      })),
+      hasAssignment,
+      hasDocuments,
+      complete: hasAssignment && hasDocuments,
+    });
+  }
+
+  return { ...groupResult.rows[0], instructions };
+};
+
+/**
+ * Assigns a subcontractor and their truck to one child instruction as a single
+ * leg (legnumber = 1). Re-assigning replaces the previous leg. The leg's route
+ * comes from the instruction; the rate is the subbie's 6m rate for that route
+ * (best-effort — refined by the rate-refresh flow / statements later).
+ */
+export const assignSubbieToInstruction = async ({ m1key, subbieId, truck }) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const instrResult = await client.query(
+      `SELECT pickup, dropoff FROM public.m1_controller WHERE m1key = $1`,
+      [m1key]
+    );
+    if (instrResult.rows.length === 0) {
+      throw new Error(`Instruction ${m1key} not found`);
+    }
+    const { pickup, dropoff } = instrResult.rows[0];
+
+    // Best-effort subbie rate for the route (6m subbie rate).
+    let driverrate = 0;
+    let m5ratekey = null;
+    const rateResult = await client.query(
+      `SELECT m5ratekey, subie_six_meter_rate
+       FROM public.m5_driver_rate
+       WHERE startingpoint = $1 AND destination = $2
+         AND effective_from <= CURRENT_DATE
+         AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+       ORDER BY effective_from DESC LIMIT 1`,
+      [pickup, dropoff]
+    );
+    if (rateResult.rows.length > 0) {
+      driverrate = rateResult.rows[0].subie_six_meter_rate || 0;
+      m5ratekey = rateResult.rows[0].m5ratekey;
+    }
+
+    // One assignment leg per instruction: clear then insert.
+    await client.query(
+      `DELETE FROM public.legs_m2 WHERE m1key = $1 AND legnumber = 1`,
+      [m1key]
+    );
+    const insertResult = await client.query(
+      `INSERT INTO public.legs_m2
+         (legnumber, startingpoint, destination, driverrate, m1key,
+          driverid, truckregnumber, m5ratekey, date, legstatus)
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'Assigned')
+       RETURNING legkey`,
+      [pickup, dropoff, driverrate, m1key, subbieId, truck, m5ratekey]
+    );
+
+    // Move the instruction into "In Progress" once it has an assignment.
+    await client.query(
+      `UPDATE public.m1_controller SET status = 'In Progress'
+       WHERE m1key = $1 AND LOWER(COALESCE(status, '')) = 'new'`,
+      [m1key]
+    );
+
+    await client.query("COMMIT");
+    return { legkey: insertResult.rows[0].legkey, driverrate };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Finalises a whole group: requires every child to have a subbie+truck and at
+ * least one document, then marks every child and the group Completed and
+ * creates the single combined invoice row for the group.
+ */
+export const finaliseInstructionGroup = async (groupId) => {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const groupResult = await client.query(
+      `SELECT group_key, client, status FROM public.instruction_group WHERE group_key = $1`,
+      [groupId]
+    );
+    if (groupResult.rows.length === 0) {
+      throw new Error(`Instruction group ${groupId} not found`);
+    }
+    const clientId = groupResult.rows[0].client;
+
+    const children = await client.query(
+      `SELECT m1key FROM public.m1_controller WHERE instruction_group_id = $1`,
+      [groupId]
+    );
+    if (children.rows.length === 0) {
+      throw new Error("This group has no instructions to finalise");
+    }
+
+    // Every child must have an assignment leg (subbie + truck) and a document.
+    const incomplete = [];
+    for (const { m1key } of children.rows) {
+      const leg = await client.query(
+        `SELECT 1 FROM public.legs_m2
+         WHERE m1key = $1 AND legnumber = 1 AND driverid IS NOT NULL
+           AND truckregnumber IS NOT NULL LIMIT 1`,
+        [m1key]
+      );
+      const doc = await client.query(
+        `SELECT 1 FROM public.documents WHERE m1key = $1 LIMIT 1`,
+        [m1key]
+      );
+      if (leg.rows.length === 0 || doc.rows.length === 0) {
+        incomplete.push(m1key);
+      }
+    }
+    if (incomplete.length > 0) {
+      const err = new Error(
+        `Every instruction needs a subcontractor, truck and at least one document before finalising. Incomplete: ${incomplete.join(", ")}`
+      );
+      err.code = "GROUP_INCOMPLETE";
+      throw err;
+    }
+
+    // One combined invoice per group (skip if it already exists).
+    const existing = await client.query(
+      `SELECT ikey FROM public.invoice WHERE instruction_group_id = $1 AND m1key IS NULL`,
+      [groupId]
+    );
+    let invoice = existing.rows[0] || null;
+
+    if (!invoice) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthNames = [
+        "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+        "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+      ];
+      const monthName = monthNames[now.getMonth()];
+
+      const seqResult = await client.query(
+        "SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_num FROM 'INV-\\d+-0*(\\d+)') AS INTEGER)), 0) + 1 AS next FROM public.invoice WHERE invoice_num LIKE $1",
+        [`INV-${year}-%`]
+      );
+      const invoiceNum = `INV-${year}-${seqResult.rows[0].next}`;
+      const monthlyGroupId = `${clientId}-${monthName}${year}`;
+
+      // Invoice date = earliest assignment-leg date across the group's children.
+      const dateResult = await client.query(
+        `SELECT MIN(l.date) AS first_date
+         FROM public.legs_m2 l
+         JOIN public.m1_controller m ON m.m1key = l.m1key
+         WHERE m.instruction_group_id = $1 AND l.date IS NOT NULL`,
+        [groupId]
+      );
+      const invoiceDate = dateResult.rows[0].first_date || now;
+
+      const insertInvoice = await client.query(
+        `INSERT INTO public.invoice (clientid, instruction_group_id, invoice_num, groupid, date)
+         VALUES ($1, $2, $3, $4, $5) RETURNING ikey, invoice_num`,
+        [clientId, groupId, invoiceNum, monthlyGroupId, invoiceDate]
+      );
+      invoice = insertInvoice.rows[0];
+    }
+
+    // Mark children and the group Completed.
+    await client.query(
+      `UPDATE public.m1_controller SET status = 'Completed' WHERE instruction_group_id = $1`,
+      [groupId]
+    );
+    await client.query(
+      `UPDATE public.instruction_group SET status = 'Completed' WHERE group_key = $1`,
+      [groupId]
+    );
+
+    await client.query("COMMIT");
+    return {
+      success: true,
+      groupId,
+      invoiceId: invoice.ikey,
+      invoiceNum: invoice.invoice_num,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+};

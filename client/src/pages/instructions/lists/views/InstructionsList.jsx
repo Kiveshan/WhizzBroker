@@ -579,6 +579,14 @@ const Instructions = () => {
           activeFilter,
           selectedLegIndex: 0,
         };
+        // Grouped instructions open the whole-group assignment carousel;
+        // legacy ungrouped instructions keep the single-instruction flow.
+        if (item.instruction_group_id) {
+          navigate("/GroupAssignment", {
+            state: { ...stateToPass, groupId: item.instruction_group_id },
+          });
+          return;
+        }
         console.log("Navigating to update-instructions with state:", stateToPass);
         navigate("/update-instructions", {
           state: stateToPass,
