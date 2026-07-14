@@ -58,6 +58,7 @@ import {
   ViewClientInvoice,
   InvoicesList,
   ClientInvoice,
+  GroupInvoiceView,
 } from "./pages/invoices";
 import {
   ViewClientStatement,
@@ -214,6 +215,7 @@ function DynamicHeader() {
     if (location.pathname.startsWith("/upload"))
       return "Upload Proof of Payment";
     if (location.pathname.startsWith("/invoice/")) return "Tax Invoice";
+    if (location.pathname.startsWith("/group-invoice/")) return "Tax Invoice";
     if (location.pathname.startsWith("/ExpenseDetails/"))
       return "Fuel Expenses";
     if (location.pathname.startsWith("/finance-clerk-wage-details/"))
@@ -449,6 +451,7 @@ function ContentWrapper() {
         <Route path="/invoice" element={<Navigate to="/invoices" replace />} />
         <Route path="/invoice/:id" element={<ClientInvoice />} />
         <Route path="/invoice/:id/download" element={<ClientInvoice />} />
+        <Route path="/group-invoice/:groupId" element={<GroupInvoiceView />} />
         <Route path="/DebtorsDashboard" element={<DebtorsDashboard />} />
         <Route path="/CreditorsDashboard" element={<CreditorsDashboard />} />
         <Route path="/FuelPage" element={<ViewExpense />} />
