@@ -232,7 +232,43 @@ export function BookingDetailsSection({
         </div>
       </div>
 
-      {/* Row 3: VAT toggle + Vessel Name */}
+      {/* Row 3: Vessel Name + extra controls (e.g. Unit Per / set rate) */}
+      <div className="controller-instructions-form-row">
+        {showVesselName && (
+          <div className="controller-instructions-form-field">
+            <label>
+              Vessel Name{" "}
+              {(formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2") && (
+                <span className="wb-required">*</span>
+              )}
+            </label>
+            <div
+              className="controller-instructions-input-wrapper"
+              ref={fieldRefs?.vesselName}
+            >
+              <input
+                type="text"
+                className={`controller-instructions-form-input ${
+                  fieldErrors.vesselName ? "controller-instructions-error-field" : ""
+                }`}
+                placeholder="Enter vessel name"
+                name="vesselName"
+                value={formData.vesselName || ""}
+                onChange={onInputChange}
+                disabled={isReadOnly}
+                style={isReadOnly ? readOnlyStyle : {}}
+                required={
+                  formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2"
+                }
+              />
+              <ErrorTooltip message={fieldErrors.vesselName} />
+            </div>
+          </div>
+        )}
+        {children}
+      </div>
+
+      {/* Row 4: VAT toggle */}
       <div className="controller-instructions-form-row">
         <div
           className="controller-instructions-form-field"
@@ -286,42 +322,7 @@ export function BookingDetailsSection({
             </label>
           </div>
         </div>
-
-        {showVesselName && (
-          <div className="controller-instructions-form-field">
-            <label>
-              Vessel Name{" "}
-              {(formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2") && (
-                <span className="wb-required">*</span>
-              )}
-            </label>
-            <div
-              className="controller-instructions-input-wrapper"
-              ref={fieldRefs?.vesselName}
-            >
-              <input
-                type="text"
-                className={`controller-instructions-form-input ${
-                  fieldErrors.vesselName ? "controller-instructions-error-field" : ""
-                }`}
-                placeholder="Enter vessel name"
-                name="vesselName"
-                value={formData.vesselName || ""}
-                onChange={onInputChange}
-                disabled={isReadOnly}
-                style={isReadOnly ? readOnlyStyle : {}}
-                required={
-                  formData.shipmentTypeId === "1" || formData.shipmentTypeId === "2"
-                }
-              />
-              <ErrorTooltip message={fieldErrors.vesselName} />
-            </div>
-          </div>
-        )}
       </div>
-
-      {/* Optional extra controls (e.g. Unit Per / set rate) */}
-      {children}
 
       {/* Row 4: Description */}
       <div className="controller-instructions-form-row">

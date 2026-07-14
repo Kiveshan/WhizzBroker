@@ -101,7 +101,7 @@ Unique wrapper for ControllerInstructions component only
   width: calc(100% + 30px);
 }
 
-.controller-instructions-unique-wrapper .controller-instructions-client-info-section .controller-instructions-form-row {
+.controller-instructions-unique-wrapper .controller-instructions-form-row {
   display: flex;
   flex-wrap: wrap;
   gap: 15px;
@@ -110,28 +110,29 @@ Unique wrapper for ControllerInstructions component only
   box-sizing: border-box;
 }
 
-.controller-instructions-unique-wrapper
-  .controller-instructions-client-info-section
-  .controller-instructions-form-field {
+.controller-instructions-unique-wrapper .controller-instructions-form-field {
   flex: 1 1 calc(16.666% - 15px);
   min-width: 180px;
-  max-width: 100%;
+  max-width: 260px;
   box-sizing: border-box;
 }
 
+/* Fields explicitly asked to fill the row (e.g. Description) opt out via inline width: 100%. */
+.controller-instructions-unique-wrapper .controller-instructions-form-field[style*="width: 100%"] {
+  max-width: 100%;
+}
+
 @media (max-width: 1400px) {
-  .controller-instructions-unique-wrapper
-    .controller-instructions-client-info-section
-    .controller-instructions-form-field {
+  .controller-instructions-unique-wrapper .controller-instructions-form-field {
     flex: 1 1 calc(33.333% - 15px);
+    max-width: 320px;
   }
 }
 
 @media (max-width: 768px) {
-  .controller-instructions-unique-wrapper
-    .controller-instructions-client-info-section
-    .controller-instructions-form-field {
+  .controller-instructions-unique-wrapper .controller-instructions-form-field {
     flex: 1 1 100%;
+    max-width: 100%;
   }
 }
 

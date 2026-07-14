@@ -151,7 +151,7 @@ export function ContainersCard({
     <div className="controller-instructions-form-section container-details-section">
       <div className="wb-card-header">
         <h4>Containers</h4>
-        <p>Set trailer quantities per type and capture each container in detail.</p>
+        <p>Manage trailer quantities in bulk or capture each container in detail.</p>
       </div>
       {successMessage && (
         <div className="controller-instructions-success-message">{successMessage}</div>
