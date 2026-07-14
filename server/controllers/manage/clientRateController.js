@@ -105,6 +105,19 @@ const saveClientRatesHandler = async (req, res) => {
       ) {
         return res.status(400).json({ error: "Fuel surcharge must be a non-negative percentage" })
       }
+
+      // Validate optional extra charges, if provided
+      if (rate.extra_charges !== undefined) {
+        if (!Array.isArray(rate.extra_charges)) {
+          return res.status(400).json({ error: "Extra charges must be an array" })
+        }
+        for (const charge of rate.extra_charges) {
+          if (!charge.charge_name || !charge.charge_name.trim()) continue
+          if (charge.amount !== undefined && charge.amount !== "" && (isNaN(charge.amount) || Number.parseFloat(charge.amount) < 0)) {
+            return res.status(400).json({ error: `Extra charge "${charge.charge_name}" must have a non-negative amount` })
+          }
+        }
+      }
     }
 
     const result = await saveClientRates(clientId, rates)

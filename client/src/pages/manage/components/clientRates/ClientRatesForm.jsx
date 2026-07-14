@@ -16,6 +16,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
       vgm: "",
       set_rate: "",
       fuel_surcharge: "",
+      extra_charges: [],
     },
   ])
   const [isFormValid, setIsFormValid] = useState(false)
@@ -44,6 +45,9 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
             set_rate: rate.set_rate !== null && rate.set_rate !== undefined ? rate.set_rate : "",
             fuel_surcharge:
               rate.fuel_surcharge !== null && rate.fuel_surcharge !== undefined ? rate.fuel_surcharge : "",
+            extra_charges: Array.isArray(rate.extra_charges)
+              ? rate.extra_charges.map((c) => ({ charge_name: c.charge_name || "", amount: c.amount ?? "" }))
+              : [],
           })),
         )
 
@@ -60,6 +64,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
             vgm: "",
             set_rate: "",
             fuel_surcharge: "",
+            extra_charges: [],
           },
         ])
       }
@@ -107,8 +112,35 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
         vgm: "",
         set_rate: "",
         fuel_surcharge: "",
+        extra_charges: [],
       },
     ])
+  }
+
+  const addExtraCharge = (rateIndex) => {
+    const updatedRates = [...rates]
+    updatedRates[rateIndex] = {
+      ...updatedRates[rateIndex],
+      extra_charges: [...updatedRates[rateIndex].extra_charges, { charge_name: "", amount: "" }],
+    }
+    setRates(updatedRates)
+  }
+
+  const handleExtraChargeChange = (rateIndex, chargeIndex, field, value) => {
+    const updatedRates = [...rates]
+    const updatedCharges = [...updatedRates[rateIndex].extra_charges]
+    updatedCharges[chargeIndex] = { ...updatedCharges[chargeIndex], [field]: value }
+    updatedRates[rateIndex] = { ...updatedRates[rateIndex], extra_charges: updatedCharges }
+    setRates(updatedRates)
+  }
+
+  const removeExtraCharge = (rateIndex, chargeIndex) => {
+    const updatedRates = [...rates]
+    updatedRates[rateIndex] = {
+      ...updatedRates[rateIndex],
+      extra_charges: updatedRates[rateIndex].extra_charges.filter((_, i) => i !== chargeIndex),
+    }
+    setRates(updatedRates)
   }
 
   // Apply a single fuel surcharge percentage to every rate at once.
@@ -138,8 +170,8 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
   }
 
   const rateRows = []
-  for (let i = 0; i < rates.length; i += 5) {
-    rateRows.push(rates.slice(i, i + 5))
+  for (let i = 0; i < rates.length; i += 3) {
+    rateRows.push(rates.slice(i, i + 3))
   }
 
   console.log("Current rates state:", rates)
@@ -157,6 +189,86 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
         }
         .remove-rate-button:hover {
           color: darkred;
+        }
+        .extra-charges-section {
+          margin-top: 1rem;
+          padding-top: 0.9rem;
+          border-top: 1px dashed #dfe4ff;
+        }
+        .extra-charges-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 0.6rem;
+        }
+        .extra-charges-header strong {
+          color: #2c3e50;
+          font-size: 0.95rem;
+        }
+        .add-extra-charge-button {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: #eef1ff;
+          color: #4169e1;
+          border: 1px solid #c7d0ff;
+          border-radius: 6px;
+          padding: 0.35rem 0.75rem;
+          cursor: pointer;
+          font-size: 0.8rem;
+          font-weight: 600;
+          transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .add-extra-charge-button:hover {
+          background: #dfe4ff;
+          border-color: #4169e1;
+        }
+        .extra-charges-column-labels {
+          display: grid;
+          grid-template-columns: 2fr 1fr 32px;
+          gap: 0.6rem;
+          margin-bottom: 0.35rem;
+          padding: 0 0.75rem;
+        }
+        .extra-charges-column-labels span {
+          font-size: 0.72rem;
+          font-weight: 600;
+          color: #8a93a6;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+        .extra-charge-row {
+          display: grid;
+          grid-template-columns: 2fr 1fr 32px;
+          gap: 0.6rem;
+          align-items: center;
+          background: #f8f9fd;
+          border: 1px solid #e6e9f5;
+          border-radius: 6px;
+          padding: 0.4rem 0.75rem;
+          margin-bottom: 0.5rem;
+        }
+        .extra-charge-row input {
+          border: 1px solid #dfe4ff;
+          border-radius: 5px;
+          background: #fff;
+          height: 42px;
+          padding: 0 10px;
+        }
+        .extra-charge-row input:focus {
+          outline: none;
+          border-color: #4169e1;
+          box-shadow: 0 0 4px rgba(65, 105, 225, 0.25);
+        }
+        .extra-charge-row .remove-rate-button {
+          justify-self: center;
+          font-size: 1rem;
+        }
+        .extra-charges-empty {
+          font-size: 0.82rem;
+          color: #8a93a6;
+          font-style: italic;
+          padding: 0.25rem 0.75rem 0.5rem;
         }
       `}</style>
       <form className="manage-add-client-rate-form" onSubmit={handleSubmit} noValidate>
@@ -188,13 +300,13 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
           {rateRows.map((row, rowIndex) => (
             <div key={rowIndex} className="rate-row">
               {row.map((rate, index) => (
-                <div key={rowIndex * 5 + index} className="rate-entry">
+                <div key={rowIndex * 3 + index} className="rate-entry">
                   <div className="rate-entry-header">
-                    <h4>Rate #{rowIndex * 5 + index + 1}</h4>
+                    <h4>Rate #{rowIndex * 3 + index + 1}</h4>
                     {rates.length > 1 && (
                       <button
                         type="button"
-                        onClick={() => removeRate(rowIndex * 5 + index)}
+                        onClick={() => removeRate(rowIndex * 3 + index)}
                         className="remove-rate-button"
                         aria-label="Remove rate"
                       >
@@ -211,7 +323,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                       <input
                         type="text"
                         value={rate.starting_point}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "starting_point", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "starting_point", e.target.value)}
                         placeholder="e.g., Johannesburg"
                         required
                       />
@@ -224,7 +336,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                       <input
                         type="text"
                         value={rate.destination}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "destination", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "destination", e.target.value)}
                         placeholder="e.g., Cape Town"
                         required
                       />
@@ -239,7 +351,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate["6m_rate"]}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "6m_rate", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "6m_rate", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -253,7 +365,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate["12m_rate"]}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "12m_rate", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "12m_rate", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -267,7 +379,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.surcharge6M}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "surcharge6M", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "surcharge6M", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -281,7 +393,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.surcharge12m}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "surcharge12m", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "surcharge12m", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -295,7 +407,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.hazardous}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "hazardous", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "hazardous", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -309,7 +421,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.vgm}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "vgm", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "vgm", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -323,7 +435,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.set_rate}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "set_rate", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "set_rate", e.target.value)}
                         placeholder="0.00"
                       />
                     </div>
@@ -337,10 +449,69 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                         min="0"
                         step="0.01"
                         value={rate.fuel_surcharge}
-                        onChange={(e) => handleRateChange(rowIndex * 5 + index, "fuel_surcharge", e.target.value)}
+                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "fuel_surcharge", e.target.value)}
                         placeholder="0"
                       />
                     </div>
+                  </div>
+
+                  <div className="extra-charges-section">
+                    <div className="extra-charges-header">
+                      <strong>Optional Extra Charges</strong>
+                      <button
+                        type="button"
+                        className="add-extra-charge-button"
+                        onClick={() => addExtraCharge(rowIndex * 3 + index)}
+                      >
+                        + Add Charge
+                      </button>
+                    </div>
+                    {rate.extra_charges.length === 0 ? (
+                      <p className="extra-charges-empty">No extra charges added for this rate.</p>
+                    ) : (
+                      <>
+                        <div className="extra-charges-column-labels">
+                          <span>Charge Name</span>
+                          <span>Amount (R)</span>
+                          <span />
+                        </div>
+                        {rate.extra_charges.map((charge, chargeIndex) => (
+                          <div key={chargeIndex} className="extra-charge-row">
+                            <input
+                              type="text"
+                              value={charge.charge_name}
+                              onChange={(e) =>
+                                handleExtraChargeChange(
+                                  rowIndex * 3 + index,
+                                  chargeIndex,
+                                  "charge_name",
+                                  e.target.value,
+                                )
+                              }
+                              placeholder="e.g., Toll fee"
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={charge.amount}
+                              onChange={(e) =>
+                                handleExtraChargeChange(rowIndex * 3 + index, chargeIndex, "amount", e.target.value)
+                              }
+                              placeholder="0.00"
+                            />
+                            <button
+                              type="button"
+                              className="remove-rate-button"
+                              aria-label="Remove extra charge"
+                              onClick={() => removeExtraCharge(rowIndex * 3 + index, chargeIndex)}
+                            >
+                              <FaTrash />
+                            </button>
+                          </div>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </div>
               ))}

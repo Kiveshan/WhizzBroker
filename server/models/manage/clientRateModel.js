@@ -70,7 +70,7 @@ const getClientRatesByClientId = async (clientId) => {
 
     // Get client info and their rates
     const clientQuery = `
-      SELECT 
+      SELECT
         c.*,
         json_agg(
           json_build_object(
@@ -85,11 +85,23 @@ const getClientRatesByClientId = async (clientId) => {
             'hazardous', cr.hazardous,
             'vgm', cr.vgm,
             'set_rate', cr.set_rate,
-            'fuel_surcharge', cr.fuel_surcharge
+            'fuel_surcharge', cr.fuel_surcharge,
+            'extra_charges', COALESCE(ec.charges, '[]'::json)
           ) ORDER BY cr.client_rate_id
         ) FILTER (WHERE cr.client_rate_id IS NOT NULL) as rates
       FROM m5_client c
       LEFT JOIN m5_client_rate cr ON c.m5clientkey = cr.clientid
+      LEFT JOIN LATERAL (
+        SELECT json_agg(
+          json_build_object(
+            'charge_id', e.charge_id,
+            'charge_name', e.charge_name,
+            'amount', e.amount
+          ) ORDER BY e.charge_id
+        ) as charges
+        FROM client_rate_extra_charge e
+        WHERE e.client_rate_id = cr.client_rate_id
+      ) ec ON true
       WHERE c.m5clientkey = $1
       GROUP BY c.m5clientkey
     `
@@ -124,42 +136,81 @@ const saveClientRates = async (clientId, rates) => {
     // Start transaction
     await client.query("BEGIN")
 
-    // Delete existing rates for this client
-    await client.query("DELETE FROM m5_client_rate WHERE clientid = $1", [clientId])
+    // Remove rates that are no longer present, so their extra charges cascade-delete with them
+    const keptRateIds = rates.map((r) => r.client_rate_id).filter((id) => id !== undefined && id !== null)
+    if (keptRateIds.length > 0) {
+      await client.query("DELETE FROM m5_client_rate WHERE clientid = $1 AND client_rate_id != ALL($2::int[])", [
+        clientId,
+        keptRateIds,
+      ])
+    } else {
+      await client.query("DELETE FROM m5_client_rate WHERE clientid = $1", [clientId])
+    }
 
-    // Insert new rates
-    const insertPromises = rates.map((rate) => {
+    const results = []
+    for (const rate of rates) {
       const surcharge6M = rate.surcharge6M ?? rate.surcharges
       const surcharge12m = rate.surcharge12m
 
-      return client.query(
-        `INSERT INTO m5_client_rate (clientid, starting_point, destination, "6m_rate", "12m_rate", surcharges, surcharge12m, hazardous, vgm, set_rate, fuel_surcharge)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING *`,
-        [
-          clientId,
-          rate.starting_point || null,
-          rate.destination || null,
-          rate["6m_rate"] === "" || rate["6m_rate"] === undefined ? null : Number(rate["6m_rate"]),
-          rate["12m_rate"] === "" || rate["12m_rate"] === undefined ? null : Number(rate["12m_rate"]),
-          surcharge6M === "" || surcharge6M === undefined ? null : Number(surcharge6M),
-          surcharge12m === "" || surcharge12m === undefined ? null : Number(surcharge12m),
-          rate.hazardous === "" || rate.hazardous === undefined ? null : Number(rate.hazardous),
-          rate.vgm === "" || rate.vgm === undefined ? null : Number(rate.vgm),
-          rate.set_rate === "" || rate.set_rate === undefined ? null : Number(rate.set_rate),
-          rate.fuel_surcharge === "" || rate.fuel_surcharge === undefined ? null : Number(rate.fuel_surcharge),
-        ],
-      )
-    })
+      const values = [
+        clientId,
+        rate.starting_point || null,
+        rate.destination || null,
+        rate["6m_rate"] === "" || rate["6m_rate"] === undefined ? null : Number(rate["6m_rate"]),
+        rate["12m_rate"] === "" || rate["12m_rate"] === undefined ? null : Number(rate["12m_rate"]),
+        surcharge6M === "" || surcharge6M === undefined ? null : Number(surcharge6M),
+        surcharge12m === "" || surcharge12m === undefined ? null : Number(surcharge12m),
+        rate.hazardous === "" || rate.hazardous === undefined ? null : Number(rate.hazardous),
+        rate.vgm === "" || rate.vgm === undefined ? null : Number(rate.vgm),
+        rate.set_rate === "" || rate.set_rate === undefined ? null : Number(rate.set_rate),
+        rate.fuel_surcharge === "" || rate.fuel_surcharge === undefined ? null : Number(rate.fuel_surcharge),
+      ]
 
-    const results = await Promise.all(insertPromises)
+      let rateRow
+      if (rate.client_rate_id) {
+        const result = await client.query(
+          `UPDATE m5_client_rate
+           SET starting_point = $2, destination = $3, "6m_rate" = $4, "12m_rate" = $5,
+               surcharges = $6, surcharge12m = $7, hazardous = $8, vgm = $9, set_rate = $10, fuel_surcharge = $11
+           WHERE client_rate_id = $12 AND clientid = $1
+           RETURNING *`,
+          [...values, rate.client_rate_id],
+        )
+        rateRow = result.rows[0]
+      }
+
+      if (!rateRow) {
+        const result = await client.query(
+          `INSERT INTO m5_client_rate (clientid, starting_point, destination, "6m_rate", "12m_rate", surcharges, surcharge12m, hazardous, vgm, set_rate, fuel_surcharge)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+           RETURNING *`,
+          values,
+        )
+        rateRow = result.rows[0]
+      }
+
+      // Replace this rate's extra charges wholesale
+      await client.query("DELETE FROM client_rate_extra_charge WHERE client_rate_id = $1", [rateRow.client_rate_id])
+
+      const extraCharges = Array.isArray(rate.extra_charges) ? rate.extra_charges : []
+      for (const charge of extraCharges) {
+        if (!charge.charge_name || charge.charge_name.trim() === "") continue
+        await client.query(
+          `INSERT INTO client_rate_extra_charge (client_rate_id, charge_name, amount)
+           VALUES ($1, $2, $3)`,
+          [rateRow.client_rate_id, charge.charge_name.trim(), charge.amount === "" || charge.amount === undefined ? 0 : Number(charge.amount)],
+        )
+      }
+
+      results.push(rateRow)
+    }
 
     // Commit transaction
     await client.query("COMMIT")
 
     return {
       success: true,
-      data: results.map((result) => result.rows[0]),
+      data: results,
     }
   } catch (err) {
     // Rollback on error
