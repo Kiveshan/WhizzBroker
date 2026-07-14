@@ -103,7 +103,15 @@ const calculateTotalCost = (instructionData, containers = [], weightData = []) =
     return total
   }, 0)
 
-  const totalCost = baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount
+  // Calculate total selected extra-charges amount from containers
+  const totalExtraChargesAmount = containers.reduce((total, container) => {
+    const charges = container.selectedExtraCharges || container.extra_charges || []
+    if (!Array.isArray(charges)) return total
+    return total + charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0)
+  }, 0)
+
+  const totalCost =
+    baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount + totalExtraChargesAmount
   return Number(totalCost.toFixed(2))
 }
 

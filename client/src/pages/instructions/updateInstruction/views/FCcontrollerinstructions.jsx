@@ -284,6 +284,7 @@ const FCcontrollerinstructions = ({
     fetchRates,
     fetchFreshAmounts,
     recalculateTotalCost,
+    availableExtraCharges,
   } = useRateManagement({
     isAddOn,
     clientId: formData.clientId,
@@ -583,6 +584,7 @@ const FCcontrollerinstructions = ({
       weightRows={weightRows}
       containers={containers}
       containerFieldErrors={containerFieldErrors}
+      availableExtraCharges={availableExtraCharges}
       // Computed flags
       isReadOnly={isReadOnly}
       isSetRateMode={isSetRateMode}

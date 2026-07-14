@@ -6,6 +6,16 @@
  */
 
 /**
+ * Sums a container's selected extra charges (custom named charges picked
+ * from the client rate's optional extras, e.g. "Toll fee").
+ */
+function sumExtraCharges(container) {
+  const charges = container.selectedExtraCharges || container.extra_charges || [];
+  if (!Array.isArray(charges)) return 0;
+  return charges.reduce((sum, charge) => sum + (Number(charge.amount) || 0), 0);
+}
+
+/**
  * Break-bulk (type 4) cost.
  * Set-rate mode: setRateAmount × weightRows.length (min 1)
  * Weight mode:   sum(row.weight) × unitRate
@@ -66,7 +76,9 @@ export function calculateTotalCostFromRates(
     .filter((c) => c.vgm === true)
     .reduce((total, c) => total + (Number(c.vgmAmount) || 0), 0);
 
-  return baseCost + surchargeTotal + hazardousTotal + vgmTotal;
+  const extraChargesTotal = containers.reduce((total, c) => total + sumExtraCharges(c), 0);
+
+  return baseCost + surchargeTotal + hazardousTotal + vgmTotal + extraChargesTotal;
 }
 
 /**
@@ -155,11 +167,14 @@ export function calcContainerBasedCost(formData, containers = [], { isCrossHaul 
     return sum + resolved;
   }, 0);
 
+  const extraChargesTotal = containers.reduce((sum, c) => sum + sumExtraCharges(c), 0);
+
   return (
     sixMeterRate * sixMeterCount +
     twelveMeterRate * twelveMeterCount +
     abnormalRate * abnormalCount +
     breakBulkCost +
-    surchargeTotal
+    surchargeTotal +
+    extraChargesTotal
   );
 }

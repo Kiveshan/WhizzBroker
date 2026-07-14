@@ -58,6 +58,7 @@ export function useRateManagement({
   const [historicalSetRate, setHistoricalSetRate] = useState(null);
   const [showSetRateWarning, setShowSetRateWarning] = useState(false);
   const [rateUpdateMessage, setRateUpdateMessage] = useState("");
+  const [availableExtraCharges, setAvailableExtraCharges] = useState([]);
 
   // Stable refs for callbacks (prevent effect re-fires)
   const onFormUpdateRef = useRef(onFormUpdate);
@@ -70,6 +71,33 @@ export function useRateManagement({
   useEffect(() => {
     setIsSetRateMode(isSetRate);
   }, [isSetRate]);
+
+  // ── Load available extra charges whenever a full route is present ──────────
+  // Runs independently of fetchRates (which is only invoked on user-driven
+  // pickup/dropoff changes) so the FC update form — which loads with the
+  // route already set — still populates the extra-charges checkbox list.
+
+  useEffect(() => {
+    if (!clientId || !pickup || !dropoff) {
+      setAvailableExtraCharges([]);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const responseData = await fetchRatesService(clientId, pickup, dropoff);
+        if (cancelled) return;
+        const rateData = Array.isArray(responseData) ? responseData[0] : responseData;
+        setAvailableExtraCharges(
+          rateData && Array.isArray(rateData.extraCharges) ? rateData.extraCharges : []
+        );
+      } catch (error) {
+        if (!cancelled) setAvailableExtraCharges([]);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [clientId, pickup, dropoff]);
 
   // ── Fetch set_rate when checkbox is on + full route is available ─────────────
 
@@ -157,6 +185,10 @@ export function useRateManagement({
           surcharge,
         });
 
+        setAvailableExtraCharges(
+          Array.isArray(rateData.extraCharges) ? rateData.extraCharges : []
+        );
+
         setRateUpdateMessage("Rates updated based on selected route");
         setTimeout(() => setRateUpdateMessage(""), 3000);
       } catch (error) {
@@ -177,8 +209,12 @@ export function useRateManagement({
     async (containers, formData) => {
       const freshContainers = await Promise.all(
         containers.map(async (container) => {
+          const hasSelectedExtraCharges =
+            Array.isArray(container.selectedExtraCharges) &&
+            container.selectedExtraCharges.length > 0;
+
           if (
-            (container.addSurcharges || container.hazardous || container.vgm) &&
+            (container.addSurcharges || container.hazardous || container.vgm || hasSelectedExtraCharges) &&
             formData.clientId &&
             formData.pickup &&
             formData.dropoff
@@ -224,6 +260,16 @@ export function useRateManagement({
                 vgmAmount: container.vgm
                   ? Number(ratesData.vgm || 0)
                   : container.vgmAmount,
+                selectedExtraCharges: hasSelectedExtraCharges
+                  ? container.selectedExtraCharges.map((selected) => {
+                      const fresh = (ratesData.extraCharges || []).find(
+                        (c) => c.charge_name === selected.charge_name
+                      );
+                      return fresh
+                        ? { charge_name: fresh.charge_name, amount: Number(fresh.amount || 0) }
+                        : selected;
+                    })
+                  : container.selectedExtraCharges,
               };
             } catch (error) {
               console.error(
@@ -329,5 +375,6 @@ export function useRateManagement({
     fetchRates,
     fetchFreshAmounts,
     recalculateTotalCost,
+    availableExtraCharges,
   };
 }

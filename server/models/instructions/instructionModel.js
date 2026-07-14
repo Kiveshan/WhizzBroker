@@ -49,6 +49,29 @@ const calculateTotalCost = (instructionData) => {
   return Number(totalCost.toFixed(2));
 };
 
+// Persists the extra charges selected for one container (create or replace).
+// `extraCharges` is the raw array from the frontend payload — either
+// `container.selectedExtraCharges` or `container.extra_charges`, each entry
+// shaped { charge_name, amount }. Snapshots name+amount at capture time.
+const saveContainerExtraCharges = async (client, containerKey, extraCharges) => {
+  const charges = Array.isArray(extraCharges) ? extraCharges : [];
+  if (charges.length === 0) return;
+
+  for (const charge of charges) {
+    const chargeName = (charge.charge_name || charge.chargeName || "").toString().trim();
+    if (!chargeName) continue;
+    const amount = Number(charge.amount);
+    await client.query(
+      `INSERT INTO public.container_extra_charge (containerkey, charge_name, amount)
+       VALUES ($1, $2, $3)`,
+      [containerKey, chargeName, Number.isFinite(amount) ? amount : 0]
+    );
+  }
+};
+
+const getContainerExtraCharges = (container) =>
+  container.selectedExtraCharges || container.extra_charges || [];
+
 export const getShipmentTypes = async () => {
   const sql = `
     SELECT shipkey, shipmenttype
@@ -63,25 +86,36 @@ export const getContainersByInstructionId = async (instructionId) => {
   // Convert instructionId to string to match database type
   const instructionIdStr = String(instructionId);
   const sql = `
-    SELECT 
-      containerkey,
-      containernum,
-      weight,
-      m1key,
-      container_type,
-      cargo_description,
-      "Hazardous",
-      "Add Surcharges",
-      "Surcharge Amount",
-      is_12m_surcharge,
-      surcharge_12m_amount,
-      "Hazardous Amount",
-      file_ref,
-      vgm,
-      "vgm amount"
-    FROM public.container
-    WHERE m1key = $1
-    ORDER BY containerkey
+    SELECT
+      c.containerkey,
+      c.containernum,
+      c.weight,
+      c.m1key,
+      c.container_type,
+      c.cargo_description,
+      c."Hazardous",
+      c."Add Surcharges",
+      c."Surcharge Amount",
+      c.is_12m_surcharge,
+      c.surcharge_12m_amount,
+      c."Hazardous Amount",
+      c.file_ref,
+      c.vgm,
+      c."vgm amount",
+      COALESCE(ec.charges, '[]'::json) as "extraCharges"
+    FROM public.container c
+    LEFT JOIN LATERAL (
+      SELECT json_agg(
+        json_build_object(
+          'charge_name', e.charge_name,
+          'amount', e.amount
+        ) ORDER BY e.id
+      ) as charges
+      FROM container_extra_charge e
+      WHERE e.containerkey = c.containerkey
+    ) ec ON true
+    WHERE c.m1key = $1
+    ORDER BY c.containerkey
   `;
 
   console.log(
@@ -745,8 +779,14 @@ export const saveInstruction = async ({
           is_12m_surcharge, surcharge_12m_amount,
           file_ref, vgm, "vgm amount"
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        RETURNING containerkey
       `;
-      await client.query(insertContainerQuery, containerValues);
+      const insertedContainerResult = await client.query(insertContainerQuery, containerValues);
+      await saveContainerExtraCharges(
+        client,
+        insertedContainerResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
 
       // Debug log for container values
       console.log("Container values array:", {
@@ -839,8 +879,16 @@ export const saveInstruction = async ({
         return total;
       }, 0);
 
-      console.log(`DEBUG: Base cost: ${baseCost}, Surcharges: ${totalSurchargeAmount}, Hazardous: ${totalHazardousAmount}, VGM: ${totalVgmAmount}`);
-      const totalCost = baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount;
+      // Calculate total selected extra-charges amount from containers
+      const totalExtraChargesAmount = containers.reduce((total, container) => {
+        const charges = getContainerExtraCharges(container);
+        if (!Array.isArray(charges)) return total;
+        return total + charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+      }, 0);
+
+      console.log(`DEBUG: Base cost: ${baseCost}, Surcharges: ${totalSurchargeAmount}, Hazardous: ${totalHazardousAmount}, VGM: ${totalVgmAmount}, ExtraCharges: ${totalExtraChargesAmount}`);
+      const totalCost =
+        baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount + totalExtraChargesAmount;
       return Number(totalCost.toFixed(2));
     };
 
@@ -859,7 +907,12 @@ export const saveInstruction = async ({
         vgmAmt = 0;
       }
 
-      return { ...c, vgm: isVgmFlag, "vgm amount": vgmAmt };
+      return {
+        ...c,
+        vgm: isVgmFlag,
+        "vgm amount": vgmAmt,
+        extra_charges: getContainerExtraCharges(original),
+      };
     });
 
     const recalculatedTotalCost = calculateTotalCostWithSurcharges(
@@ -1354,7 +1407,18 @@ export const getInstructionById = async (instructionId) => {
               'surcharge_12m_amount', COALESCE(c.surcharge_12m_amount, 0),
               'Hazardous Amount', COALESCE(c."Hazardous Amount", 0),
               'vgm', COALESCE(c.vgm, false),
-              'vgm amount', COALESCE(c."vgm amount", 0)
+              'vgm amount', COALESCE(c."vgm amount", 0),
+              'extraCharges', COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object('charge_name', e.charge_name, 'amount', e.amount)
+                    ORDER BY e.id
+                  )
+                  FROM container_extra_charge e
+                  WHERE e.containerkey = c.containerkey
+                ),
+                '[]'::json
+              )
             )
             ORDER BY c.containerkey
           )
@@ -1527,6 +1591,11 @@ export const updateContainersByInstructionId = async (
 
       const result = await client.query(insertQuery, values);
       console.log(`Inserted container with ID: ${result.rows[0].containerkey}`);
+      await saveContainerExtraCharges(
+        client,
+        result.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
       insertResults.push(result.rows[0]);
     }
 
@@ -1684,21 +1753,34 @@ export const getClientRates = async (clientId, start, destination) => {
 
   const sql = `
     SELECT
-      "6m_rate" as "sixMeterRate",
-      "12m_rate" as "twelveMeterRate",
-      set_rate as "setRate",
-      surcharges,
-      surcharge12m,
-      hazardous,
-      vgm,
-      fuel_surcharge as "fuelSurcharge",
-      starting_point as "startingPoint",
-      destination
-    FROM public.m5_client_rate
-    WHERE clientid = $1
-      AND starting_point = $2
-      AND destination = $3
-    ORDER BY client_rate_id DESC
+      cr.client_rate_id as "clientRateId",
+      cr."6m_rate" as "sixMeterRate",
+      cr."12m_rate" as "twelveMeterRate",
+      cr.set_rate as "setRate",
+      cr.surcharges,
+      cr.surcharge12m,
+      cr.hazardous,
+      cr.vgm,
+      cr.fuel_surcharge as "fuelSurcharge",
+      cr.starting_point as "startingPoint",
+      cr.destination,
+      COALESCE(ec.charges, '[]'::json) as "extraCharges"
+    FROM public.m5_client_rate cr
+    LEFT JOIN LATERAL (
+      SELECT json_agg(
+        json_build_object(
+          'charge_id', e.charge_id,
+          'charge_name', e.charge_name,
+          'amount', e.amount
+        ) ORDER BY e.charge_id
+      ) as charges
+      FROM client_rate_extra_charge e
+      WHERE e.client_rate_id = cr.client_rate_id
+    ) ec ON true
+    WHERE cr.clientid = $1
+      AND cr.starting_point = $2
+      AND cr.destination = $3
+    ORDER BY cr.client_rate_id DESC
     LIMIT 1
   `;
 
@@ -2520,6 +2602,28 @@ export const updateFCInstructionAndContainers = async (
       } to delete`
     );
 
+    // Sync extra charges for every existing container in the payload,
+    // independent of the field-diffing above (compareContainers only flags a
+    // container as changed when hazardous/surcharge/vgm/etc. differ, so a
+    // container whose ONLY change is its extra-charge selection would
+    // otherwise be silently skipped).
+    const currentContainerKeys = new Set(
+      currentContainers.map((c) => c.containerkey)
+    );
+    for (const newContainer of containerData) {
+      const key = Number(newContainer.containerKey);
+      if (!key || !currentContainerKeys.has(key)) continue;
+      await client.query(
+        `DELETE FROM public.container_extra_charge WHERE containerkey = $1`,
+        [key]
+      );
+      await saveContainerExtraCharges(
+        client,
+        key,
+        getContainerExtraCharges(newContainer)
+      );
+    }
+
     // Make current instruction fields available for rate lookups (hazardous/VGM)
     const clientId = currentInstruction.client;
     const pickup = currentInstruction.pickup;
@@ -2922,6 +3026,12 @@ export const updateFCInstructionAndContainers = async (
         isAddOnType ? 0 : vgmAmount,
       ]);
 
+      await saveContainerExtraCharges(
+        client,
+        insertResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
+
       console.log("Inserted new container with VGM values:", { isVgm, vgmAmount });
       console.log(
         `[${new Date().toISOString()}] [MODEL] Inserted new container ${insertResult.rows[0].containerkey} with hazardous=${isHazardous}, hazardousAmount=${hazardousAmount}, file_ref=${container.file_ref || ""}`,
@@ -2970,7 +3080,16 @@ export const updateFCInstructionAndContainers = async (
         totalVgm += Number(container["vgm amount"] || 0);
       }
     }
-    
+
+    const extraChargesTotalQuery = `
+      SELECT COALESCE(SUM(e.amount), 0) as total
+      FROM public.container_extra_charge e
+      JOIN public.container c ON c.containerkey = e.containerkey
+      WHERE c.m1key = $1
+    `;
+    const extraChargesTotalResult = await client.query(extraChargesTotalQuery, [instructionId]);
+    const totalExtraCharges = Number(extraChargesTotalResult.rows[0].total || 0);
+
     // Get the instruction data for recalculation
     const currentInstructionQuery = `
       SELECT
@@ -3006,18 +3125,18 @@ export const updateFCInstructionAndContainers = async (
       }, 0);
       const unitRate = Number(d.unitrate || 0);
       baseCost = totalWeight * unitRate;
-      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm).toFixed(2));
+      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm + totalExtraCharges).toFixed(2));
     } else {
       // Container-based calculation
       baseCost =
         (Number(d.num_six_meters || 0) * Number(d.rateper_6 || 0)) +
         (Number(d.num_twelve_meters || 0) * Number(d.rateper_12 || 0)) +
         (Number(d.num_abnormal || 0) * Number(d.rateper_abnormal || 0));
-      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm).toFixed(2));
+      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm + totalExtraCharges).toFixed(2));
     }
-    
+
     console.log(
-      `[${new Date().toISOString()}] [MODEL] Recalculated total_cost: ${recalculatedTotalCost} (is_set_rate: ${d.is_set_rate}, isAddOn: ${isAddOnType}, base: ${baseCost}, surcharge: ${totalSurcharge}, hazardous: ${totalHazardous}, vgm: ${totalVgm})`
+      `[${new Date().toISOString()}] [MODEL] Recalculated total_cost: ${recalculatedTotalCost} (is_set_rate: ${d.is_set_rate}, isAddOn: ${isAddOnType}, base: ${baseCost}, surcharge: ${totalSurcharge}, hazardous: ${totalHazardous}, vgm: ${totalVgm}, extraCharges: ${totalExtraCharges})`
     );
     
     // Update the instruction with the recalculated total_cost
@@ -3334,6 +3453,7 @@ export const saveInstructionAndContainers = async (
           "Hazardous Amount", file_ref
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING containerkey
       `;
 
       const resolvedContainerType = container.container_type || container.containerType || "";
@@ -3360,7 +3480,12 @@ export const saveInstructionAndContainers = async (
           ? container.fileRef
           : ""), // New file reference field for export shipments
       ];
-      await client.query(containerQuery, containerValues);
+      const containerInsertResult = await client.query(containerQuery, containerValues);
+      await saveContainerExtraCharges(
+        client,
+        containerInsertResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
     }
 
     await client.query("COMMIT");

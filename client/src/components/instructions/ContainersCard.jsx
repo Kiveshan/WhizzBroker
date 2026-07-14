@@ -32,7 +32,7 @@ const TYPES = [
 
 const TYPE_OPTIONS = ["6m", "12m", "Abnormal"];
 
-function SurchargeSelect({ container, allowVgmUI, disabled, onChange }) {
+function SurchargeSelect({ container, allowVgmUI, disabled, onChange, availableExtraCharges = [], onExtraChargeToggle }) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
 
@@ -45,10 +45,15 @@ function SurchargeSelect({ container, allowVgmUI, disabled, onChange }) {
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
 
+  const selectedExtraCharges = container.selectedExtraCharges || [];
+  const isExtraChargeSelected = (chargeName) =>
+    selectedExtraCharges.some((c) => c.charge_name === chargeName);
+
   const selected = [
     container.hazardous && "Hazardous",
     container.addSurcharges && "Surcharge",
     allowVgmUI && container.vgm && "VGM",
+    ...selectedExtraCharges.map((c) => c.charge_name),
   ].filter(Boolean);
 
   return (
@@ -92,6 +97,16 @@ function SurchargeSelect({ container, allowVgmUI, disabled, onChange }) {
               VGM
             </label>
           )}
+          {availableExtraCharges.map((charge) => (
+            <label key={charge.charge_id ?? charge.charge_name}>
+              <input
+                type="checkbox"
+                checked={isExtraChargeSelected(charge.charge_name)}
+                onChange={(e) => onExtraChargeToggle(container.id, charge, e.target.checked)}
+              />
+              {charge.charge_name}
+            </label>
+          ))}
         </div>
       )}
     </div>
@@ -113,6 +128,7 @@ export function ContainersCard({
   allowVgmUI,
   countsDisabled = false,
   countError = "",
+  availableExtraCharges = [],
   // FC update-form extras
   isReadOnly = false,
   rateFieldNames = CREATE_RATE_FIELDS,
@@ -146,6 +162,16 @@ export function ContainersCard({
     (showFileRef ? 1 : 0) +
     (showTypeSelect ? 1 : 0) +
     (showActions ? 1 : 0);
+
+  const handleExtraChargeToggle = (containerId, charge, checked) => {
+    const container = containers.find((c) => c.id === containerId);
+    if (!container) return;
+    const existing = container.selectedExtraCharges || [];
+    const nextCharges = checked
+      ? [...existing, { charge_name: charge.charge_name, amount: Number(charge.amount) || 0 }]
+      : existing.filter((c) => c.charge_name !== charge.charge_name);
+    handleContainerChange(containerId, "selectedExtraCharges", nextCharges);
+  };
 
   return (
     <div className="controller-instructions-form-section container-details-section">
@@ -324,6 +350,8 @@ export function ContainersCard({
                         allowVgmUI={allowVgmUI}
                         disabled={inputsDisabled}
                         onChange={handleContainerChange}
+                        availableExtraCharges={availableExtraCharges}
+                        onExtraChargeToggle={handleExtraChargeToggle}
                       />
                     </td>
                     {showActions && (

@@ -114,6 +114,7 @@ const ControllerInstructions = ({
 
   const [rateLockStatus, setRateLockStatus] = useState({ sixMeter: false, twelveMeter: false })
   const [rateFieldsEnabled, setRateFieldsEnabled] = useState({ sixMeter: false, twelveMeter: false, abnormal: false })
+  const [availableExtraCharges, setAvailableExtraCharges] = useState([])
 
   const isFieldValid = useCallback(
     (fieldName, value) => {
@@ -427,6 +428,7 @@ const ControllerInstructions = ({
     if (!clientId || !pickup || !dropoff) {
       setFormData((prev) => ({ ...prev, sixMeterRate: "", twelveMeterRate: "", abnormalRate: "", rateper_breakbulk: "", surchargesAmount: "" }))
       setRateLockStatus({ sixMeter: false, twelveMeter: false })
+      setAvailableExtraCharges([])
       return
     }
     const fetchAndUpdateRates = async () => {
@@ -446,9 +448,11 @@ const ControllerInstructions = ({
           setRateLockStatus(newLock)
           return updates
         })
+        setAvailableExtraCharges(Array.isArray(rates?.extraCharges) ? rates.extraCharges : [])
       } catch {
         setFormData((prev) => ({ ...prev, sixMeterRate: "", twelveMeterRate: "", abnormalRate: "", rateper_breakbulk: "", surchargesAmount: "" }))
         setRateLockStatus({ sixMeter: false, twelveMeter: false })
+        setAvailableExtraCharges([])
       }
     }
     fetchAndUpdateRates()
@@ -515,6 +519,7 @@ const ControllerInstructions = ({
       setRateValue={setRateValue}
       rateFieldsEnabled={rateFieldsEnabled}
       rateLockStatus={rateLockStatus}
+      availableExtraCharges={availableExtraCharges}
       handleInputChange={handleInputChange}
       handleShipmentTypeChange={handleShipmentTypeChange}
       handleContainerCountChange={handleContainerCountChange}

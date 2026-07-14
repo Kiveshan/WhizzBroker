@@ -38,6 +38,7 @@ export function ControllerInstructionsLayout({
   setRateValue,
   rateFieldsEnabled,
   rateLockStatus,
+  availableExtraCharges,
   handleInputChange,
   handleShipmentTypeChange,
   handleContainerCountChange,
@@ -275,6 +276,7 @@ export function ControllerInstructionsLayout({
             allowVgmUI={allowVgmUI}
             countsDisabled={isWeightBased || isSetRateMode}
             countError={fieldErrors.containers || fieldErrors.containerCount || ""}
+            availableExtraCharges={availableExtraCharges}
           />
         ) : null}
         <div className="controller-instructions-button-container" style={{ margin: "20px 0" }}>

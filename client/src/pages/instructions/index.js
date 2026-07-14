@@ -12,4 +12,3 @@ export { default as ViewcontrollerInstructionDetails } from "./viewInstruction/v
 
 export { default as FCcontrollerinstructions } from "./updateInstruction/views/FCcontrollerinstructions.jsx";
 export { default as FCcontrollerInstructionGroup } from "./updateInstruction/views/FCcontrollerInstructionGroup.jsx";
-export { default as FCcontrollerInstructionDetails } from "./updateInstruction/views/FCcontrollerInstructionDetails.jsx";

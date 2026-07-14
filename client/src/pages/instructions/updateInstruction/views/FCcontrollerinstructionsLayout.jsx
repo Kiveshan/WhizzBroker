@@ -41,6 +41,7 @@ export function FCcontrollerinstructionsLayout({
   weightRows,
   containers,
   containerFieldErrors,
+  availableExtraCharges,
   // Computed flags
   isReadOnly,
   isSetRateMode,
@@ -245,6 +246,7 @@ export function FCcontrollerinstructionsLayout({
               isExport={String(formData.shipmentTypeId) === "2"}
               isCrossHaul={String(formData.shipmentTypeId) === "3"}
               allowVgmUI={String(formData.shipmentTypeId) !== "4"}
+              availableExtraCharges={availableExtraCharges}
               countsDisabled={isSetRateMode}
               countError={fieldErrors.containers || ""}
               isReadOnly={isReadOnly}

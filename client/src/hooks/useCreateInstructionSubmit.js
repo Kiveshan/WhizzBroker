@@ -189,6 +189,9 @@ export function useCreateInstructionSubmit({
               is_12m_surcharge: Boolean(container.is_12m_surcharge),
               surcharge_12m_amount: Number(container.surcharge_12m_amount || 0),
               vgm: allowVgmUI ? container.vgm || false : false,
+              extra_charges: Array.isArray(container.selectedExtraCharges)
+                ? container.selectedExtraCharges
+                : [],
             }))
           : [];
 
