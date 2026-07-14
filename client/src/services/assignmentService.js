@@ -25,6 +25,11 @@ export async function finaliseGroup(groupId) {
   return response.data;
 }
 
+export async function fetchGroupInvoicePreview(groupId) {
+  const response = await api.get(`/api/invoices/group-preview/${groupId}`);
+  return response.data;
+}
+
 export async function fetchInstructionDocuments(instructionId) {
   const response = await api.get(`/documents/${instructionId}`);
   return response.data;

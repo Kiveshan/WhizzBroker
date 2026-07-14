@@ -914,6 +914,158 @@ const getInstructionDetailsForPreview = async (instructionId) => {
 };
 
 
+/**
+ * Combined group invoice data: company/billing details, plus one section per
+ * child instruction whose lines are aggregated by container type
+ * ("10 x 6m @ rate"), followed by aggregated surcharge lines. Powers the
+ * group invoice preview modal and (later) the finalised group invoice.
+ */
+const getGroupInvoicePreview = async (groupId) => {
+  const client = await pool.connect();
+  try {
+    const groupResult = await client.query(
+      `SELECT g.group_key, g.client, g.status, g.group_ref,
+              c.client AS client_name, c.companyaddress AS client_address,
+              c.cellnum AS client_telephone, c.email AS client_email,
+              c.vatregno AS client_vat, c.suburb AS client_suburb
+       FROM public.instruction_group g
+       LEFT JOIN public.m5_client c ON g.client = c.m5clientkey
+       WHERE g.group_key = $1`,
+      [groupId]
+    );
+    if (groupResult.rows.length === 0) {
+      return { success: false, message: "Instruction group not found" };
+    }
+    const group = groupResult.rows[0];
+
+    // Existing invoice for the group (present once finalised).
+    const invResult = await client.query(
+      `SELECT invoice_num, date FROM public.invoice
+       WHERE instruction_group_id = $1 AND m1key IS NULL
+       ORDER BY ikey DESC LIMIT 1`,
+      [groupId]
+    );
+    const invoice = invResult.rows[0] || null;
+
+    const companyResult = await client.query(
+      `SELECT cluster_box, vat_reg_num, address, suburb, branch_code, bank,
+              name_of_acc, companyname, swift_code, account_num,
+              COALESCE(cell_num, cell_num2) AS phonenumber
+       FROM usertable WHERE roleid = 1 AND status = 'active' LIMIT 1`
+    );
+    const company = companyResult.rows[0] || {};
+
+    const childRows = await client.query(
+      `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
+              m.vessel_name, m.pickup, m.dropoff, m.vat, m.total_cost,
+              m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
+              m.rateper_6, m.rateper_12, m.rateper_abnormal,
+              s.shipmenttype
+       FROM public.m1_controller m
+       LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
+       WHERE m.instruction_group_id = $1
+       ORDER BY m.m1key`,
+      [groupId]
+    );
+
+    let subtotal = 0;
+    let vatTotal = 0;
+    const children = [];
+
+    for (const row of childRows.rows) {
+      const lines = [];
+      const typeSpecs = [
+        ["6m", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
+        ["12m", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
+        ["Abnormal", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
+      ];
+      for (const [label, qty, rate] of typeSpecs) {
+        if (qty > 0) {
+          lines.push({
+            description: `${qty} x ${label}`,
+            quantity: qty,
+            rate,
+            amount: Number((qty * rate).toFixed(2)),
+          });
+        }
+      }
+
+      // Aggregated surcharge lines from this instruction's containers.
+      const surchargeResult = await client.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN "Add Surcharges" THEN "Surcharge Amount" ELSE 0 END), 0) AS surcharge,
+           COALESCE(SUM(CASE WHEN "Add Surcharges" AND is_12m_surcharge THEN surcharge_12m_amount ELSE 0 END), 0) AS surcharge_12m,
+           COALESCE(SUM(CASE WHEN "Hazardous" THEN "Hazardous Amount" ELSE 0 END), 0) AS hazardous,
+           COALESCE(SUM(CASE WHEN vgm THEN "vgm amount" ELSE 0 END), 0) AS vgm
+         FROM public.container WHERE m1key = $1`,
+        [row.m1key]
+      );
+      const s = surchargeResult.rows[0];
+      const surchargeLines = [
+        ["Surcharge", Number(s.surcharge) + Number(s.surcharge_12m)],
+        ["Hazardous", Number(s.hazardous)],
+        ["VGM", Number(s.vgm)],
+      ];
+      for (const [label, amount] of surchargeLines) {
+        if (amount > 0) {
+          lines.push({ description: label, quantity: null, rate: null, amount: Number(amount.toFixed(2)) });
+        }
+      }
+
+      const childSubtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+      const vatRate = Number(row.vat || 0);
+      const childVat = Number(((childSubtotal * vatRate) / 100).toFixed(2));
+      subtotal += childSubtotal;
+      vatTotal += childVat;
+
+      children.push({
+        m1key: row.m1key,
+        shipmentType: row.shipmenttype,
+        bookingRef: row.booking_ref,
+        clientFileRef: row.clientFileRef,
+        companyFileRef: row.ksmFileRef,
+        vesselName: row.vessel_name,
+        pickup: row.pickup,
+        dropoff: row.dropoff,
+        vatRate,
+        lines,
+        subtotal: Number(childSubtotal.toFixed(2)),
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        group: {
+          groupKey: group.group_key,
+          groupRef: group.group_ref,
+          status: group.status,
+          invoiceNum: invoice?.invoice_num || null,
+          invoiceDate: invoice?.date || null,
+        },
+        client: {
+          name: group.client_name,
+          address: group.client_address,
+          suburb: group.client_suburb,
+          telephone: group.client_telephone,
+          email: group.client_email,
+          vat: group.client_vat,
+        },
+        company,
+        children,
+        subtotal: Number(subtotal.toFixed(2)),
+        vat: Number(vatTotal.toFixed(2)),
+        total: Number((subtotal + vatTotal).toFixed(2)),
+      },
+    };
+  } catch (error) {
+    console.error("Error building group invoice preview:", error);
+    return { success: false, message: error.message };
+  } finally {
+    client.release();
+  }
+};
+
 export {
   getCompletedInvoices,
   getInvoiceDetails,
@@ -922,4 +1074,5 @@ export {
   createInvoice,
   updateInstructionDetails,
   getInstructionDetailsForPreview,
+  getGroupInvoicePreview,
 };

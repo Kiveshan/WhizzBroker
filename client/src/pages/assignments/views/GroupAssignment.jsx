@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import "../css/GroupAssignment.css"
+import GroupInvoicePreviewModal from "./GroupInvoicePreviewModal"
 import {
   fetchGroupForAssignment,
   fetchSubbies,
@@ -44,7 +45,11 @@ const GroupAssignment = () => {
   const [openContainers, setOpenContainers] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [finalising, setFinalising] = useState(false)
+  const [showInvoice, setShowInvoice] = useState(false)
   const fileInputRef = useRef(null)
+
+  // Once the group is finalised the whole carousel becomes read-only.
+  const readOnly = group?.status === "Completed"
 
   const loadGroup = useCallback(async () => {
     try {
@@ -222,6 +227,12 @@ const GroupAssignment = () => {
 
         {error && <div className="wb-assign-alert err">{error}</div>}
         {notice && <div className="wb-assign-alert ok">{notice}</div>}
+        {readOnly && (
+          <div className="wb-assign-alert ok">
+            This group has been finalised and is read-only.
+            {group?.invoiceNum ? ` Invoice ${group.invoiceNum}.` : ""}
+          </div>
+        )}
 
         {/* ── Instructions card ── */}
         <div className="wb-assign-card">
@@ -304,6 +315,7 @@ const GroupAssignment = () => {
               <label>Select Subcontractor</label>
               <select
                 value={sel.subbieId}
+                disabled={readOnly}
                 onChange={(e) => updateSelection("subbieId", e.target.value)}
               >
                 <option value="">Select Subcontractor</option>
@@ -316,7 +328,7 @@ const GroupAssignment = () => {
             </div>
             <div className="wb-assign-field">
               <label>Truck</label>
-              <select value={sel.truck} onChange={(e) => updateSelection("truck", e.target.value)}>
+              <select value={sel.truck} disabled={readOnly} onChange={(e) => updateSelection("truck", e.target.value)}>
                 <option value="">Truck</option>
                 {trucks.map((t) => (
                   <option key={t} value={t}>
@@ -364,9 +376,11 @@ const GroupAssignment = () => {
               <h3 style={{ margin: 0 }}>Documents</h3>
               <div className="wb-docs-sub">Upload PODs and any supporting documentation.</div>
             </div>
-            <button className="wb-upload-btn" onClick={() => fileInputRef.current?.click()}>
-              ⬆ Upload Document
-            </button>
+            {!readOnly && (
+              <button className="wb-upload-btn" onClick={() => fileInputRef.current?.click()}>
+                ⬆ Upload Document
+              </button>
+            )}
           </div>
 
           <input
@@ -378,24 +392,30 @@ const GroupAssignment = () => {
             onChange={(e) => handleFiles(Array.from(e.target.files || []))}
           />
 
-          <div
-            className={`wb-dropzone ${dragging ? "drag" : ""}`}
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => {
-              e.preventDefault()
-              setDragging(true)
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => {
-              e.preventDefault()
-              setDragging(false)
-              handleFiles(Array.from(e.dataTransfer.files || []))
-            }}
-          >
-            <div style={{ fontSize: 22 }}>⬆</div>
-            <div className="wb-drop-main">Drop files here or click to upload</div>
-            <div className="wb-drop-sub">PDF, PNG or JPG up to 10MB</div>
-          </div>
+          {!readOnly && (
+            <div
+              className={`wb-dropzone ${dragging ? "drag" : ""}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragging(true)
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragging(false)
+                handleFiles(Array.from(e.dataTransfer.files || []))
+              }}
+            >
+              <div style={{ fontSize: 22 }}>⬆</div>
+              <div className="wb-drop-main">Drop files here or click to upload</div>
+              <div className="wb-drop-sub">PDF, PNG or JPG up to 10MB</div>
+            </div>
+          )}
+
+          {docs.length === 0 && readOnly && (
+            <div className="wb-drop-sub" style={{ padding: "10px 0" }}>No documents uploaded.</div>
+          )}
 
           {docs.map((d) => (
             <div className="wb-doc-row" key={d.id}>
@@ -405,36 +425,43 @@ const GroupAssignment = () => {
                 <div className="wb-doc-sub">{d.type || "Instruction Document"}</div>
               </div>
               <span className="wb-doc-check">✓</span>
-              <button className="wb-doc-remove" onClick={() => handleRemoveDoc(d.id)} aria-label="Remove">
-                ✕
-              </button>
+              {!readOnly && (
+                <button className="wb-doc-remove" onClick={() => handleRemoveDoc(d.id)} aria-label="Remove">
+                  ✕
+                </button>
+              )}
             </div>
           ))}
         </div>
 
         {/* ── Footer actions ── */}
         <div className="wb-assign-actions">
-          <button className="wb-btn-outline" onClick={loadGroup}>
-            ⟳ Save Changes
-          </button>
-          <button
-            className="wb-btn-outline"
-            disabled={!allComplete && group?.status !== "Completed"}
-            onClick={() => navigate("/invoices", { state: { groupId } })}
-            title={!allComplete ? "Available once the group is finalised" : ""}
-          >
+          {!readOnly && (
+            <button className="wb-btn-outline" onClick={loadGroup}>
+              ⟳ Save Changes
+            </button>
+          )}
+          <button className="wb-btn-outline" onClick={() => setShowInvoice(true)}>
             🧾 Preview Invoice
           </button>
-          <button
-            className="wb-btn-finalise"
-            disabled={!allComplete || finalising}
-            onClick={handleFinalise}
-            title={!allComplete ? "Complete every instruction first" : ""}
-          >
-            {finalising ? "Finalising…" : "✓ Finalise Instruction"}
-          </button>
+          {!readOnly && (
+            <button
+              className="wb-btn-finalise"
+              disabled={!allComplete || finalising}
+              onClick={handleFinalise}
+              title={!allComplete ? "Complete every instruction first" : ""}
+            >
+              {finalising ? "Finalising…" : "✓ Finalise Instruction"}
+            </button>
+          )}
         </div>
       </div>
+
+      <GroupInvoicePreviewModal
+        groupId={groupId}
+        isOpen={showInvoice}
+        onClose={() => setShowInvoice(false)}
+      />
     </div>
   )
 }

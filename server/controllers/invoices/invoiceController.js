@@ -5,6 +5,7 @@ import {
   createInvoice,
   updateInstructionDetails,
   getInstructionDetailsForPreview,
+  getGroupInvoicePreview,
 } from "../../models/invoices/invoiceModel.js";
 import { auditFromReq } from "../../utils/auditLogger.js";
 
@@ -333,6 +334,19 @@ const generateInvoicePreviewHandler = async (req, res) => {
 
 
 
+const getGroupInvoicePreviewHandler = async (req, res) => {
+  try {
+    const result = await getGroupInvoicePreview(req.params.groupId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    console.error("Error generating group invoice preview:", error);
+    res.status(500).json({ success: false, message: "Failed to generate group invoice preview", error: error.message });
+  }
+};
+
 export {
   getCompletedInvoicesHandler,
   getInvoiceDetailsHandler,
@@ -340,4 +354,5 @@ export {
   createInvoiceHandler,
   updateInstructionDetailsHandler,
   generateInvoicePreviewHandler, // Export the new handler
+  getGroupInvoicePreviewHandler,
 };
