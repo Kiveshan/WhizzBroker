@@ -8,19 +8,22 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
       );
     }
 
+    // Legacy per-instruction invoices (invoice.m1key set).
     let queryText = `
-      SELECT 
-        m1.m1key, 
-        m1."ksmFileRef" as instruction_no, 
-        s.shipmenttype as shipment_type, 
-        m1."clientFileRef" as file_no, 
+      SELECT
+        m1.m1key,
+        m1."ksmFileRef" as instruction_no,
+        s.shipmenttype as shipment_type,
+        m1."clientFileRef" as file_no,
         m1.status,
         i.ikey,
         i.invoice_num,
-        i.date as date
-      FROM 
+        i.date as date,
+        NULL::integer AS instruction_group_id,
+        false AS is_group
+      FROM
         public.m1_controller m1
-      LEFT JOIN 
+      LEFT JOIN
         public.shipment s ON m1.shipment_type = s.shipkey
       JOIN
         public.invoice i ON m1.m1key = i.m1key
@@ -42,7 +45,7 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
     }
 
     if (year && month) {
-      queryText += ` AND EXTRACT(YEAR FROM i.date) = $${paramIndex} 
+      queryText += ` AND EXTRACT(YEAR FROM i.date) = $${paramIndex}
                     AND EXTRACT(MONTH FROM i.date) = $${paramIndex + 1}`;
       queryParams.push(year, month);
       paramIndex += 2;
@@ -60,7 +63,56 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
 
     console.log("Executing query:", queryText, "with params:", queryParams);
     const result = await query(queryText, queryParams);
-    return { success: true, data: result.rows };
+    let rows = result.rows;
+
+    // Combined group invoices (invoice.m1key NULL, instruction_group_id set).
+    // A group spans mixed shipment types, so it is only listed when no specific
+    // shipment-type filter is active.
+    if (!type || type === "All") {
+      let groupText = `
+        SELECT
+          NULL::integer AS m1key,
+          COALESCE(g.group_ref, 'Group ' || g.group_key::text) AS instruction_no,
+          'Group' AS shipment_type,
+          NULL AS file_no,
+          g.status,
+          i.ikey,
+          i.invoice_num,
+          i.date AS date,
+          g.group_key AS instruction_group_id,
+          true AS is_group
+        FROM public.invoice i
+        JOIN public.instruction_group g ON i.instruction_group_id = g.group_key
+        WHERE i.m1key IS NULL
+      `;
+      const groupParams = [];
+      let gi = 1;
+      if (clientId) {
+        groupText += ` AND i.clientid = $${gi}`;
+        groupParams.push(clientId);
+        gi++;
+      }
+      if (year && month) {
+        groupText += ` AND EXTRACT(YEAR FROM i.date) = $${gi} AND EXTRACT(MONTH FROM i.date) = $${gi + 1}`;
+        groupParams.push(year, month);
+        gi += 2;
+      } else if (year) {
+        groupText += ` AND EXTRACT(YEAR FROM i.date) = $${gi}`;
+        groupParams.push(year);
+        gi++;
+      } else if (month) {
+        groupText += ` AND EXTRACT(MONTH FROM i.date) = $${gi}`;
+        groupParams.push(month);
+        gi++;
+      }
+      const groupResult = await query(groupText, groupParams);
+      rows = [...groupResult.rows, ...rows];
+    }
+
+    // Newest first across both sets.
+    rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return { success: true, data: rows };
   } catch (error) {
     throw error;
   }
