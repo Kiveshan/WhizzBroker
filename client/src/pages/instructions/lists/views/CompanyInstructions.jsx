@@ -230,21 +230,6 @@ const CompanyInstructions = () => {
     setCurrentPage(1) // Reset to first page when filter changes - ADDED
   }
 
-  // Helper function to get status priority for sorting
-  const getStatusPriority = (status) => {
-    const normalized = (status || "").toLowerCase()
-    switch (normalized) {
-      case "new":
-        return 1
-      case "in progress":
-        return 3
-      case "completed":
-        return 4
-      default:
-        return 5 // Any other status will come after the specified ones
-    }
-  }
-
   const getFilteredInstructions = () => {
     let filtered = [...instructions]
 
@@ -335,20 +320,30 @@ const CompanyInstructions = () => {
       filtered = filtered.filter((item) => searchMatchedKeys.has(String(item.m1key)))
     }
 
-    // Sort by status priority first, then by instruction number (descending)
+    // Sort by last free date, then stack date, soonest to latest
     filtered.sort((a, b) => {
-      // Primary sort: Status priority
-      const priorityA = getStatusPriority(a.status)
-      const priorityB = getStatusPriority(b.status)
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB
+      const toTime = (value) => {
+        if (!value) return Infinity
+        const time = new Date(value).getTime()
+        return Number.isNaN(time) ? Infinity : time
       }
 
-      // Secondary sort: Instruction number (descending)
+      const lastFreeA = toTime(a.lastFreeDate)
+      const lastFreeB = toTime(b.lastFreeDate)
+      if (lastFreeA !== lastFreeB) {
+        return lastFreeA - lastFreeB
+      }
+
+      const stackA = toTime(a.stackdate || a.stackDate)
+      const stackB = toTime(b.stackdate || b.stackDate)
+      if (stackA !== stackB) {
+        return stackA - stackB
+      }
+
+      // Fallback: instruction number (descending)
       const instructionA = Number.parseInt(a.m1controllerkey || a.m1key || 0)
       const instructionB = Number.parseInt(b.m1controllerkey || b.m1key || 0)
-      return instructionB - instructionA // Descending order
+      return instructionB - instructionA
     })
 
     return filtered
