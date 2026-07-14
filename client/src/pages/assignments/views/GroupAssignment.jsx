@@ -133,11 +133,18 @@ const GroupAssignment = () => {
       const list = await fetchInstructionDocuments(m1key)
       setDocsByChild((prev) => ({
         ...prev,
-        [m1key]: list.map((d) => ({ id: d.id, name: d.name, type: d.type })),
+        [m1key]: list.map((d) => ({ id: d.id, name: d.name, type: d.type, url: d.url })),
       }))
     } catch {
       /* keep existing */
     }
+  }, [m1key])
+
+  // The group fetch returns documents without signed URLs; fetch the full list
+  // (with viewable URLs) whenever the carousel lands on an instruction.
+  useEffect(() => {
+    if (m1key) refreshDocs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m1key])
 
   const handleFiles = async (files) => {
@@ -421,9 +428,31 @@ const GroupAssignment = () => {
             <div className="wb-doc-row" key={d.id}>
               <div className="wb-doc-icon">📎</div>
               <div className="wb-doc-meta">
-                <div className="wb-doc-name">{d.name}</div>
+                {d.url ? (
+                  <a
+                    className="wb-doc-name wb-doc-link"
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {d.name}
+                  </a>
+                ) : (
+                  <div className="wb-doc-name">{d.name}</div>
+                )}
                 <div className="wb-doc-sub">{d.type || "Instruction Document"}</div>
               </div>
+              {d.url && (
+                <a
+                  className="wb-doc-view"
+                  href={d.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open document"
+                >
+                  View
+                </a>
+              )}
               <span className="wb-doc-check">✓</span>
               {!readOnly && (
                 <button className="wb-doc-remove" onClick={() => handleRemoveDoc(d.id)} aria-label="Remove">
