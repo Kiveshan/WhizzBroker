@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import ExcelJS from "exceljs"
 import "../../css/InstructionsList.css"
 import api from "../../../../api"
 import Pagination from "../../../../components/Pagination"
@@ -301,6 +302,81 @@ const Instructions = () => {
     setCurrentPage(pageNumber)
   }
 
+  const getTypeText = (item) => {
+    return (
+      item.type_text ||
+      (item.shipment_type === 1 || item.shipment_type === "1"
+        ? "import"
+        : item.shipment_type === 2 || item.shipment_type === "2"
+          ? "export"
+          : item.shipment_type === 3 || item.shipment_type === "3"
+            ? "cross-haul"
+            : item.shipment_type === 4 || item.shipment_type === "4"
+              ? "cross-haul (break bulk)"
+              : item.shipment_type === 5 || item.shipment_type === "5"
+                ? "add-on"
+                : item.type)
+    )
+  }
+
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("Instructions")
+
+    worksheet.columns = [
+      { header: "Instruction No", key: "instructionNo", width: 20 },
+      { header: "Group Ref", key: "groupRef", width: 15 },
+      { header: "Invoice No", key: "invoiceNo", width: 20 },
+      { header: "Booking Ref", key: "bookingRef", width: 20 },
+      { header: "Client Ref", key: "clientRef", width: 20 },
+      { header: "File Ref", key: "fileRef", width: 20 },
+      { header: "Type", key: "type", width: 20 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Creation Date", key: "creationDate", width: 18 },
+    ]
+
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE6F3FF" },
+    }
+
+    filteredInstructions.forEach((item) => {
+      const isAddOn =
+        item.shipment_type === 5 ||
+        item.shipment_type === "5" ||
+        (item.type_text || "").toLowerCase() === "add-on" ||
+        (item.type_text || "").toLowerCase() === "add on"
+
+      worksheet.addRow({
+        instructionNo: item.m1controllerkey || item.m1key,
+        groupRef: item.instruction_group_id ? item.group_ref || item.instruction_group_id : "",
+        invoiceNo: (isAddOn ? item.addon_invoice_number : item.invoice_num) || "N/A",
+        bookingRef: item.booking_ref || "N/A",
+        clientRef: item.client_ref || "N/A",
+        fileRef: item.ksm_file_ref || "N/A",
+        type: getTypeText(item),
+        status: item.status || "",
+        creationDate: (item.startingdate || item.pickupdate)
+          ? new Date(item.startingdate || item.pickupdate).toLocaleDateString()
+          : "Not Set",
+      })
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const datePart = new Date().toISOString().slice(0, 10)
+    link.download = `Instructions_${clientName ? clientName.replace(/\s+/g, "_") + "_" : ""}${datePart}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1)
@@ -469,6 +545,14 @@ const Instructions = () => {
               minWidth: "220px",
             }}
           />
+          <button
+            className="btn btn-blue"
+            style={{ marginLeft: "10px" }}
+            onClick={handleExportExcel}
+            disabled={loading || filteredInstructions.length === 0}
+          >
+            Export to Excel
+          </button>
         </div>
         <div className="tables-container">
           {loading ? (
