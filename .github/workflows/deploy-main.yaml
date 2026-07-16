@@ -2,13 +2,13 @@ name: Deploy to Elastic Beanstalk Main
 on:
   push:
     branches:
-      - pop
+      - staging
 
 env:
   AWS_REGION: af-south-1
-  EB_APPLICATION_NAME: Whizz-Away
-  EB_ENVIRONMENT_NAME: Whizz-Away-env
-  S3_BUCKET_NAME: whizz-away-versions-prod
+  EB_APPLICATION_NAME: WhizzBroker
+  EB_ENVIRONMENT_NAME: WhizzBroker-env
+  S3_BUCKET_NAME: whizzbroker-versions-prod
   DEPLOYMENT_PACKAGE: whizz-${{ github.sha }}.zip
 jobs:
   build-and-deploy:
@@ -36,7 +36,7 @@ jobs:
       - name: Set React environment variables
         run: |
           cd client
-          echo "REACT_APP_API_URL=https://ksm-whizz-away.co.za" > .env
+          echo "REACT_APP_API_URL=http://whizzbroker-env.eba-mfcpnkar.af-south-1.elasticbeanstalk.com" > .env
 
       - name: Build React app
         run: cd client && CI=false npm run build
