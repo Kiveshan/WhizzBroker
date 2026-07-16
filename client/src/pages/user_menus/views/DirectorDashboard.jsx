@@ -25,6 +25,7 @@ const dashboardData = [
     image: "/images/expenses.jpeg",
     path: "/DirectorCreditorsDash",
   },
+  { title: "Manage", image: "/images/manage.jpg", path: "/manage" },
 
   { title: "Analytics", image: "/images/analytics.jpg", path: "/analytics" },
 ];
@@ -53,7 +54,7 @@ const DirectorDashboard = () => {
         ))}
       </div>
       <div className="dashboard-row bottom-row">
-        {dashboardData.slice(3, 5).map((item) => (
+        {dashboardData.slice(3, 6).map((item) => (
           <Card
             key={item.title}
             title={item.title}

@@ -538,7 +538,7 @@ const CompanyInstructions = () => {
                   <th>Invoice No</th>
                   <th>Booking Ref</th>
                   <th>Client Ref</th>
-                  <th>KSM File Ref</th>
+                  <th>File Ref</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Creation Date</th>

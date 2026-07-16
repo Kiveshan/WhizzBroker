@@ -322,6 +322,24 @@ const getInvoiceDetails = async (id) => {
       leg_rate: c.leg_rate
     })));
 
+    // One summary line per distinct custom extra charge, summed across this
+    // instruction's containers. Charges have arbitrary names (unlike the
+    // fixed surcharge/hazardous/vgm columns above), so they're shown as
+    // separate summary lines rather than per-container columns.
+    const extraChargesQuery = `
+      SELECT e.charge_name, SUM(e.amount) AS amount
+      FROM public.container_extra_charge e
+      JOIN public.container c ON c.containerkey = e.containerkey
+      INNER JOIN invoice i ON i.m1key = c.m1key
+      WHERE i.ikey = $1
+      GROUP BY e.charge_name
+      ORDER BY e.charge_name
+    `;
+    const extraChargesResult = await query(extraChargesQuery, [id]);
+    const extraCharges = extraChargesResult.rows
+      .map((r) => ({ charge_name: r.charge_name, amount: Number(r.amount || 0) }))
+      .filter((c) => c.amount > 0);
+
     // If shipment type is 4 (weight-based), fetch weight items
     const shipmentTypeKey = result.rows[0].shipment_type_key;
     const isSetRate = result.rows[0].is_set_rate === true || result.rows[0].rateweight === "SetRate";
@@ -367,6 +385,7 @@ const getInvoiceDetails = async (id) => {
         containers,
         weightItems,
         unitrate,
+        extraCharges,
       },
     };
   } catch (error) {
@@ -892,6 +911,21 @@ const getInstructionDetailsForPreview = async (instructionId) => {
 
       const containers = Array.from(containerMap.values());
 
+      // One summary line per distinct custom extra charge, summed across
+      // this instruction's containers (same shape as getInvoiceDetails).
+      const extraChargesQuery = `
+        SELECT e.charge_name, SUM(e.amount) AS amount
+        FROM public.container_extra_charge e
+        JOIN public.container c ON c.containerkey = e.containerkey
+        WHERE c.m1key = $1
+        GROUP BY e.charge_name
+        ORDER BY e.charge_name
+      `;
+      const extraChargesResult = await client.query(extraChargesQuery, [instructionId]);
+      const extraCharges = extraChargesResult.rows
+        .map((r) => ({ charge_name: r.charge_name, amount: Number(r.amount || 0) }))
+        .filter((c) => c.amount > 0);
+
       // Weight-based items for preview when shipment_type_key = 4
       let weightItems = [];
       const unitratePrev = Number(m1Result.rows[0].unitrate || 0);
@@ -946,6 +980,7 @@ const getInstructionDetailsForPreview = async (instructionId) => {
           weightItems,
           unitrate: unitratePrev,
           base_rates: baseRates,
+          extraCharges,
           // Add company details
           ...companyResult.rows[0],
           // Add preview metadata
@@ -1061,6 +1096,25 @@ const getGroupInvoicePreview = async (groupId) => {
       for (const [label, amount] of surchargeLines) {
         if (amount > 0) {
           lines.push({ description: label, quantity: null, rate: null, amount: Number(amount.toFixed(2)) });
+        }
+      }
+
+      // One line per distinct custom extra charge, summed across this
+      // instruction's containers (charges have arbitrary names, unlike the
+      // fixed Surcharge/Hazardous/VGM set above).
+      const extraChargesResult = await client.query(
+        `SELECT e.charge_name, SUM(e.amount) AS amount
+         FROM public.container_extra_charge e
+         JOIN public.container c ON c.containerkey = e.containerkey
+         WHERE c.m1key = $1
+         GROUP BY e.charge_name
+         ORDER BY e.charge_name`,
+        [row.m1key]
+      );
+      for (const charge of extraChargesResult.rows) {
+        const amount = Number(charge.amount || 0);
+        if (amount > 0) {
+          lines.push({ description: charge.charge_name, quantity: null, rate: null, amount: Number(amount.toFixed(2)) });
         }
       }
 

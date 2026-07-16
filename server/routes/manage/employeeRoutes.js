@@ -36,7 +36,7 @@ router.post(
 );
 
 // Parameterized routes should come AFTER specific routes
-router.get("/api/employees/:id", getEmployeeBasicHandler);
+router.get("/api/employees/:id", verifyToken, getEmployeeBasicHandler);
 router.get(
   "/api/employees/:id/details",
   verifyToken,

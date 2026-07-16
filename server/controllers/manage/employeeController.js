@@ -9,6 +9,10 @@ import {
   deleteEmployeeDocument,
 } from "../../models/manage/employeeModal.js"
 import { s3Employees, getSignedUrl } from "../../utils/s3Config.js"
+import { ROLES } from "../../config/roles.js"
+
+// Only Directors/Admins are permitted to set or change salary and deduction figures.
+const canManageSalary = (req) => req.user?.roleid === ROLES.DIRECTOR || req.user?.roleid === ROLES.ADMIN
 
 const getEmployeeBasicHandler = async (req, res) => {
   try {
@@ -30,7 +34,11 @@ const getEmployeeBasicHandler = async (req, res) => {
       })
     }
     console.log(`Found employee data for ID ${id}:`, result.data)
-    res.json(result.data)
+    const data = { ...result.data }
+    if (!canManageSalary(req)) {
+      delete data.base_salary
+    }
+    res.json(data)
   } catch (error) {
     console.error(`Error fetching employee data for ID ${req.params.id}:`, error)
     res.status(500).json({
@@ -57,8 +65,25 @@ const getAllEmployeesHandler = async (req, res) => {
       status,
     })
 
+    const items = canManageSalary(req)
+      ? result.employees
+      : result.employees.map((emp) => {
+          const {
+            base_salary,
+            income_tax_rate,
+            deduction_other_deductions,
+            deduction_uif,
+            deduction_bonus,
+            deduction_savings,
+            deduction_loan,
+            deduction_damage,
+            ...rest
+          } = emp
+          return rest
+        })
+
     res.json({
-      items: result.employees,
+      items,
       currentPage: pageNum,
       totalPages: Math.ceil(result.totalCount / limitNum),
       totalItems: result.totalCount,
@@ -111,6 +136,19 @@ const createEmployeeHandler = async (req, res) => {
       return res.status(400).json({ error: "Name and surname are required" })
     }
 
+    const salaryFields = canManageSalary(req)
+      ? {
+          base_salary,
+          income_tax_rate,
+          deduction_other_deductions,
+          deduction_uif,
+          deduction_bonus,
+          deduction_savings,
+          deduction_loan,
+          deduction_damage,
+        }
+      : {}
+
     const urls = (req.files || []).map((f) => f.location)
     while (urls.length < 3) urls.push(null)
 
@@ -127,15 +165,8 @@ const createEmployeeHandler = async (req, res) => {
         roleid,
         email,
         password,
-        base_salary,
         company_reg_num: company_reg_num || req.user.company_reg_num,
-        income_tax_rate,
-        deduction_other_deductions,
-        deduction_uif,
-        deduction_bonus,
-        deduction_savings,
-        deduction_loan,
-        deduction_damage,
+        ...salaryFields,
       },
       urls,
       adminId,
@@ -183,6 +214,19 @@ const updateEmployeeHandler = async (req, res) => {
       return res.status(400).json({ error: "Name and surname are required" })
     }
 
+    const salaryFields = canManageSalary(req)
+      ? {
+          base_salary,
+          income_tax_rate,
+          deduction_other_deductions,
+          deduction_uif,
+          deduction_bonus,
+          deduction_savings,
+          deduction_loan,
+          deduction_damage,
+        }
+      : {}
+
     const newFileUrls = (req.files || []).map((f) => f.location)
 
     console.log(`Updating employee ID ${id}`)
@@ -199,14 +243,7 @@ const updateEmployeeHandler = async (req, res) => {
         roleid,
         email,
         password,
-        base_salary,
-        income_tax_rate,
-        deduction_other_deductions,
-        deduction_uif,
-        deduction_bonus,
-        deduction_savings,
-        deduction_loan,
-        deduction_damage,
+        ...salaryFields,
       },
       newFileUrls,
       adminId,
@@ -301,6 +338,17 @@ const getEmployeeDetailsHandler = async (req, res) => {
     employee.document_url1 = signedUrls[0]
     employee.document_url2 = signedUrls[1]
     employee.document_url3 = signedUrls[2]
+
+    if (!canManageSalary(req)) {
+      delete employee.base_salary
+      delete employee.income_tax_rate
+      delete employee.deduction_other_deductions
+      delete employee.deduction_uif
+      delete employee.deduction_bonus
+      delete employee.deduction_savings
+      delete employee.deduction_loan
+      delete employee.deduction_damage
+    }
 
     res.json(employee)
   } catch (err) {

@@ -91,7 +91,7 @@ export function validateForm(formData, containers = [], flags = {}) {
   // ── Create-form rules ─────────────────────────────────────────────────────
   if (mode === "create") {
     if (!isAddOn) {
-      if (!formData.task) fail("task", "KSM File Reference is required");
+      if (!formData.task) fail("task", "File Reference is required");
       if (!formData.lastFreeDate) fail("lastFreeDate", "Last Free Date is required");
       if (!formData.bookingRef) fail("bookingRef", "Booking reference is required");
       if (!formData.fileRef) fail("fileRef", "Client File Reference is required");
@@ -137,7 +137,7 @@ export function validateForm(formData, containers = [], flags = {}) {
   // ── Update-form rules ─────────────────────────────────────────────────────
   } else if (mode === "update") {
     if (!isAddOn) {
-      if (!formData.ksmFileRef) fail("ksmFileRef", "KSM File Reference is required");
+      if (!formData.ksmFileRef) fail("ksmFileRef", "File Reference is required");
       if (!formData.clientFileRef) fail("clientFileRef", "Client File Reference is required");
       if (!formData.bookingRef) fail("bookingRef", "Booking Reference is required");
       if (!formData.description) fail("description", "Description is required");

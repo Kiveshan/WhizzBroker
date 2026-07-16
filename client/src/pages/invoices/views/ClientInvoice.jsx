@@ -685,6 +685,10 @@ const ClientInvoice = forwardRef(({
       // FIXED Summary Table - Proper two-column layout
       const summaryHeaders = ["Description", "Amount"];
       const summaryData = [
+        ...(finalInvoiceData.extraCharges || []).map((charge) => [
+          charge.charge_name,
+          formatCurrency(charge.amount),
+        ]),
         ["Amount (excl. VAT)", formatCurrency(amount)],
         ...(vat > 0 ? [["VAT (" + finalInvoiceData.vat + "%)", formatCurrency(vat)]] : []),
         ["Total Amount", formatCurrency(total)],
@@ -1209,6 +1213,14 @@ const ClientInvoice = forwardRef(({
                     </tr>
                   </thead>
                   <tbody>
+                    {(finalInvoiceData.extraCharges || []).map((charge, index) => (
+                      <tr key={`extra-charge-${index}`}>
+                        <td className="summary-label">{charge.charge_name}</td>
+                        <td className="summary-value">
+                          {formatCurrency(charge.amount)}
+                        </td>
+                      </tr>
+                    ))}
                     <tr>
                       <td className="summary-label">Amount (excl. VAT)</td>
                       <td className="summary-value">
