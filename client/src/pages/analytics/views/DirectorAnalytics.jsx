@@ -20,6 +20,7 @@ import {
   CustomBarLabelForTurnover,
   CustomBarLabelForDefault,
   CustomBarLabelForPayments,
+  CustomBarLabelForCount,
   fetchClients,
   fetchSubcontractors,
   fetchTurnoverData,
@@ -31,6 +32,8 @@ import {
   fetchTurnoverVsSubbieExpense,
   fetchPaymentClients,
   fetchPaymentsReceivedPerMonth,
+  fetchWorkVolumePerClient,
+  fetchWorkVolumePerSubbie,
 } from "../AnalyticsFunctions";
 
 export default function DirectorAnalytics() {
@@ -143,6 +146,12 @@ export default function DirectorAnalytics() {
             break;
           case "paymentsReceivedPerMonth":
             data = await fetchPaymentsReceivedPerMonth(activeMonth, activeYear, selectedClient, setIsLoading, setError);
+            break;
+          case "workVolumePerClient":
+            data = await fetchWorkVolumePerClient(activeMonth, activeYear, setIsLoading, setError);
+            break;
+          case "workVolumePerSubbie":
+            data = await fetchWorkVolumePerSubbie(activeMonth, activeYear, setIsLoading, setError);
             break;
           default:
             data = [];
@@ -867,6 +876,67 @@ export default function DirectorAnalytics() {
           </div>
         );
 
+      case "workVolumePerClient":
+      case "workVolumePerSubbie":
+        return (
+          <div className="chart-wrapper">
+            {isLoading ? (
+              <div className="loading-indicator">Loading work volume data...</div>
+            ) : error ? (
+              <div className="error-message">{error}</div>
+            ) : !Array.isArray(chartData) || chartData.length === 0 ? (
+              <div className="no-data-message">
+                No work volume data available for {activeMonth} {activeYear}
+              </div>
+            ) : (
+              <>
+                <div className="chart-header">
+                  <div className="chart-header-item">
+                    <span className="legend-color royal-blue"></span>
+                    <span>
+                      {activeFilter === "workVolumePerClient"
+                        ? "Jobs per Client"
+                        : "Legs per Subbie"}
+                    </span>
+                  </div>
+                </div>
+                <div className="chart-scroll-container">
+                  <ResponsiveContainer width={chartWidth} height="100%">
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 24, right: 24, left: 48, bottom: 16 }}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        interval={0}
+                        tick={<CustomAxisTick />}
+                        height={150}
+                        tickMargin={10}
+                      />
+                      <YAxis
+                        label={{
+                          value: "Count",
+                          angle: 0,
+                          position: "top",
+                          dy: -20,
+                        }}
+                      />
+                      <Tooltip formatter={(value) => value.toLocaleString()} />
+                      <Bar dataKey="value" name="Count" fill="#4169E1" radius={[4, 4, 0, 0]}>
+                        <LabelList
+                          dataKey="value"
+                          content={CustomBarLabelForCount}
+                          position="top"
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </>
+            )}
+          </div>
+        );
+
       default:
         return null;
     }
@@ -980,6 +1050,12 @@ export default function DirectorAnalytics() {
               <option value="paymentsReceivedPerMonth">
                 Payments Received per Month
               </option>
+              <option value="workVolumePerClient">
+                Work Volume per Client
+              </option>
+              <option value="workVolumePerSubbie">
+                Work Volume per Subbie
+              </option>
             </select>
           </div>
 
@@ -1000,6 +1076,10 @@ export default function DirectorAnalytics() {
                 "Turnover VS Subbie Expense"}
               {activeFilter === "paymentsReceivedPerMonth" &&
                 "Payments Received per Month"}
+              {activeFilter === "workVolumePerClient" &&
+                "Work Volume per Client"}
+              {activeFilter === "workVolumePerSubbie" &&
+                "Work Volume per Subbie"}
             </h2>
             {renderChart()}
           </div>

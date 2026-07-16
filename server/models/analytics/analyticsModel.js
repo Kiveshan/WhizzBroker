@@ -1338,6 +1338,186 @@ const getClientSubbieCommissionReport = async (client, month, year, clientId) =>
   }
 }
 
+// Income Per Client Report — group-aware: a combined group invoice has
+// invoice.m1key IS NULL and invoice.instruction_group_id set instead, covering
+// every child instruction in the group, so both invoicing paths are unioned
+// here (unlike calculateMonthlyTurnover, which only sees the legacy path).
+const getIncomePerClientReport = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const invoiceQuery = `
+    WITH invoice_lines AS (
+      SELECT i.clientid, m.m1key, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE i.date >= $1 AND i.date < $2
+      UNION ALL
+      SELECT i.clientid, m.m1key, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL AND i.date >= $1 AND i.date < $2
+    )
+    SELECT
+      il.clientid,
+      c.client AS client_name,
+      COUNT(DISTINCT il.m1key) AS job_count,
+      COALESCE(SUM(il.total_cost * (1 + COALESCE(il.vat, 0)::numeric / 100)), 0) AS invoice_income
+    FROM invoice_lines il
+    JOIN m5_client c ON il.clientid = c.m5clientkey
+    GROUP BY il.clientid, c.client
+  `
+
+  const addOnQuery = `
+    SELECT a.client_id, COALESCE(SUM(a.amount), 0) AS addon_income
+    FROM add_ons a
+    WHERE a.date >= $1 AND a.date < $2
+    GROUP BY a.client_id
+  `
+
+  const [invoiceResult, addOnResult] = await Promise.all([
+    client.query(invoiceQuery, [dateFrom, dateTo]),
+    client.query(addOnQuery, [dateFrom, dateTo]),
+  ])
+
+  const rowsByClient = new Map()
+
+  for (const row of invoiceResult.rows) {
+    rowsByClient.set(row.clientid, {
+      clientId: row.clientid,
+      clientName: row.client_name,
+      jobCount: Number.parseInt(row.job_count, 10) || 0,
+      invoiceIncome: Number(row.invoice_income) || 0,
+      addOnIncome: 0,
+    })
+  }
+
+  for (const row of addOnResult.rows) {
+    const existing = rowsByClient.get(row.client_id)
+    const addOnIncome = Number(row.addon_income) || 0
+    if (existing) {
+      existing.addOnIncome = addOnIncome
+    } else {
+      rowsByClient.set(row.client_id, {
+        clientId: row.client_id,
+        clientName: null,
+        jobCount: 0,
+        invoiceIncome: 0,
+        addOnIncome,
+      })
+    }
+  }
+
+  // Add-on-only rows may be missing a client name (client left the invoice
+  // path untouched that month) — backfill it separately.
+  const missingNameIds = [...rowsByClient.values()]
+    .filter((row) => !row.clientName)
+    .map((row) => row.clientId)
+    .filter((id) => id != null)
+
+  if (missingNameIds.length > 0) {
+    const nameResult = await client.query(
+      `SELECT m5clientkey, client FROM m5_client WHERE m5clientkey = ANY($1::int[])`,
+      [missingNameIds]
+    )
+    for (const row of nameResult.rows) {
+      const existing = rowsByClient.get(row.m5clientkey)
+      if (existing) existing.clientName = row.client
+    }
+  }
+
+  const rows = [...rowsByClient.values()]
+    .filter((row) => row.clientName)
+    .map((row) => ({
+      ...row,
+      totalIncome: Number((row.invoiceIncome + row.addOnIncome).toFixed(2)),
+      invoiceIncome: Number(row.invoiceIncome.toFixed(2)),
+      addOnIncome: Number(row.addOnIncome.toFixed(2)),
+    }))
+    .sort((a, b) => b.totalIncome - a.totalIncome)
+
+  const totals = rows.reduce(
+    (acc, row) => ({
+      jobCount: acc.jobCount + row.jobCount,
+      invoiceIncome: acc.invoiceIncome + row.invoiceIncome,
+      addOnIncome: acc.addOnIncome + row.addOnIncome,
+      totalIncome: acc.totalIncome + row.totalIncome,
+    }),
+    { jobCount: 0, invoiceIncome: 0, addOnIncome: 0, totalIncome: 0 }
+  )
+
+  return {
+    period: { month: month.trim(), year: year.toString() },
+    rows,
+    totals: {
+      jobCount: totals.jobCount,
+      invoiceIncome: Number(totals.invoiceIncome.toFixed(2)),
+      addOnIncome: Number(totals.addOnIncome.toFixed(2)),
+      totalIncome: Number(totals.totalIncome.toFixed(2)),
+    },
+  }
+}
+
+// Work Volume per Client — counts jobs (m1_controller rows) per client for the
+// month. Unlike income, each child instruction in a group still gets its own
+// subbie assignment, so counting m1_controller rows directly (no group
+// dedup) is the correct "volume" basis.
+const getWorkVolumePerClient = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const query = `
+    SELECT m.client AS client_id, c.client AS client_name, COUNT(DISTINCT m.m1key) AS job_count
+    FROM m1_controller m
+    JOIN m5_client c ON m.client = c.m5clientkey
+    WHERE m.created_at >= $1 AND m.created_at < $2
+    GROUP BY m.client, c.client
+    ORDER BY job_count DESC
+  `
+
+  const result = await client.query(query, [dateFrom, dateTo])
+
+  return result.rows.map((row) => ({
+    name: row.client_name,
+    value: Number.parseInt(row.job_count, 10) || 0,
+    month: month.trim(),
+    year: year.toString(),
+  }))
+}
+
+// Work Volume per Subbie — company-wide leg/job counts per subcontractor,
+// using the same leg-counting basis as getClientSubbieCommissionReport's
+// subcontractorQuery but without client scoping and without earnings.
+const getWorkVolumePerSubbie = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const query = `
+    SELECT
+      MIN(e.userid) AS subcontractor_id,
+      COALESCE(e.companyname, 'Unknown') AS companyname,
+      e.subei_reg_num,
+      COUNT(DISTINCT l.legkey) AS leg_count,
+      COUNT(DISTINCT l.m1key) AS job_count
+    FROM legs_m2 l
+    JOIN m1_controller m ON l.m1key = m.m1key
+    JOIN m5_employee e ON l.driverid = e.userid
+    WHERE e.roleid = 6
+      AND l.date >= $1 AND l.date < $2
+    GROUP BY e.companyname, e.subei_reg_num
+    ORDER BY leg_count DESC
+  `
+
+  const result = await client.query(query, [dateFrom, dateTo])
+
+  return result.rows.map((row) => ({
+    name: row.companyname,
+    value: Number.parseInt(row.leg_count, 10) || 0,
+    jobCount: Number.parseInt(row.job_count, 10) || 0,
+    subcontractorId: row.subcontractor_id,
+    registrationNumber: row.subei_reg_num,
+    month: month.trim(),
+    year: year.toString(),
+  }))
+}
+
 async function calculateTotalPayable(client, employeeId, month, year) {
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
@@ -1501,4 +1681,7 @@ export {
   getPaymentsReceivedPerMonth,
   getPaymentClients,
   getClientSubbieCommissionReport,
+  getIncomePerClientReport,
+  getWorkVolumePerClient,
+  getWorkVolumePerSubbie,
 }

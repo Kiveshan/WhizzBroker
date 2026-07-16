@@ -3,3 +3,4 @@ export { default as ProfitLossReportsPage } from "./views/ProfitLossReportsPage.
 export { default as ProfitLossDetailPage } from "./views/ProfitLossDetailPage.jsx";
 export { default as ClientSubbieCommissionReport } from "./views/ClientSubbieCommissionReport.jsx";
 export { default as VatReconReportPage } from "./views/VatReconReportPage.jsx";
+export { default as IncomePerClientReport } from "./views/IncomePerClientReport.jsx";

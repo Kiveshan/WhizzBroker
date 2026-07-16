@@ -117,6 +117,7 @@ import {
   ProfitLossDetailPage,
   ClientSubbieCommissionReport,
   VatReconReportPage,
+  IncomePerClientReport,
 } from "./pages/Reports";
 
 // CSS Imports
@@ -206,6 +207,7 @@ function DynamicHeader() {
     "/profit-loss-reports": "Income & Expenditure Reports",
     "/income-expenditure-reports/:month/:year": "Income & Expenditure Report",
     "/client-subbie-commission": "Client Subbie Commission Report",
+    "/income-per-client": "Income Per Client Report",
     "/vat-recon-reports": "VAT Reconciliation Report",
   };
 
@@ -468,6 +470,10 @@ function ContentWrapper() {
         <Route
           path="/client-subbie-commission"
           element={<ClientSubbieCommissionReport />}
+        />
+        <Route
+          path="/income-per-client"
+          element={<IncomePerClientReport />}
         />
         <Route path="/view-client-list" element={<ClientList />} />
         <Route path="/view-add-on-list" element={<AddOnList />} />

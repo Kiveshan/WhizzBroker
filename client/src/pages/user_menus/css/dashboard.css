@@ -57,3 +57,14 @@
   justify-content: center;
   gap: 70px;
 }
+
+/* Reports page has more cards than the row can fit at 60px gaps (5 cards
+   would shrink below their 250px card width) — wrap instead of squishing. */
+.reports-page .dashboard-row {
+  flex-wrap: wrap;
+  gap: 30px;
+}
+
+.reports-page .card {
+  flex: 0 0 250px;
+}

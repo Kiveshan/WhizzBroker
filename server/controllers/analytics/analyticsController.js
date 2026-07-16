@@ -18,6 +18,9 @@ import {
   getPaymentsReceivedPerMonth,
   getPaymentClients,
   getClientSubbieCommissionReport,
+  getIncomePerClientReport,
+  getWorkVolumePerClient,
+  getWorkVolumePerSubbie,
 } from "../../models/analytics/analyticsModel.js";
 
 const getFuelExpensesController = async (req, res) => {
@@ -328,6 +331,72 @@ const getClientSubbieCommissionReportController = async (req, res) => {
   }
 };
 
+const getIncomePerClientReportController = async (req, res) => {
+  const { month, year } = req.query;
+  console.log(`Received request for income per client report: month=${month}, year=${year}`);
+
+  if (!month || !year) {
+    return res.status(400).json({ success: false, message: "month and year are required" });
+  }
+
+  try {
+    const client = await pool.connect();
+    try {
+      const data = await getIncomePerClientReport(client, month, year);
+      res.status(200).json({ success: true, data });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error in getIncomePerClientReportController:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getWorkVolumePerClientController = async (req, res) => {
+  const { month, year } = req.query;
+  console.log(`Received request for work volume per client: month=${month}, year=${year}`);
+
+  if (!month || !year) {
+    return res.status(400).json({ success: false, message: "month and year are required" });
+  }
+
+  try {
+    const client = await pool.connect();
+    try {
+      const data = await getWorkVolumePerClient(client, month, year);
+      res.status(200).json({ success: true, data });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error in getWorkVolumePerClientController:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getWorkVolumePerSubbieController = async (req, res) => {
+  const { month, year } = req.query;
+  console.log(`Received request for work volume per subbie: month=${month}, year=${year}`);
+
+  if (!month || !year) {
+    return res.status(400).json({ success: false, message: "month and year are required" });
+  }
+
+  try {
+    const client = await pool.connect();
+    try {
+      const data = await getWorkVolumePerSubbie(client, month, year);
+      res.status(200).json({ success: true, data });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("Error in getWorkVolumePerSubbieController:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 export {
   getFuelExpensesController,
   getTurnoverPerMonthController,
@@ -347,4 +416,7 @@ export {
   getPaymentsReceivedPerMonthController,
   getPaymentClientsController,
   getClientSubbieCommissionReportController,
+  getIncomePerClientReportController,
+  getWorkVolumePerClientController,
+  getWorkVolumePerSubbieController,
 };
