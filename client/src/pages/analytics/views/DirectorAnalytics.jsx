@@ -18,24 +18,17 @@ import {
   CustomAxisTick,
   getBarFill,
   CustomBarLabelForTurnover,
-  CustomBarLabelForDieselCost,
-  CustomBarLabelForFuelAndTurnover,
   CustomBarLabelForDefault,
   CustomBarLabelForPayments,
   fetchClients,
   fetchSubcontractors,
-  fetchTrucks,
-  fetchFuelData,
   fetchTurnoverData,
   fetchAgingAnalysisData,
-  fetchTurnoverVsDieselCost,
   fetchIncomeVsExpenses,
-  fetchTurnoverPerTruck,
   fetchWagesVsExpenses,
   fetchSubcontractorTurnoverPerMonth,
   fetchSubcontractorVsTurnover,
   fetchTurnoverVsSubbieExpense,
-  fetchTurnoverVsFuelPerTruck,
   fetchPaymentClients,
   fetchPaymentsReceivedPerMonth,
 } from "../AnalyticsFunctions";
@@ -63,15 +56,13 @@ export default function DirectorAnalytics() {
   const [activeYear, setActiveYear] = useState(
     currentDate.getFullYear().toString()
   );
-  const [activeFilter, setActiveFilter] = useState("fuel");
+  const [activeFilter, setActiveFilter] = useState("turnoverPerMonth");
   const [chartData, setChartData] = useState([]);
   const [clients, setClients] = useState([]);
   const [subcontractors, setSubcontractors] = useState([]);
-  const [trucks, setTrucks] = useState([]);
   const [paymentClients, setPaymentClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedSubcontractor, setSelectedSubcontractor] = useState("");
-  const [selectedTruck, setSelectedTruck] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const roleId = JSON.parse(localStorage.getItem("user"))?.roleid;
@@ -81,7 +72,6 @@ export default function DirectorAnalytics() {
   useEffect(() => {
     fetchClients(setClients, setError);
     fetchSubcontractors(setSubcontractors, setError);
-    fetchTrucks(setTrucks, setError);
   }, []);
 
   useEffect(() => {
@@ -100,9 +90,6 @@ export default function DirectorAnalytics() {
       let data = [];
       try {
         switch (activeFilter) {
-          case "fuel":
-            data = await fetchFuelData(activeMonth, activeYear, setIsLoading, setError);
-            break;
           case "turnoverPerMonth":
             data = await fetchTurnoverData(
               activeMonth,
@@ -122,9 +109,6 @@ export default function DirectorAnalytics() {
               setError
             );
             break;
-          case "turnoverVsDieselCost":
-            data = await fetchTurnoverVsDieselCost(activeMonth, activeYear, setIsLoading, setError);
-            break;
           case "subcontractorTurnoverPerMonth":
             data = await fetchSubcontractorTurnoverPerMonth(
               activeMonth,
@@ -142,9 +126,6 @@ export default function DirectorAnalytics() {
               setError
             );
             break;
-          case "turnoverPerTruck":
-            data = await fetchTurnoverPerTruck(activeMonth, activeYear, setIsLoading, setError);
-            break;
           case "incomeVsExpense":
             data = await fetchIncomeVsExpenses(activeMonth, activeYear, setIsLoading, setError);
             break;
@@ -156,15 +137,6 @@ export default function DirectorAnalytics() {
               activeMonth,
               activeYear,
               selectedSubcontractor,
-              setIsLoading,
-              setError
-            );
-            break;
-          case "turnoverVsFuelPerTruck":
-            data = await fetchTurnoverVsFuelPerTruck(
-              activeMonth,
-              activeYear,
-              selectedTruck,
               setIsLoading,
               setError
             );
@@ -199,7 +171,6 @@ export default function DirectorAnalytics() {
     activeYear,
     selectedClient,
     selectedSubcontractor,
-    selectedTruck,
     clients,
   ]);
 
@@ -271,90 +242,6 @@ export default function DirectorAnalytics() {
     const chartWidth = getChartWidth(chartData.length, activeFilter);
 
     switch (activeFilter) {
-      case "fuel":
-        return (
-          <div className="chart-wrapper">
-            {isLoading ? (
-              <div className="loading-indicator">Loading fuel data...</div>
-            ) : error ? (
-              <div className="error-message">{error}</div>
-            ) : !Array.isArray(chartData) || chartData.length === 0 ? (
-              <div className="no-data-message">
-                No fuel data available for {activeMonth} {activeYear}
-              </div>
-            ) : (
-              <>
-                <div className="chart-scroll-container">
-                  <ResponsiveContainer width={chartWidth} height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 24, right: 24, left: 48, bottom: 16 }}
-                    >
-                      <XAxis
-                        dataKey="truckId"
-                        angle={0}
-                        textAnchor="middle"
-                        height={150}
-                        interval={0}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <YAxis
-                        label={{
-                          value: "Expense Amount (R)",
-                          angle: 0,
-                          position: "top",
-                          dy: -20,
-                        }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="value"
-                        name="Fuel Expense"
-                        radius={[4, 4, 0, 0]}
-                        fillOpacity={0.9}
-                        isAnimationActive={true}
-                        animationDuration={500}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                                                        fill={getBarFill(entry, activeFilter)}
-                          />
-                        ))}
-                        <LabelList
-                          dataKey="value"
-                          content={(props) => CustomBarLabelForFuelAndTurnover({ ...props, chartData })}
-                          position="top"
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="chart-legend">
-                  <div className="legend-item">
-                    <span
-                      className="legend-color green"
-                    ></span>
-                    <span>Good: R0-R3,500</span>
-                  </div>
-                  <div className="legend-item">
-                    <span
-                      className="legend-color yellow"
-                    ></span>
-                    <span>Warning: R3,501-R4,500</span>
-                  </div>
-                  <div className="legend-item">
-                    <span
-                      className="legend-color red"
-                    ></span>
-                    <span>High: R4,501+</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        );
-
       case "turnoverPerMonth":
         return (
           <div className="chart-wrapper">
@@ -757,174 +644,6 @@ export default function DirectorAnalytics() {
           </div>
         );
 
-      case "turnoverVsDieselCost":
-        return (
-          <div className="chart-wrapper">
-            {isLoading ? (
-              <div className="loading-indicator">
-                Loading turnover vs diesel cost data...
-              </div>
-            ) : error ? (
-              <div className="error-message">{error}</div>
-            ) : !Array.isArray(chartData) || chartData.length === 0 ? (
-              <div className="no-data-message">
-                No turnover vs diesel cost data available for {activeMonth}{" "}
-                {activeYear}
-              </div>
-            ) : (
-              <>
-                <div className="chart-header">
-                  <div className="chart-header-item">
-                    <span
-                      className="legend-color blue"
-                    ></span>
-                    <span>Turnover</span>
-                  </div>
-                  <div className="chart-header-item">
-                    <span
-                      className="legend-color tomato"
-                    ></span>
-                    <span>Diesel Cost</span>
-                  </div>
-                </div>
-                <div className="chart-scroll-container">
-                  <ResponsiveContainer width={chartWidth} height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 24, right: 24, left: 48, bottom: 16 }}
-                    >
-                      <XAxis dataKey="month" />
-                      <YAxis
-                        label={{
-                          value: "Amount (R)",
-                          angle: 0,
-                          position: "top",
-                          dy: -20,
-                        }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="totalTurnover"
-                        name="Turnover"
-                        fill="#2196F3"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        <LabelList
-                          dataKey="totalTurnover"
-                          content={CustomBarLabelForTurnover}
-                          position="top"
-                        />
-                      </Bar>
-                      <Bar
-                        dataKey="dieselCost"
-                        name="Diesel Cost"
-                        fill="#FF6347"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        <LabelList
-                          dataKey="dieselCost"
-                          content={CustomBarLabelForDieselCost}
-                          position="top"
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </>
-            )}
-          </div>
-        );
-
-      case "turnoverPerTruck":
-        return (
-          <div className="chart-wrapper">
-            {isLoading ? (
-              <div className="loading-indicator">
-                Loading turnover per truck data...
-              </div>
-            ) : error ? (
-              <div className="error-message">{error}</div>
-            ) : !Array.isArray(chartData) || chartData.length === 0 ? (
-              <div className="no-data-message">
-                No turnover per truck data available for {activeMonth}{" "}
-                {activeYear}
-              </div>
-            ) : (
-              <>
-                <div className="chart-scroll-container">
-                  <ResponsiveContainer width={chartWidth} height="100%">
-                    <BarChart
-                      data={chartData}
-                      margin={{ top: 24, right: 24, left: 48, bottom: 16 }}
-                    >
-                      <XAxis
-                        dataKey="truckregnumber"
-                        angle={0}
-                        textAnchor="middle"
-                        height={150}
-                        interval={0}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <YAxis
-                        label={{
-                          value: "Turnover (R)",
-                          angle: 0,
-                          position: "top",
-                          dy: -20,
-                        }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="total_turnover"
-                        name="Turnover"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={
-                              entry.status === "high"
-                                ? "#4CAF50"
-                                : entry.status === "medium"
-                                  ? "#FFC107"
-                                  : "#F44336"
-                            }
-                          />
-                        ))}
-                        <LabelList
-                          dataKey="total_turnover"
-                          content={(props) => CustomBarLabelForFuelAndTurnover({ ...props, chartData })}
-                          position="top"
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="chart-legend">
-                  <div className="legend-item">
-                    <span
-                      className="legend-color green"
-                    ></span>
-                    <span>High: R10,000+</span>
-                  </div>
-                  <div className="legend-item">
-                    <span
-                      className="legend-color yellow"
-                    ></span>
-                    <span>Medium: R5,000-R9,999</span>
-                  </div>
-                  <div className="legend-item">
-                    <span
-                      className="legend-color red"
-                    ></span>
-                    <span>Low: R0-R4,999</span>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        );
-
       case "incomeVsExpense":
         return (
           <div className="chart-wrapper">
@@ -1061,111 +780,6 @@ export default function DirectorAnalytics() {
                         <LabelList
                           dataKey="value"
                           content={CustomBarLabelForTurnover}
-                          position="top"
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </>
-            )}
-          </div>
-        );
-
-      case "turnoverVsFuelPerTruck":
-        return (
-          <div className="chart-wrapper">
-            {isLoading ? (
-              <div className="loading-indicator">
-                Loading turnover vs fuel per truck data...
-              </div>
-            ) : error ? (
-              <div className="error-message">{error}</div>
-            ) : !Array.isArray(chartData) || chartData.length === 0 ? (
-              <div className="no-data-message">
-                No turnover vs fuel per truck data available for {activeMonth}{" "}
-                {activeYear}
-              </div>
-            ) : (
-              <>
-                <div className="chart-header">
-                  <div className="chart-header-item">
-                    <span
-                      className="legend-color blue"
-                    ></span>
-                    <span>Turnover</span>
-                  </div>
-                  <div className="chart-header-item">
-                    <span
-                      className="legend-color tomato"
-                    ></span>
-                    <span>Diesel Cost</span>
-                  </div>
-                </div>
-                <div className="chart-scroll-container">
-                  <ResponsiveContainer width={chartWidth} height={500}>
-                    <BarChart
-                      data={
-                        selectedTruck
-                          ? chartData
-                          : [
-                            {
-                              truckId: "Totals",
-                              turnover: chartData.reduce(
-                                (sum, item) => sum + (item.turnover || 0),
-                                0
-                              ),
-                              fuelCost: chartData.reduce(
-                                (sum, item) => sum + (item.fuelCost || 0),
-                                0
-                              ),
-                              turnoverPercentage: 100,
-                              fuelCostPercentage: 100,
-                              month: chartData[0]?.month,
-                              year: chartData[0]?.year,
-                            },
-                          ]
-                      }
-                      margin={{ top: 40, right: 30, left: 60, bottom: 120 }}
-                    >
-                      <XAxis
-                        dataKey="truckId"
-                        angle={0}
-                        textAnchor="middle"
-                        height={150}
-                        interval={0}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <YAxis
-                        label={{
-                          value: "Amount (R)",
-                          angle: 0,
-                          position: "top",
-                          dy: -20,
-                        }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="turnover"
-                        name="Turnover"
-                        fill="#2196F3"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        <LabelList
-                          dataKey="turnover"
-                          content={CustomBarLabelForTurnover}
-                          position="top"
-                        />
-                      </Bar>
-                      <Bar
-                        dataKey="fuelCost"
-                        name="Diesel Cost"
-                        fill="#FF6347"
-                        radius={[4, 4, 0, 0]}
-                      >
-                        <LabelList
-                          dataKey="fuelCost"
-                          content={CustomBarLabelForDieselCost}
                           position="top"
                         />
                       </Bar>
@@ -1335,20 +949,6 @@ export default function DirectorAnalytics() {
                 ))}
               </select>
             )}
-          {activeFilter === "turnoverVsFuelPerTruck" && (
-            <select
-              value={selectedTruck}
-              onChange={(e) => setSelectedTruck(e.target.value)}
-              className="truck-select"
-            >
-              <option value="">Totals</option>
-              {trucks.map((truck) => (
-                <option key={truck.m5truckskey} value={truck.m5truckskey}>
-                  {truck.truckregnumber || `Truck ID ${truck.m5truckskey}`}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
 
         <div className="analytics-content">
@@ -1358,7 +958,6 @@ export default function DirectorAnalytics() {
               onChange={(e) => setActiveFilter(e.target.value)}
               className="filter-select"
             >
-              <option value="fuel">Fuel Per Truck</option>
               <option value="turnoverPerMonth">
                 Turnover per month vs Client
               </option>
@@ -1372,20 +971,11 @@ export default function DirectorAnalytics() {
               <option value="wagesVsExpenses">
                 Wages per month VS Expenses
               </option>
-              <option value="turnoverVsDieselCost">
-                Turnover vs Diesel Cost
-              </option>
-              <option value="turnoverPerTruck">
-                Turnover Per Truck
-              </option>
               <option value="incomeVsExpense">
                 Income vs Expense Per Month
               </option>
               <option value="turnoverVsSubbieExpense">
                 Turnover VS Subbie Expense
-              </option>
-              <option value="turnoverVsFuelPerTruck">
-                Turnover Per Truck VS Diesel
               </option>
               <option value="paymentsReceivedPerMonth">
                 Payments Received per Month
@@ -1395,7 +985,6 @@ export default function DirectorAnalytics() {
 
           <div className="chart-area">
             <h2 className="chart-title">
-              {activeFilter === "fuel" && "Fuel Per Truck"}
               {activeFilter === "turnoverPerMonth" &&
                 "Turnover per month vs Client"}
               {activeFilter === "agingAnalysis" && "30, 60, 90, Current"}
@@ -1405,15 +994,10 @@ export default function DirectorAnalytics() {
                 "Subbie VS Turnover"}
               {activeFilter === "wagesVsExpenses" &&
                 "Wages per month VS Expenses"}
-              {activeFilter === "turnoverVsDieselCost" &&
-                "Turnover vs Diesel Cost"}
-              {activeFilter === "turnoverPerTruck" && "Turnover Per Truck"}
               {activeFilter === "incomeVsExpense" &&
                 "Income vs Expense Per Month"}
               {activeFilter === "turnoverVsSubbieExpense" &&
                 "Turnover VS Subbie Expense"}
-              {activeFilter === "turnoverVsFuelPerTruck" &&
-                "Turnover Per Truck VS Diesel"}
               {activeFilter === "paymentsReceivedPerMonth" &&
                 "Payments Received per Month"}
             </h2>
