@@ -1317,7 +1317,12 @@ export const searchInstructions = async ({ q, clientId } = {}) => {
     FROM public.m1_controller m
     JOIN public.m5_client c ON m.client = c.m5clientkey
     LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
-    LEFT JOIN public.invoice i ON m.m1key = i.m1key
+    LEFT JOIN public.invoice i ON i.m1key = m.m1key
+      OR (
+        i.m1key IS NULL
+        AND m.instruction_group_id IS NOT NULL
+        AND i.instruction_group_id = m.instruction_group_id
+      )
     LEFT JOIN public.container cont ON cont.m1key = m.m1key
     ${whereClause}
     ORDER BY m.m1key, m.created_at DESC

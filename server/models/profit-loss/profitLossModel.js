@@ -114,17 +114,30 @@ const getProfitLossData = async (month, year) => {
 
     // === INCOME: Separate Categories (VAT-inclusive for Invoices) ===
 
-    // Invoices — now matches calculateMonthlyTurnover (VAT-inclusive)
+    // Invoices — now matches calculateMonthlyTurnover (VAT-inclusive).
+    // Group-aware: unions the legacy m1key invoice path with the combined
+    // group-invoice path (invoice.m1key IS NULL, matched via instruction_group_id).
     const invoicesQuery = `
+      WITH invoice_lines AS (
+        SELECT m.total_cost, m.vat
+        FROM invoice i
+        JOIN m1_controller m ON i.m1key = m.m1key
+        WHERE TRIM(TO_CHAR(i.date, 'Month')) = $1
+          AND EXTRACT(YEAR FROM i.date)::text = $2
+        UNION ALL
+        SELECT m.total_cost, m.vat
+        FROM invoice i
+        JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+        WHERE i.m1key IS NULL
+          AND TRIM(TO_CHAR(i.date, 'Month')) = $1
+          AND EXTRACT(YEAR FROM i.date)::text = $2
+      )
       SELECT
         COALESCE(
-          SUM(m.total_cost + (m.total_cost * (COALESCE(m.vat, 0)::numeric / 100))),
+          SUM(total_cost + (total_cost * (COALESCE(vat, 0)::numeric / 100))),
           0
         ) AS invoices_total
-      FROM invoice i
-      JOIN m1_controller m ON i.m1key = m.m1key
-      WHERE TRIM(TO_CHAR(i.date, 'Month')) = $1
-        AND EXTRACT(YEAR FROM i.date)::text = $2
+      FROM invoice_lines
     `;
 
     const invoicesResult = await client.query(invoicesQuery, [month, year]);

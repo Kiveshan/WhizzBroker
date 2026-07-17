@@ -69,23 +69,35 @@ const getFuelExpenses = async (client, month, year) => {
 
 const calculateMonthlyTurnover = async (client, dateFrom, dateTo, clientId = null) => {
   // --- Invoice portion (VAT-inclusive per instruction) ---
+  // Group-aware: a combined group invoice has invoice.m1key IS NULL and
+  // invoice.instruction_group_id set instead, covering every child instruction
+  // in the group, so both invoicing paths are unioned (see getIncomePerClientReport).
   const invoiceParams = [dateFrom, dateTo]
   let invoiceFilter = ''
   if (clientId) {
-    invoiceFilter = 'AND i.clientid = $3'
+    invoiceFilter = 'AND clientid = $3'
     invoiceParams.push(clientId)
   }
 
   const invoiceQuery = `
+    WITH invoice_lines AS (
+      SELECT i.clientid, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE i.date >= $1 AND i.date < $2
+      UNION ALL
+      SELECT i.clientid, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL AND i.date >= $1 AND i.date < $2
+    )
     SELECT
       COALESCE(
-        SUM(m.total_cost + (m.total_cost * (COALESCE(m.vat, 0)::numeric / 100))),
+        SUM(total_cost + (total_cost * (COALESCE(vat, 0)::numeric / 100))),
         0
       ) AS invoice_turnover
-    FROM invoice i
-    JOIN m1_controller m ON i.m1key = m.m1key
-    WHERE i.date >= $1
-      AND i.date < $2
+    FROM invoice_lines
+    WHERE TRUE
       ${invoiceFilter}
   `
 
@@ -961,16 +973,29 @@ const getAllExpenses = async (client, month, year) => {
     GROUP BY TO_CHAR(l.date, 'Month'), EXTRACT(YEAR FROM l.date)
   `
 
+  // Group-aware: unions the legacy m1key invoice path with the combined
+  // group-invoice path (invoice.m1key IS NULL, matched via instruction_group_id).
   const incomeQuery = `
-    SELECT 
-      COALESCE(SUM(m.total_cost), 0) as total_income,
-      to_char(i.date, 'Month') as month_name,
-      EXTRACT(YEAR FROM i.date) as year
-    FROM invoice i
-    JOIN m1_controller m ON i.m1key = m.m1key
-    WHERE TRIM(to_char(i.date, 'Month')) = $1
-    AND EXTRACT(YEAR FROM i.date)::text = $2
-    GROUP BY to_char(i.date, 'Month'), EXTRACT(YEAR FROM i.date)
+    WITH invoice_lines AS (
+      SELECT i.date, m.total_cost
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE TRIM(to_char(i.date, 'Month')) = $1
+        AND EXTRACT(YEAR FROM i.date)::text = $2
+      UNION ALL
+      SELECT i.date, m.total_cost
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL
+        AND TRIM(to_char(i.date, 'Month')) = $1
+        AND EXTRACT(YEAR FROM i.date)::text = $2
+    )
+    SELECT
+      COALESCE(SUM(total_cost), 0) as total_income,
+      to_char(date, 'Month') as month_name,
+      EXTRACT(YEAR FROM date) as year
+    FROM invoice_lines
+    GROUP BY to_char(date, 'Month'), EXTRACT(YEAR FROM date)
   `
 
   const creditNotesQuery = `
@@ -1166,20 +1191,40 @@ const getClientSubbieCommissionReport = async (client, month, year, clientId) =>
   const clientInfoResult = await client.query(clientInfoQuery, [clientId])
   const clientInfo = clientInfoResult.rows[0] || null
 
+  // Group-aware: unions the legacy m1key invoice path with the combined
+  // group-invoice path (invoice.m1key IS NULL, matched via instruction_group_id).
+  // m.m1key (the child instruction's own key) is used instead of i.m1key, since
+  // the latter is NULL on group invoices.
   const invoicesQuery = `
     WITH filtered_invoices AS (
-      SELECT 
+      SELECT
         i.ikey,
         i.invoice_num,
         i.doc_num,
         i.date,
-        i.m1key,
+        m.m1key,
         m.total_cost,
         m.vat,
         m.description
       FROM invoice i
       JOIN m1_controller m ON i.m1key = m.m1key
       WHERE i.clientid = $1
+        AND TRIM(TO_CHAR(i.date, 'Month')) = $2
+        AND EXTRACT(YEAR FROM i.date)::text = $3
+      UNION ALL
+      SELECT
+        i.ikey,
+        i.invoice_num,
+        i.doc_num,
+        i.date,
+        m.m1key,
+        m.total_cost,
+        m.vat,
+        m.description
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL
+        AND i.clientid = $1
         AND TRIM(TO_CHAR(i.date, 'Month')) = $2
         AND EXTRACT(YEAR FROM i.date)::text = $3
     )
