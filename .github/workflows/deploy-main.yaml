@@ -36,7 +36,7 @@ jobs:
       - name: Set React environment variables
         run: |
           cd client
-          echo "REACT_APP_API_URL=http://whizzbroker-env.eba-mfcpnkar.af-south-1.elasticbeanstalk.com" > .env
+          echo "REACT_APP_API_URL=https://whizzbroker.co.za" > .env
 
       - name: Build React app
         run: cd client && CI=false npm run build
