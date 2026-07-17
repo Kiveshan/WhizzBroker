@@ -21,7 +21,11 @@ import {
  * carousel only advances once the current instruction is complete (assigned +
  * documented); the whole group is finalised together, producing one invoice.
  */
-const GroupAssignment = () => {
+// Renders standalone (route + location.state) by default. The Director's
+// read-only counterpart (DirectorGroupAssignment) passes viewOnly to force
+// read-only rendering regardless of the group's status, and backRoute so
+// "Back" returns to the director's instruction list instead of the FC one.
+const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const groupId = location.state?.groupId
@@ -48,8 +52,9 @@ const GroupAssignment = () => {
   const [showInvoice, setShowInvoice] = useState(false)
   const fileInputRef = useRef(null)
 
-  // Once the group is finalised the whole carousel becomes read-only.
-  const readOnly = group?.status === "Completed"
+  // Once the group is finalised (or the caller forces view-only mode) the
+  // whole carousel becomes read-only.
+  const readOnly = viewOnly || group?.status === "Completed"
 
   const loadGroup = useCallback(async () => {
     try {
@@ -80,7 +85,7 @@ const GroupAssignment = () => {
 
   useEffect(() => {
     if (!groupId) {
-      navigate("/instructions", { state: listState })
+      navigate(backRoute, { state: listState })
       return
     }
     loadGroup()
@@ -170,11 +175,13 @@ const GroupAssignment = () => {
   }
 
   const goNext = () => {
-    if (current < children.length - 1 && currentComplete) setCurrent((i) => i + 1)
+    if (current < children.length - 1 && (readOnly || currentComplete)) setCurrent((i) => i + 1)
   }
   const goTo = (i) => {
-    // Free to go back; forward only into an already-complete instruction.
-    if (i <= current || childComplete(children[i - 1])) setCurrent(i)
+    // Read-only carousels are free to browse in any order. In the editable
+    // flow, going back is always allowed; going forward requires the
+    // previous instruction to already be complete.
+    if (readOnly || i <= current || childComplete(children[i - 1])) setCurrent(i)
   }
 
   const handleFinalise = async () => {
@@ -204,7 +211,7 @@ const GroupAssignment = () => {
       <div className="wb-assign-wrapper">
         <div className="wb-assign-inner">
           <div className="wb-assign-alert err">{error}</div>
-          <button className="wb-assign-back" onClick={() => navigate("/instructions", { state: listState })}>
+          <button className="wb-assign-back" onClick={() => navigate(backRoute, { state: listState })}>
             Back
           </button>
         </div>
@@ -228,7 +235,7 @@ const GroupAssignment = () => {
   return (
     <div className="wb-assign-wrapper">
       <div className="wb-assign-inner">
-        <button className="wb-assign-back" onClick={() => navigate("/instructions", { state: listState })}>
+        <button className="wb-assign-back" onClick={() => navigate(backRoute, { state: listState })}>
           Back
         </button>
 
@@ -236,7 +243,9 @@ const GroupAssignment = () => {
         {notice && <div className="wb-assign-alert ok">{notice}</div>}
         {readOnly && (
           <div className="wb-assign-alert ok">
-            This group has been finalised and is read-only.
+            {group?.status === "Completed"
+              ? "This group has been finalised and is read-only."
+              : "Viewing this group's assignments in read-only mode."}
             {group?.invoiceNum ? ` Invoice ${group.invoiceNum}.` : ""}
           </div>
         )}
@@ -348,9 +357,9 @@ const GroupAssignment = () => {
             <button
               className="wb-next-btn"
               onClick={goNext}
-              disabled={current >= children.length - 1 || !currentComplete}
+              disabled={current >= children.length - 1 || (!readOnly && !currentComplete)}
               title={
-                !currentComplete
+                !readOnly && !currentComplete
                   ? "Assign a subcontractor + truck and upload a document to continue"
                   : ""
               }

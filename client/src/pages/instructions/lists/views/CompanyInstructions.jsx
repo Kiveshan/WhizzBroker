@@ -365,31 +365,47 @@ const CompanyInstructions = () => {
     setCurrentPage(1)
   }, [selectedMonth, selectedYear])
 
-  // Handle view instruction click
-  const handleViewInstruction = (instructionId) => {
-    navigate("/Viewcontrollerinstructions", {
-      state: {
-        instructionId,
-        clientId,
-        clientName,
-        selectedMonth,
-        selectedYear,
-        activeFilter,
-      },
-    })
+  // Handle view instruction click. Grouped instructions open the read-only,
+  // tabbed group view; legacy ungrouped instructions keep the single-instruction view.
+  const handleViewInstruction = (item) => {
+    const stateToPass = {
+      instructionId: item.m1controllerkey || item.m1key,
+      clientId,
+      clientName,
+      selectedMonth,
+      selectedYear,
+      activeFilter,
+    }
+
+    if (item.instruction_group_id) {
+      navigate("/DirectorInstructionGroupView", {
+        state: { ...stateToPass, groupId: item.instruction_group_id },
+      })
+      return
+    }
+
+    navigate("/Viewcontrollerinstructions", { state: stateToPass })
   }
-  const handleViewAssignment = (instructionId) => {
-    console.log(`Navigating to DirectorManagerViewAssignment with instructionId: ${instructionId}`)
-    navigate("/DirectorManagerViewAssignment", {
-      state: {
-        instructionId,
-        clientId,
-        clientName,
-        selectedMonth,
-        selectedYear,
-        activeFilter,
-      },
-    })
+  const handleViewAssignment = (item) => {
+    const stateToPass = {
+      instructionId: item.m1controllerkey || item.m1key,
+      clientId,
+      clientName,
+      selectedMonth,
+      selectedYear,
+      activeFilter,
+    }
+
+    if (item.instruction_group_id) {
+      console.log(`Navigating to DirectorGroupAssignment with groupId: ${item.instruction_group_id}`)
+      navigate("/DirectorGroupAssignment", {
+        state: { ...stateToPass, groupId: item.instruction_group_id },
+      })
+      return
+    }
+
+    console.log(`Navigating to DirectorManagerViewAssignment with instructionId: ${stateToPass.instructionId}`)
+    navigate("/DirectorManagerViewAssignment", { state: stateToPass })
   }
 
   // Function to render status with bell for "New" status
@@ -560,7 +576,14 @@ const CompanyInstructions = () => {
                     const disableAssignment = (item.has_valid_containers !== true) && (item.shipment_type !== 4)
                     return (
                       <tr key={item.m1controllerkey || item.m1key}>
-                        <td>Instruction {item.m1controllerkey || item.m1key}</td>
+                        <td>
+                          Instruction {item.m1controllerkey || item.m1key}
+                          {item.instruction_group_id && (
+                            <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>
+                              Group {item.group_ref || item.instruction_group_id}
+                            </div>
+                          )}
+                        </td>
                         <td>
                           {item.shipment_type === 5 || item.shipment_type === "5" || (item.type_text || "").toLowerCase() === "add-on" || (item.type_text || "").toLowerCase() === "add on"
                             ? (item.addon_invoice_number || "N/A")
@@ -588,7 +611,7 @@ const CompanyInstructions = () => {
                         <td>
                           <button
                             className="view-btn"
-                            onClick={() => handleViewInstruction(item.m1controllerkey || item.m1key)}
+                            onClick={() => handleViewInstruction(item)}
                           >
                             View
                           </button>
@@ -606,7 +629,7 @@ const CompanyInstructions = () => {
                           ) : (
                             <button
                               className="view-btn"
-                              onClick={() => handleViewAssignment(item.m1controllerkey || item.m1key)}
+                              onClick={() => handleViewAssignment(item)}
                             >
                               View
                             </button>

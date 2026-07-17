@@ -9,6 +9,7 @@ export { default as InstructionsList } from "./lists/views/InstructionsList.jsx"
 
 export { default as Viewcontrollerinstructions } from "./viewInstruction/views/Viewcontrollerinstructions.jsx";
 export { default as ViewcontrollerInstructionDetails } from "./viewInstruction/views/ViewcontrollerInstructionDetails.jsx";
+export { default as DirectorInstructionGroupView } from "./viewInstruction/views/DirectorInstructionGroupView.jsx";
 
 export { default as FCcontrollerinstructions } from "./updateInstruction/views/FCcontrollerinstructions.jsx";
 export { default as FCcontrollerInstructionGroup } from "./updateInstruction/views/FCcontrollerInstructionGroup.jsx";

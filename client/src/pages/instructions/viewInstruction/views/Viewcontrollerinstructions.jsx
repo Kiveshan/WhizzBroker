@@ -22,11 +22,17 @@ const ErrorTooltip = ({ message }) => {
   )
 }
 
-const Viewcontrollerinstructions = () => {
+// Renders standalone (route + location.state) by default. When embedded in the
+// Director's read-only instruction-group view, the group page passes
+// instructionId/groupMode as props and owns the Back navigation itself.
+const Viewcontrollerinstructions = ({
+  instructionId: instructionIdProp = null,
+  groupMode = false,
+} = {}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isMounted = useRef(true)
-  const instructionId = location.state?.instructionId
+  const instructionId = instructionIdProp ?? location.state?.instructionId
   const preservedFormData = location.state?.preservedFormData || {}
 
   // Form data state with default values
@@ -736,12 +742,14 @@ const Viewcontrollerinstructions = () => {
   return (
     <div className="controller-instructions-root">
       <div className="controller-instructions-unique-wrapper">
-        {/* Header with Back Button */}
-        <div className="controller-instructions-header">
-          <button className="controller-instructions-back-button" onClick={handleBackClick}>
-            Back
-          </button>
-        </div>
+        {/* Header with Back Button - the group page owns navigation when embedded */}
+        {!groupMode && (
+          <div className="controller-instructions-header">
+            <button className="controller-instructions-back-button" onClick={handleBackClick}>
+              Back
+            </button>
+          </div>
+        )}
 
         {/* Success Message */}
         {successMessage && <div className="alert alert-success">{successMessage}</div>}

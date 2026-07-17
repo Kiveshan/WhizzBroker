@@ -40,6 +40,7 @@ import {
   ViewClientInstruction,
   Viewcontrollerinstructions,
   ViewcontrollerInstructionDetails,
+  DirectorInstructionGroupView,
   CompanyInstructions,
   CompanyInstructionView,
   InstructionsList,
@@ -87,6 +88,7 @@ import {
   UpdateInstruction,
   GroupAssignment,
   DirectorManagerViewAssignment,
+  DirectorGroupAssignment,
   UploadInstructionDocuments,
   DirectorDocs,
 } from "./pages/assignments";
@@ -170,6 +172,8 @@ function DynamicHeader() {
     "/CompanyInstructions": "Instruction ",
     "/Creditors/CreditorsOther": "Creditors",
     "/DirectorManagerViewAssignment": "View Assignment",
+    "/DirectorGroupAssignment": "View Assignment",
+    "/DirectorInstructionGroupView": "Instruction ",
     "/DirectorDocs": "Documents",
     "/DirectorAnalytics": "Analytics",
     "/DirectorDebtors": "Debtors",
@@ -356,6 +360,14 @@ function ContentWrapper() {
         <Route
           path="/DirectorManagerViewAssignment"
           element={<DirectorManagerViewAssignment />}
+        />
+        <Route
+          path="/DirectorGroupAssignment"
+          element={<DirectorGroupAssignment />}
+        />
+        <Route
+          path="/DirectorInstructionGroupView"
+          element={<DirectorInstructionGroupView />}
         />
         <Route path="/DirectorDocs" element={<DirectorDocs />} />
         <Route path="/DirectorAnalytics" element={<DirectorAnalytics />} />
