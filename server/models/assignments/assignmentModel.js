@@ -1239,7 +1239,7 @@ export const getGroupForAssignment = async (groupId) => {
             m.shipment_type, s.shipmenttype, m.pickup, m.dropoff,
             m.vessel_name, m.stackdate, m."lastFreeDate", m.status,
             m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
-            m.total_cost, m.vat
+            m.total_cost, m.vat, m.rateweight
      FROM public.m1_controller m
      LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
      WHERE m.instruction_group_id = $1
@@ -1249,11 +1249,25 @@ export const getGroupForAssignment = async (groupId) => {
 
   const instructions = [];
   for (const row of childRows.rows) {
-    const containers = await pool.query(
-      `SELECT containerkey, containernum, container_type, weight, cargo_description
-       FROM public.container WHERE m1key = $1 ORDER BY containerkey`,
-      [row.m1key]
-    );
+    // Cross-haul break bulk (shipment_type 4) is weight-based — its "container
+    // details" are KSM DN/ticket/receipt weight entries rather than containers.
+    const isBreakBulk = String(row.shipment_type) === "4";
+
+    const containers = isBreakBulk
+      ? { rows: [] }
+      : await pool.query(
+          `SELECT containerkey, containernum, container_type, weight, cargo_description
+           FROM public.container WHERE m1key = $1 ORDER BY containerkey`,
+          [row.m1key]
+        );
+
+    const weightRows = isBreakBulk
+      ? await pool.query(
+          `SELECT weight_pk, ksm_dm_no, ticket_no, receipt_book_no, weight
+           FROM public.m1_controller_weight WHERE m1_key = $1 ORDER BY weight_pk`,
+          [row.m1key]
+        )
+      : { rows: [] };
 
     // Current assignment: the single leg (legnumber = 1) for this instruction.
     const legResult = await pool.query(
@@ -1279,6 +1293,7 @@ export const getGroupForAssignment = async (groupId) => {
     instructions.push({
       ...row,
       containers: containers.rows,
+      weightRows: weightRows.rows,
       assignment: leg
         ? {
             legkey: leg.legkey,

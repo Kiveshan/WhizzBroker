@@ -8,6 +8,7 @@ import api from "../../../../api"
 import { ClientInfoSection } from "../../../../components/instructions/ClientInfoSection"
 import { BookingDetailsSection } from "../../../../components/instructions/BookingDetailsSection"
 import { ContainersCard } from "../../../../components/instructions/ContainersCard"
+import { mapContainersFromDb } from "../../../../utils/instructions/payloadBuilders.js"
 import "../../../../css/components.css"
 
 // ErrorTooltip component for displaying validation errors
@@ -573,16 +574,6 @@ const Viewcontrollerinstructions = ({
     return containersList
   }
 
-  // Determine container type based on index and form data
-  const determineContainerType = (index, data) => {
-    if (!data) return "Unknown"
-    const sixMCount = data.num_six_meters || 0
-    const twelveMCount = data.num_twelve_meters || 0
-    if (index < sixMCount) return "6m"
-    if (index < sixMCount + twelveMCount) return "12m"
-    return "Abnormal"
-  }
-
   // Fetch container details
   const fetchContainerDetails = async () => {
     if (!instructionId) {
@@ -618,39 +609,12 @@ const Viewcontrollerinstructions = ({
       console.log("Containers data from API:", data)
 
       if (data && data.length > 0) {
-        // Map container data to match the expected format
-        const containersList = data.map((container, index) => {
-          // Ensure container is not null or undefined before accessing properties
-          if (!container) {
-            console.log(`Container at index ${index} is null or undefined`);
-            return {
-              id: index + 1,
-              containerKey: null,
-              containerNum: "",
-              weight: "",
-              containerType: determineContainerType(index, formData),
-              cargoDescription: "",
-              hazardous: false,
-              addSurcharges: false
-            };
-          }
-          
-          // Log the container data to debug
-          console.log(`Container ${index} data:`, container);
-          
-          return {
-            id: index + 1,
-            containerKey: container.containerkey || null,
-            containerNum: container.containernum ? String(container.containernum) : "",
-            weight: container.weight != null ? String(container.weight) : "",
-            containerType: container.container_type || determineContainerType(index, formData),
-            cargoDescription: container.cargo_description || "",
-            // The column names in PostgreSQL are case-sensitive with quotes
-            // These fields might be missing if the backend query doesn't select them
-            hazardous: container["Hazardous"] === true || false,
-            addSurcharges: container["Add Surcharges"] === true || false,
-            vgm: container["vgm"] === true || false,
-          };
+        // Shared with the FC edit view so read-only viewing gets the same
+        // fields (surcharge/hazardous/vgm amounts, extra charges) instead of
+        // a partial hand-rolled mapping.
+        const containersList = mapContainersFromDb(data, {
+          isImportType: String(formData.shipmentTypeId) === "1",
+          shipmentType: formData.shipmentTypeId,
         })
         console.log("Mapped containers list:", containersList)
         setContainers(containersList)
@@ -813,10 +777,7 @@ const Viewcontrollerinstructions = ({
             />
 
             {formData.shipmentTypeId === "4" && weightRows.length > 0 && (
-              <div
-                className="controller-instructions-form-section"
-                style={{ marginTop: "-100px", paddingTop: "0" }}
-              >
+              <div className="controller-instructions-form-section">
                 <div
                   className="controller-instructions-form-row"
                   style={{ marginTop: "0" }}

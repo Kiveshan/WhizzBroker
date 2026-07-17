@@ -57,7 +57,7 @@ export const ROUTE_ROLES = [
   { pattern: "/DirectorDocs", roles: [4, 1] },
   { pattern: "/DirectorManagerViewAssignment", roles: [4, 1] },
   { pattern: "/DirectorGroupAssignment", roles: [4, 1] },
-  { pattern: "/DirectorInstructionGroupView", roles: [4, 1] },
+  { pattern: "/DirectorInstructionGroupView", roles: [4, 1, 2] },
   { pattern: "/DirectorManagerViewFuelExpense", roles: [4, 1] },
   { pattern: "/DirectorExpenses/:truckId", roles: [4, 1] },
   { pattern: "/director-client-list-payments", roles: [4, 1] },

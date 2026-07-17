@@ -95,6 +95,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   }, [groupId])
 
   const child = children[current] || null
+  const isBreakBulk = String(child?.shipment_type) === "4"
   const m1key = child?.m1key
   const sel = m1key ? selections[m1key] || { subbieId: "", truck: "" } : { subbieId: "", truck: "" }
   const docs = m1key ? docsByChild[m1key] || [] : []
@@ -284,43 +285,76 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
             )}
           </div>
 
-          {/* Containers accordion */}
+          {/* Containers / Weight details accordion */}
           <div className="wb-accordion">
             <button className="wb-accordion-head" onClick={() => setOpenContainers((o) => !o)}>
               <span>
-                <div className="wb-accordion-title">Containers</div>
-                <div className="wb-accordion-sub">Trailer quantities and container details.</div>
+                <div className="wb-accordion-title">{isBreakBulk ? "Weight Details" : "Containers"}</div>
+                <div className="wb-accordion-sub">
+                  {isBreakBulk
+                    ? "KSM DN, ticket and receipt book weight entries."
+                    : "Trailer quantities and container details."}
+                </div>
               </span>
               <span className={`wb-accordion-chevron ${openContainers ? "open" : ""}`}>▾</span>
             </button>
             {openContainers && (
               <div className="wb-accordion-body">
-                <table className="wb-assign-table">
-                  <thead>
-                    <tr>
-                      <th>Container Type</th>
-                      <th>Container Number</th>
-                      <th>Weight</th>
-                      <th>Cargo Description</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(child?.containers || []).length === 0 ? (
+                {isBreakBulk ? (
+                  <table className="wb-assign-table">
+                    <thead>
                       <tr>
-                        <td colSpan={4} style={{ color: "#98a2b3" }}>No containers</td>
+                        <th>KSM DN Number</th>
+                        <th>Ticket Number</th>
+                        <th>Receipt Book Number</th>
+                        <th>Weight{child?.rateweight ? ` (${child.rateweight})` : ""}</th>
                       </tr>
-                    ) : (
-                      child.containers.map((c) => (
-                        <tr key={c.containerkey}>
-                          <td>{c.container_type}</td>
-                          <td>{c.containernum || "—"}</td>
-                          <td>{c.weight ?? "—"}</td>
-                          <td>{c.cargo_description || "—"}</td>
+                    </thead>
+                    <tbody>
+                      {(child?.weightRows || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={4} style={{ color: "#98a2b3" }}>No weight entries</td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        child.weightRows.map((w) => (
+                          <tr key={w.weight_pk}>
+                            <td>{w.ksm_dm_no || "—"}</td>
+                            <td>{w.ticket_no || "—"}</td>
+                            <td>{w.receipt_book_no || "—"}</td>
+                            <td>{w.weight ?? "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="wb-assign-table">
+                    <thead>
+                      <tr>
+                        <th>Container Type</th>
+                        <th>Container Number</th>
+                        <th>Weight</th>
+                        <th>Cargo Description</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(child?.containers || []).length === 0 ? (
+                        <tr>
+                          <td colSpan={4} style={{ color: "#98a2b3" }}>No containers</td>
+                        </tr>
+                      ) : (
+                        child.containers.map((c) => (
+                          <tr key={c.containerkey}>
+                            <td>{c.container_type}</td>
+                            <td>{c.containernum || "—"}</td>
+                            <td>{c.weight ?? "—"}</td>
+                            <td>{c.cargo_description || "—"}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                )}
               </div>
             )}
           </div>

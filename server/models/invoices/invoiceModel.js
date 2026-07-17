@@ -1047,6 +1047,8 @@ const getGroupInvoicePreview = async (groupId) => {
               m.vessel_name, m.pickup, m.dropoff, m.vat, m.total_cost,
               m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
               m.rateper_6, m.rateper_12, m.rateper_abnormal,
+              m.shipment_type as shipment_type_key, m.unitrate,
+              m.is_set_rate, m.historical_set_rate, m.rateweight,
               s.shipmenttype
        FROM public.m1_controller m
        LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
@@ -1061,19 +1063,51 @@ const getGroupInvoicePreview = async (groupId) => {
 
     for (const row of childRows.rows) {
       const lines = [];
-      const typeSpecs = [
-        ["6m", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
-        ["12m", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
-        ["Abnormal", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
-      ];
-      for (const [label, qty, rate] of typeSpecs) {
-        if (qty > 0) {
+      const isBreakBulk = row.shipment_type_key === 4;
+
+      if (isBreakBulk) {
+        // Break-bulk instructions are weight-based (KSM DN/ticket/receipt
+        // rows in m1_controller_weight), not container-based. Mirrors the
+        // weight-item calculation in getInvoiceDetails /
+        // getInstructionDetailsForPreview: price = weight × unitrate, or
+        // weight × historical_set_rate when the instruction is set-rate.
+        const isSetRate = row.is_set_rate === true || row.rateweight === "SetRate";
+        const rowUnitRate = isSetRate
+          ? Number(row.historical_set_rate || 0)
+          : Number(row.unitrate || 0);
+
+        const weightResult = await client.query(
+          `SELECT ksm_dm_no, ticket_no, receipt_book_no, weight
+           FROM public.m1_controller_weight
+           WHERE m1_key = $1
+           ORDER BY weight_pk ASC`,
+          [row.m1key]
+        );
+        for (const w of weightResult.rows) {
+          const weight = Number(w.weight || 0);
+          const refParts = [w.ksm_dm_no, w.ticket_no, w.receipt_book_no].filter(Boolean);
           lines.push({
-            description: `${qty} x ${label}`,
-            quantity: qty,
-            rate,
-            amount: Number((qty * rate).toFixed(2)),
+            description: refParts.length ? `Break bulk — ${refParts.join(" / ")}` : "Break bulk",
+            quantity: weight,
+            rate: rowUnitRate,
+            amount: Number((weight * rowUnitRate).toFixed(2)),
           });
+        }
+      } else {
+        const typeSpecs = [
+          ["6m", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
+          ["12m", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
+          ["Abnormal", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
+        ];
+        for (const [label, qty, rate] of typeSpecs) {
+          if (qty > 0) {
+            lines.push({
+              description: `${qty} x ${label}`,
+              quantity: qty,
+              rate,
+              amount: Number((qty * rate).toFixed(2)),
+            });
+          }
         }
       }
 

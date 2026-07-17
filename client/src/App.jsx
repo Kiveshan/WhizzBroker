@@ -173,6 +173,7 @@ function DynamicHeader() {
     "/Creditors/CreditorsOther": "Creditors",
     "/DirectorManagerViewAssignment": "View Assignment",
     "/DirectorGroupAssignment": "View Assignment",
+    "/GroupAssignment": "Assignment",
     "/DirectorInstructionGroupView": "Instruction ",
     "/DirectorDocs": "Documents",
     "/DirectorAnalytics": "Analytics",
