@@ -17,9 +17,28 @@ const getClientInstructions = async (clientId, { year, month, type }) => {
         m1.status,
         m1.instruction_group_id,
         m1.created_at as pickupdate,
-        m1.total_cost AS base_total_cost,
+        -- A group invoice covers every child in the group, so the displayed
+        -- amount is the combined total across all of the group's children
+        -- (not just this row's own instruction) to match what the invoice
+        -- actually bills. Singleton groups collapse back to the child's own cost.
+        CASE
+          WHEN m1.instruction_group_id IS NULL THEN COALESCE(m1.total_cost, 0)
+          ELSE (
+            SELECT COALESCE(SUM(gm.total_cost), 0)
+            FROM public.m1_controller gm
+            WHERE gm.instruction_group_id = m1.instruction_group_id
+          )
+        END AS base_total_cost,
         COALESCE(m1.vat, 0) AS vat_percentage,
-        (COALESCE(m1.total_cost, 0) * (1 + COALESCE(m1.vat, 0)::numeric / 100)) AS total_cost,
+        CASE
+          WHEN m1.instruction_group_id IS NULL THEN
+            (COALESCE(m1.total_cost, 0) * (1 + COALESCE(m1.vat, 0)::numeric / 100))
+          ELSE (
+            SELECT COALESCE(SUM(gm.total_cost * (1 + COALESCE(gm.vat, 0)::numeric / 100)), 0)
+            FROM public.m1_controller gm
+            WHERE gm.instruction_group_id = m1.instruction_group_id
+          )
+        END AS total_cost,
         i.ikey,
         i.invoice_num,
         i.date as invoice_date,

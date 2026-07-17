@@ -864,7 +864,7 @@ const ClientInvoice = forwardRef(({
         <div className="invoice-page">
           <div className="loading-error">{error}</div>
           <div className="invoicedownloadbtn1">
-            <button className="back-btn" onClick={() => navigate("/invoices")}>
+            <button className="back-btn" onClick={() => navigate(-1)}>
               Back
             </button>
           </div>
@@ -879,7 +879,7 @@ const ClientInvoice = forwardRef(({
         <div className="invoice-page">
           <div className="loading-error">No invoice data found.</div>
           <div className="invoicedownloadbtn1">
-            <button className="back-btn" onClick={() => navigate("/invoices")}>
+            <button className="back-btn" onClick={() => navigate(-1)}>
               Back
             </button>
           </div>

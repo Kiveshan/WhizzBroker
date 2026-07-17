@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useNavigate, useParams, useLocation } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import html2pdf from "html2pdf.js"
 import { PDFDocument } from "pdf-lib"
 import { fetchGroupInvoicePreview, fetchInstructionDocuments } from "../../../services/assignmentService"
@@ -24,7 +24,6 @@ const detectFileType = (bytes) => {
  */
 const GroupInvoiceView = () => {
   const navigate = useNavigate()
-  const location = useLocation()
   const { groupId } = useParams()
   const sheetRef = useRef(null)
 
@@ -50,7 +49,7 @@ const GroupInvoiceView = () => {
     }
   }, [groupId])
 
-  const goBack = () => navigate("/invoices", { state: location.state })
+  const goBack = () => navigate(-1)
 
   const handleDownload = async () => {
     if (!sheetRef.current || downloading) return

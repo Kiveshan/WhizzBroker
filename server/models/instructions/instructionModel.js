@@ -1209,7 +1209,12 @@ export const getInstructions = async (clientId) => {
     LEFT JOIN
       public.shipment s ON m.shipment_type = s.shipkey
     LEFT JOIN
-      public.invoice i ON m.m1key = i.m1key
+      public.invoice i ON i.m1key = m.m1key
+      OR (
+        i.m1key IS NULL
+        AND m.instruction_group_id IS NOT NULL
+        AND i.instruction_group_id = m.instruction_group_id
+      )
     LEFT JOIN
       public.add_ons ao ON m.addon_id = ao.addon_id
     LEFT JOIN
