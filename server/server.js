@@ -37,7 +37,7 @@ app.use(
 
 // Enhanced CORS configuration
 app.use((req, res, next) => {
-  const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000" , "http://whizzbroker-env.eba-mfcpnkar.af-south-1.elasticbeanstalk.com"];
+  const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000" , "http://whizzbroker-env.eba-mfcpnkar.af-south-1.elasticbeanstalk.com", "https://whizzbroker.co.za"];
   const origin = req.headers.origin;
 
   if (allowedOrigins.includes(origin)) {
