@@ -693,14 +693,26 @@ export const getGroupForAssignmentHandler = async (req, res) => {
 export const assignSubbieHandler = async (req, res) => {
   try {
     const { m1key } = req.params;
-    const { subbieId, truck } = req.body;
+    const { subbieId, truck, startingpoint, destination, legDate } = req.body;
     if (!subbieId || !truck) {
       return res.status(400).json({ success: false, message: "Both subbieId and truck are required" });
     }
-    const result = await assignSubbieToInstruction({ m1key, subbieId, truck });
+    const result = await assignSubbieToInstruction({
+      m1key,
+      subbieId,
+      truck,
+      startingpoint,
+      destination,
+      legDate,
+    });
     res.status(200).json({ success: true, ...result });
   } catch (error) {
     console.error("Error assigning subbie:", error);
+    // A missing route or unresolvable rate is the controller's to fix, not a
+    // server fault — surface it as a 400 with the message the model built.
+    if (error.code === "ROUTE_REQUIRED" || error.code === "RATE_UNRESOLVED") {
+      return res.status(400).json({ success: false, message: error.message, code: error.code });
+    }
     res.status(500).json({ success: false, message: "Failed to assign", error: error.message });
   }
 };

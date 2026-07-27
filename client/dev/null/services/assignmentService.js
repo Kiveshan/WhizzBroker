@@ -1,61 +1,48 @@
 import api from "../api.js";
-
 export async function fetchGroupForAssignment(groupId) {
   const response = await api.get(`/group/${groupId}`);
   return response.data;
 }
-
 export async function fetchSubbies() {
   const response = await api.get("/employees/driverssub");
   return response.data;
 }
-
 export async function fetchTruckRegNums() {
   const response = await api.get("/trucks/regnums");
   return response.data;
 }
-
-// The route is the leg's route, picked from fetchRouteOptions below — not the
-// instruction's pickup/dropoff, which never match a m5_driver_rate row.
 export async function assignSubbie(m1key, { subbieId, truck, startingpoint, destination, legDate }) {
   const response = await api.post(`/instruction/${m1key}/assign`, {
     subbieId,
     truck,
     startingpoint,
     destination,
-    legDate,
+    legDate
   });
   return response.data;
 }
-
-// Route vocabulary for rating a leg: both lists come from m5_driver_rate, so a
-// route picked here always resolves to a rate row.
 export async function fetchRouteOptions() {
   const [startingPoints, destinations] = await Promise.all([
     api.get("/starting-points"),
-    api.get("/destinations"),
+    api.get("/destinations")
   ]);
   return {
     startingPoints: startingPoints.data || [],
-    destinations: destinations.data || [],
+    destinations: destinations.data || []
   };
 }
-
 export async function finaliseGroup(groupId) {
   const response = await api.post(`/group/${groupId}/finalise`);
   return response.data;
 }
-
 export async function fetchGroupInvoicePreview(groupId) {
   const response = await api.get(`/api/invoices/group-preview/${groupId}`);
   return response.data;
 }
-
 export async function fetchInstructionDocuments(instructionId) {
   const response = await api.get(`/documents/${instructionId}`);
   return response.data;
 }
-
 export async function uploadInstructionDocument(instructionId, file, name) {
   const formData = new FormData();
   formData.append("file", file);
@@ -64,11 +51,10 @@ export async function uploadInstructionDocument(instructionId, file, name) {
   formData.append("instructionId", instructionId);
   formData.append("legNumber", "1");
   const response = await api.post("/documents/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: { "Content-Type": "multipart/form-data" }
   });
   return response.data;
 }
-
 export async function deleteInstructionDocument(documentId) {
   const response = await api.delete(`/documents/${documentId}`);
   return response.data;

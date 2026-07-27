@@ -1272,6 +1272,7 @@ export const getGroupForAssignment = async (groupId) => {
     // Current assignment: the single leg (legnumber = 1) for this instruction.
     const legResult = await pool.query(
       `SELECT l.legkey, l.driverid, l.truckregnumber, l.driverrate,
+              l.startingpoint, l.destination, l.date,
               e.name AS driver_name, e.surname AS driver_surname
        FROM public.legs_m2 l
        LEFT JOIN public.m5_employee e ON e.userid = l.driverid
@@ -1287,7 +1288,13 @@ export const getGroupForAssignment = async (groupId) => {
       [row.m1key]
     );
 
-    const hasAssignment = !!(leg && leg.driverid && leg.truckregnumber);
+    // "Assigned" now means rated too — an unrated leg pays the subbie R0.
+    const hasAssignment = !!(
+      leg &&
+      leg.driverid &&
+      leg.truckregnumber &&
+      Number(leg.driverrate) > 0
+    );
     const hasDocuments = docsResult.rows.length > 0;
 
     instructions.push({
@@ -1303,6 +1310,9 @@ export const getGroupForAssignment = async (groupId) => {
               ? `${leg.driver_name} ${leg.driver_surname || ""}`.trim()
               : null,
             driverrate: leg.driverrate,
+            startingpoint: leg.startingpoint,
+            destination: leg.destination,
+            legDate: leg.date,
           }
         : null,
       documents: docsResult.rows.map((d) => ({
@@ -1320,41 +1330,95 @@ export const getGroupForAssignment = async (groupId) => {
 };
 
 /**
- * Assigns a subcontractor and their truck to one child instruction as a single
- * leg (legnumber = 1). Re-assigning replaces the previous leg. The leg's route
- * comes from the instruction; the rate is the subbie's 6m rate for that route
- * (best-effort — refined by the rate-refresh flow / statements later).
+ * Picks which rate column applies to a child instruction: the container type
+ * the instruction mostly carries. Mirrors calculateLegDriverRate in the legacy
+ * assignment UI so grouped and ungrouped instructions rate the same way.
+ * Returns "12m", "6m" or "abnormal".
  */
-export const assignSubbieToInstruction = async ({ m1key, subbieId, truck }) => {
+const dominantContainerType = ({ num_six_meters, num_twelve_meters, num_abnormal }) => {
+  const six = Number(num_six_meters) || 0;
+  const twelve = Number(num_twelve_meters) || 0;
+  const abnormal = Number(num_abnormal) || 0;
+
+  if (twelve >= six && twelve >= abnormal && twelve > 0) return "12m";
+  if (abnormal > six && abnormal > twelve) return "abnormal";
+  return "6m";
+};
+
+/**
+ * Assigns a subcontractor and their truck to one child instruction as a single
+ * leg (legnumber = 1). Re-assigning replaces the previous leg.
+ *
+ * The route is passed in, NOT taken from m1_controller.pickup/dropoff. Those
+ * columns describe the shipment and come from a different vocabulary than
+ * m5_driver_rate.startingpoint/destination (which hold whole trip descriptions
+ * like "Yard To Reid Innovation Mobeni To Terminal"). The two sets do not
+ * overlap at all, so rating off pickup/dropoff always missed and silently left
+ * the subbie on driverrate = 0. The controller now picks the route from the
+ * same /starting-points + /destinations lists the legacy assignment screen uses.
+ *
+ * Throws RATE_UNRESOLVED when the route + date has no usable subbie rate, so a
+ * bad route surfaces at assignment time instead of becoming an unpaid leg.
+ */
+export const assignSubbieToInstruction = async ({
+  m1key,
+  subbieId,
+  truck,
+  startingpoint,
+  destination,
+  legDate,
+}) => {
+  if (!startingpoint || !destination) {
+    const err = new Error("A route (starting point and destination) is required to rate the assignment");
+    err.code = "ROUTE_REQUIRED";
+    throw err;
+  }
+
+  const instrResult = await pool.query(
+    `SELECT num_six_meters, num_twelve_meters, num_abnormal
+     FROM public.m1_controller WHERE m1key = $1`,
+    [m1key]
+  );
+  if (instrResult.rows.length === 0) {
+    throw new Error(`Instruction ${m1key} not found`);
+  }
+
+  const effectiveDate = legDate || new Date().toISOString().split("T")[0];
+  const containerType = dominantContainerType(instrResult.rows[0]);
+
+  if (containerType === "abnormal") {
+    const err = new Error(
+      "Abnormal containers have no route-based subcontractor rate. Rate this instruction outside the group flow."
+    );
+    err.code = "RATE_UNRESOLVED";
+    throw err;
+  }
+
+  // isSubcontractor = true: these assignments are always subbies, so this reads
+  // subie_six_meter_rate / subie_twelve_meter_rate.
+  const rate = await getRateForLegDate(startingpoint, destination, effectiveDate, true, containerType);
+
+  if (!rate.success) {
+    const err = new Error(
+      `No rate for "${startingpoint}" → "${destination}" effective ${effectiveDate}. Check the route or add a rate period.`
+    );
+    err.code = "RATE_UNRESOLVED";
+    throw err;
+  }
+
+  const driverrate = Number(rate.data.applicable_rate) || 0;
+  if (driverrate <= 0) {
+    const err = new Error(
+      `"${startingpoint}" → "${destination}" has no ${containerType} subcontractor rate for ${effectiveDate}. The subcontractor would be paid R0.`
+    );
+    err.code = "RATE_UNRESOLVED";
+    throw err;
+  }
+  const m5ratekey = rate.data.m5ratekey;
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
-    const instrResult = await client.query(
-      `SELECT pickup, dropoff FROM public.m1_controller WHERE m1key = $1`,
-      [m1key]
-    );
-    if (instrResult.rows.length === 0) {
-      throw new Error(`Instruction ${m1key} not found`);
-    }
-    const { pickup, dropoff } = instrResult.rows[0];
-
-    // Best-effort subbie rate for the route (6m subbie rate).
-    let driverrate = 0;
-    let m5ratekey = null;
-    const rateResult = await client.query(
-      `SELECT m5ratekey, subie_six_meter_rate
-       FROM public.m5_driver_rate
-       WHERE startingpoint = $1 AND destination = $2
-         AND effective_from <= CURRENT_DATE
-         AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
-       ORDER BY effective_from DESC LIMIT 1`,
-      [pickup, dropoff]
-    );
-    if (rateResult.rows.length > 0) {
-      driverrate = rateResult.rows[0].subie_six_meter_rate || 0;
-      m5ratekey = rateResult.rows[0].m5ratekey;
-    }
 
     // One assignment leg per instruction: clear then insert.
     await client.query(
@@ -1365,9 +1429,9 @@ export const assignSubbieToInstruction = async ({ m1key, subbieId, truck }) => {
       `INSERT INTO public.legs_m2
          (legnumber, startingpoint, destination, driverrate, m1key,
           driverid, truckregnumber, m5ratekey, date, legstatus)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, CURRENT_DATE, 'Assigned')
+       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'Assigned')
        RETURNING legkey`,
-      [pickup, dropoff, driverrate, m1key, subbieId, truck, m5ratekey]
+      [startingpoint, destination, driverrate, m1key, subbieId, truck, m5ratekey, effectiveDate]
     );
 
     // Move the instruction into "In Progress" once it has an assignment.
@@ -1378,7 +1442,14 @@ export const assignSubbieToInstruction = async ({ m1key, subbieId, truck }) => {
     );
 
     await client.query("COMMIT");
-    return { legkey: insertResult.rows[0].legkey, driverrate };
+    return {
+      legkey: insertResult.rows[0].legkey,
+      driverrate,
+      containerType,
+      legDate: effectiveDate,
+      startingpoint,
+      destination,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -1388,9 +1459,9 @@ export const assignSubbieToInstruction = async ({ m1key, subbieId, truck }) => {
 };
 
 /**
- * Finalises a whole group: requires every child to have a subbie+truck and at
- * least one document, then marks every child and the group Completed and
- * creates the single combined invoice row for the group.
+ * Finalises a whole group: requires every child to have a subbie+truck, a rated
+ * leg and at least one document, then marks every child and the group Completed
+ * and creates the single combined invoice row for the group.
  */
 export const finaliseInstructionGroup = async (groupId) => {
   const client = await pool.connect();
@@ -1416,9 +1487,13 @@ export const finaliseInstructionGroup = async (groupId) => {
 
     // Every child must have an assignment leg (subbie + truck) and a document.
     const incomplete = [];
+    // A leg that exists but is unrated would silently pay the subcontractor R0 —
+    // the subbie statement generator sums legs_m2.driverrate and skips subbies
+    // whose total is 0, so this must never reach a finalised group.
+    const unrated = [];
     for (const { m1key } of children.rows) {
       const leg = await client.query(
-        `SELECT 1 FROM public.legs_m2
+        `SELECT driverrate FROM public.legs_m2
          WHERE m1key = $1 AND legnumber = 1 AND driverid IS NOT NULL
            AND truckregnumber IS NOT NULL LIMIT 1`,
         [m1key]
@@ -1429,11 +1504,20 @@ export const finaliseInstructionGroup = async (groupId) => {
       );
       if (leg.rows.length === 0 || doc.rows.length === 0) {
         incomplete.push(m1key);
+      } else if (!(Number(leg.rows[0].driverrate) > 0)) {
+        unrated.push(m1key);
       }
     }
     if (incomplete.length > 0) {
       const err = new Error(
         `Every instruction needs a subcontractor, truck and at least one document before finalising. Incomplete: ${incomplete.join(", ")}`
+      );
+      err.code = "GROUP_INCOMPLETE";
+      throw err;
+    }
+    if (unrated.length > 0) {
+      const err = new Error(
+        `These instructions have no subcontractor rate and would pay R0 — re-save the assignment with a valid route: ${unrated.join(", ")}`
       );
       err.code = "GROUP_INCOMPLETE";
       throw err;

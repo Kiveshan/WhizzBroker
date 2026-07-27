@@ -158,13 +158,22 @@
   margin-bottom: 6px;
 }
 
-.wb-assign-field select {
+.wb-assign-field select,
+.wb-assign-field input {
   border: 1px solid #e4e7ec;
   border-radius: 8px;
   padding: 9px 12px;
   font-size: 13.5px;
   background: #fff;
   color: #101828;
+}
+
+/* Resolved subcontractor rate: read-only, and greyed out until a route resolves
+   one so an unrated instruction is visibly not ready to finalise. */
+.wb-assign-field input[readonly] {
+  background: #f9fafb;
+  color: #475467;
+  font-weight: 600;
 }
 
 .wb-assign-spacer {

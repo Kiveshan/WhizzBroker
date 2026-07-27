@@ -8,6 +8,7 @@ import {
   fetchGroupForAssignment,
   fetchSubbies,
   fetchTruckRegNums,
+  fetchRouteOptions,
   assignSubbie,
   finaliseGroup,
   fetchInstructionDocuments,
@@ -25,6 +26,10 @@ import {
 // read-only counterpart (DirectorGroupAssignment) passes viewOnly to force
 // read-only rendering regardless of the group's status, and backRoute so
 // "Back" returns to the director's instruction list instead of the FC one.
+const today = new Date().toISOString().split("T")[0]
+
+const emptySelection = { subbieId: "", truck: "", startingpoint: "", destination: "", legDate: today, driverrate: null }
+
 const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {}) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -36,12 +41,15 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   const [current, setCurrent] = useState(0)
   const [subbies, setSubbies] = useState([])
   const [trucks, setTrucks] = useState([])
+  const [startingPoints, setStartingPoints] = useState([])
+  const [destinations, setDestinations] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
 
   // Per-child editable state, keyed by m1key.
-  const [selections, setSelections] = useState({}) // { m1key: { subbieId, truck } }
+  // { m1key: { subbieId, truck, startingpoint, destination, legDate, driverrate } }
+  const [selections, setSelections] = useState({})
   const [docsByChild, setDocsByChild] = useState({}) // { m1key: [{id,name}] }
 
   // Accordions (collapsed by default like the mockup).
@@ -66,9 +74,18 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
       const sel = {}
       const docs = {}
       kids.forEach((c) => {
+        // Legs assigned before routes were rated stored the instruction's
+        // pickup/drop-off, which is not a rate-table route and so left the leg
+        // on R0. Drop that route rather than show it in a dropdown that has no
+        // matching option — the controller has to re-pick it either way.
+        const rated = Number(c.assignment?.driverrate) > 0
         sel[c.m1key] = {
           subbieId: c.assignment?.subbieId ? String(c.assignment.subbieId) : "",
           truck: c.assignment?.truck || "",
+          startingpoint: rated ? c.assignment.startingpoint || "" : "",
+          destination: rated ? c.assignment.destination || "" : "",
+          legDate: c.assignment?.legDate || today,
+          driverrate: rated ? c.assignment.driverrate : null,
         }
         docs[c.m1key] = c.documents || []
       })
@@ -91,35 +108,54 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
     loadGroup()
     fetchSubbies().then((d) => setSubbies(Array.isArray(d) ? d : [])).catch(() => {})
     fetchTruckRegNums().then((d) => setTrucks(Array.isArray(d) ? d : [])).catch(() => {})
+    fetchRouteOptions()
+      .then(({ startingPoints: sp, destinations: dest }) => {
+        setStartingPoints(sp)
+        setDestinations(dest)
+      })
+      .catch(() => {})
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId])
 
   const child = children[current] || null
   const isBreakBulk = String(child?.shipment_type) === "4"
   const m1key = child?.m1key
-  const sel = m1key ? selections[m1key] || { subbieId: "", truck: "" } : { subbieId: "", truck: "" }
+  const sel = m1key ? selections[m1key] || emptySelection : emptySelection
   const docs = m1key ? docsByChild[m1key] || [] : []
 
+  // Complete means the leg is also rated: a rate of 0 pays the subcontractor
+  // nothing and is silently dropped from their monthly statement.
   const childComplete = (c) => {
     if (!c) return false
     const s = selections[c.m1key] || {}
     const d = docsByChild[c.m1key] || []
-    return Boolean(s.subbieId && s.truck && d.length > 0)
+    return Boolean(s.subbieId && s.truck && s.startingpoint && s.destination && Number(s.driverrate) > 0 && d.length > 0)
   }
 
   const currentComplete = childComplete(child)
   const allComplete = children.length > 0 && children.every(childComplete)
 
-  // Persist a subbie/truck selection: both must be set to write the assignment.
+  // Persist an assignment. Subbie, truck and route must all be set — the route
+  // is what resolves the subcontractor's rate, so there is nothing to save
+  // without it. The server returns the resolved rate, which we store so the
+  // controller can see what the subbie will be paid before finalising.
   const persistAssignment = useCallback(
-    async (subbieId, truck) => {
-      if (!m1key || !subbieId || !truck) return
+    async (next) => {
+      const { subbieId, truck, startingpoint, destination, legDate } = next
+      if (!m1key || !subbieId || !truck || !startingpoint || !destination) return
       try {
         setError("")
-        await assignSubbie(m1key, subbieId, truck)
-        setNotice("Assignment saved.")
-        setTimeout(() => setNotice(""), 1500)
+        const result = await assignSubbie(m1key, { subbieId, truck, startingpoint, destination, legDate })
+        setSelections((prev) => ({
+          ...prev,
+          [m1key]: { ...prev[m1key], driverrate: result.driverrate },
+        }))
+        setNotice(`Assignment saved — subcontractor rate R${Number(result.driverrate).toFixed(2)}.`)
+        setTimeout(() => setNotice(""), 2500)
       } catch (e) {
+        // A rate that cannot be resolved clears any previously shown rate so the
+        // instruction reads as incomplete rather than looking assigned-and-paid.
+        setSelections((prev) => ({ ...prev, [m1key]: { ...prev[m1key], driverrate: null } }))
         setError(e.response?.data?.message || e.message || "Failed to save assignment")
       }
     },
@@ -129,7 +165,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   const updateSelection = (field, value) => {
     const next = { ...sel, [field]: value }
     setSelections((prev) => ({ ...prev, [m1key]: next }))
-    if (next.subbieId && next.truck) persistAssignment(next.subbieId, next.truck)
+    persistAssignment(next)
   }
 
   // ── Documents (scoped to the current carousel instruction) ──
@@ -359,7 +395,51 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
             )}
           </div>
 
-          {/* Subbie / Truck / Next */}
+          {/* Route — what the subcontractor is paid on. These lists come from
+              m5_driver_rate, not from the instruction's pickup/drop-off. */}
+          <div className="wb-assign-controls">
+            <div className="wb-assign-field">
+              <label>Route</label>
+              <select
+                value={sel.startingpoint}
+                disabled={readOnly}
+                onChange={(e) => updateSelection("startingpoint", e.target.value)}
+              >
+                <option value="">Select Route</option>
+                {startingPoints.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="wb-assign-field">
+              <label>Destination</label>
+              <select
+                value={sel.destination}
+                disabled={readOnly}
+                onChange={(e) => updateSelection("destination", e.target.value)}
+              >
+                <option value="">Select Destination</option>
+                {destinations.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="wb-assign-field">
+              <label>Date</label>
+              <input
+                type="date"
+                value={sel.legDate || ""}
+                disabled={readOnly}
+                onChange={(e) => updateSelection("legDate", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Subbie / Truck / Rate / Next */}
           <div className="wb-assign-controls">
             <div className="wb-assign-field">
               <label>Select Subcontractor</label>
@@ -387,6 +467,15 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                 ))}
               </select>
             </div>
+            <div className="wb-assign-field">
+              <label>Subcontractor Rate</label>
+              <input
+                type="text"
+                readOnly
+                value={Number(sel.driverrate) > 0 ? `R ${Number(sel.driverrate).toFixed(2)}` : "Not rated"}
+                title="Resolved from the route, date and this instruction's container type"
+              />
+            </div>
             <div className="wb-assign-spacer" />
             <button
               className="wb-next-btn"
@@ -394,7 +483,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
               disabled={current >= children.length - 1 || (!readOnly && !currentComplete)}
               title={
                 !readOnly && !currentComplete
-                  ? "Assign a subcontractor + truck and upload a document to continue"
+                  ? "Set a route that resolves a rate, assign a subcontractor + truck and upload a document to continue"
                   : ""
               }
             >
