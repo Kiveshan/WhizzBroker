@@ -304,7 +304,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                   <table className="wb-assign-table">
                     <thead>
                       <tr>
-                        <th>KSM DN Number</th>
+                        <th>DN Number</th>
                         <th>Ticket Number</th>
                         <th>Receipt Book Number</th>
                         <th>Weight{child?.rateweight ? ` (${child.rateweight})` : ""}</th>
