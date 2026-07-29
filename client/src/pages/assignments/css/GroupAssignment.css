@@ -134,7 +134,184 @@
   color: #101828;
 }
 
-/* Subbie / Truck / Next row */
+/* Group-wide container assignment progress */
+.wb-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f3f7;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.wb-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #12b76a;
+  transition: width 0.25s ease;
+}
+
+/* Container picker — which containers this subcontractor is taking */
+.wb-container-picker {
+  margin-top: 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fcfcfd;
+}
+
+.wb-container-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  margin-bottom: 10px;
+}
+
+.wb-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1570ef;
+  cursor: pointer;
+}
+
+.wb-link-btn:hover {
+  text-decoration: underline;
+}
+
+.wb-container-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.wb-container-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.wb-container-option:hover {
+  border-color: #b2ddff;
+  background: #f5faff;
+}
+
+.wb-container-num {
+  font-weight: 600;
+  color: #101828;
+}
+
+.wb-container-meta {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #667085;
+}
+
+/* One block per subcontractor load on the selected instruction */
+.wb-assignment-block {
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 14px 16px 18px;
+  margin-top: 14px;
+  background: #fff;
+}
+
+.wb-assignment-block.draft {
+  border-color: #b2ddff;
+  background: #f9fcff;
+}
+
+.wb-assignment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.wb-assignment-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.wb-assignment-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: #667085;
+}
+
+.wb-assignment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Containers carried by a saved assignment */
+.wb-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f7fb;
+  border: 1px solid #e4e7ec;
+  font-size: 12px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.wb-chip-meta {
+  font-weight: 400;
+  color: #667085;
+}
+
+.wb-add-assignment {
+  margin-top: 14px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px dashed #b2ddff;
+  border-radius: 10px;
+  background: #f9fcff;
+  color: #1570ef;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-add-assignment:hover {
+  background: #eff8ff;
+  border-color: #84caff;
+}
+
+/* Subbie / route / add-assignment row */
 .wb-assign-controls {
   display: flex;
   align-items: flex-end;

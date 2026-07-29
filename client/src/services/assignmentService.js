@@ -10,21 +10,25 @@ export async function fetchSubbies() {
   return response.data;
 }
 
-export async function fetchTruckRegNums() {
-  const response = await api.get("/trucks/regnums");
-  return response.data;
-}
-
+// Creates one assignment: this subcontractor takes these containers off this
+// instruction. containerKeys is empty only for break bulk, which has none.
+//
 // The route is the leg's route, picked from fetchRouteOptions below — not the
 // instruction's pickup/dropoff, which never match a m5_driver_rate row.
-export async function assignSubbie(m1key, { subbieId, truck, startingpoint, destination, legDate }) {
+export async function createAssignment(m1key, { subbieId, containerKeys, startingpoint, destination, legDate }) {
   const response = await api.post(`/instruction/${m1key}/assign`, {
     subbieId,
-    truck,
+    containerKeys,
     startingpoint,
     destination,
     legDate,
   });
+  return response.data;
+}
+
+// Removing an assignment releases its containers back into the unassigned pool.
+export async function deleteAssignment(legkey) {
+  const response = await api.delete(`/assignment/${legkey}`);
   return response.data;
 }
 

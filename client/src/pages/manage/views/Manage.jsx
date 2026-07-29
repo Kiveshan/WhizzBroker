@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { dashboardRouteForRole } from "../../../utils/dashboardRoute"
 import "../css/Manage.css"
 import "../css/pagination.css"
 import "../css/additional-styles.css"
@@ -141,7 +142,7 @@ const Manage = () => {
       actions.setEditing("Company", null)
     } else {
       // If no form is showing (we're in table view), navigate to dashboard
-      navigate("/Dashboard")
+      navigate(dashboardRouteForRole())
     }
   }
 

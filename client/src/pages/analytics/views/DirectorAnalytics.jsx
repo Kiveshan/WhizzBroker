@@ -895,7 +895,7 @@ export default function DirectorAnalytics() {
                     <span className="legend-color royal-blue"></span>
                     <span>
                       {activeFilter === "workVolumePerClient"
-                        ? "Jobs per Client"
+                        ? "Containers per Client"
                         : "Legs per Subbie"}
                     </span>
                   </div>
