@@ -86,7 +86,7 @@ const IncomePerClientReport = () => {
       const sheet = workbook.addWorksheet("Income Per Client")
       sheet.columns = [
         { header: "Client", key: "clientName", width: 32 },
-        { header: "Jobs", key: "jobCount", width: 12 },
+        { header: "Containers", key: "jobCount", width: 12 },
         { header: "Invoice Income", key: "invoiceIncome", width: 20 },
         { header: "Add-On Income", key: "addOnIncome", width: 20 },
         { header: "Total Income", key: "totalIncome", width: 20 },
@@ -195,10 +195,10 @@ const IncomePerClientReport = () => {
           </header>
           <div className="client-subbie-summary">
             <div className="client-subbie-summary-card">
-              <span className="client-subbie-summary-label">Total Jobs</span>
+              <span className="client-subbie-summary-label">Total Containers</span>
               <span className="client-subbie-summary-value">{totals.jobCount}</span>
               <span className="client-subbie-summary-footnote">
-                Instructions invoiced across all clients this period.
+                Containers transported across all clients this period.
               </span>
             </div>
             <div className="client-subbie-summary-card">
@@ -231,7 +231,7 @@ const IncomePerClientReport = () => {
                   <thead>
                     <tr>
                       <th>Client</th>
-                      <th>Jobs</th>
+                      <th>Containers</th>
                       <th>Invoice Income</th>
                       <th>Add-On Income</th>
                       <th>Total Income</th>

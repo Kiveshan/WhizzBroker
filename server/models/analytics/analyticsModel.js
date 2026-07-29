@@ -27,6 +27,23 @@ const getDateRange = (month, year) => {
   return { dateFrom, dateTo }
 }
 
+// Shared CTE body — billable units per instruction. Volume is counted in
+// containers, not instructions: a single m1_controller row can carry several
+// containers. Break-bulk (shipment_type 4) has no containers, so its weight
+// rows in m1_controller_weight are the unit instead.
+// Intended for use as: `WITH ${INSTRUCTION_UNITS_CTE} SELECT ...`
+const INSTRUCTION_UNITS_CTE = `
+    instruction_units AS (
+      SELECT
+        m.m1key,
+        CASE
+          WHEN m.shipment_type::text = '4'
+            THEN (SELECT COUNT(*) FROM public.m1_controller_weight w WHERE w.m1_key = m.m1key)
+          ELSE (SELECT COUNT(*) FROM public.container c WHERE c.m1key = m.m1key)
+        END AS units
+      FROM m1_controller m
+    )`
+
 const getFuelExpenses = async (client, month, year) => {
   const query = `
     SELECT t.truckregnum, 
@@ -1401,15 +1418,28 @@ const getIncomePerClientReport = async (client, month, year) => {
       FROM invoice i
       JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
       WHERE i.m1key IS NULL AND i.date >= $1 AND i.date < $2
+    ),
+    ${INSTRUCTION_UNITS_CTE},
+    -- Dedup before summing units: a child instruction reachable via both the
+    -- legacy and the group-invoice path must contribute its containers once.
+    invoiced_jobs AS (
+      SELECT DISTINCT clientid, m1key FROM invoice_lines
+    ),
+    unit_counts AS (
+      SELECT j.clientid, COALESCE(SUM(u.units), 0) AS job_count
+      FROM invoiced_jobs j
+      LEFT JOIN instruction_units u ON u.m1key = j.m1key
+      GROUP BY j.clientid
     )
     SELECT
       il.clientid,
       c.client AS client_name,
-      COUNT(DISTINCT il.m1key) AS job_count,
+      COALESCE(uc.job_count, 0) AS job_count,
       COALESCE(SUM(il.total_cost * (1 + COALESCE(il.vat, 0)::numeric / 100)), 0) AS invoice_income
     FROM invoice_lines il
     JOIN m5_client c ON il.clientid = c.m5clientkey
-    GROUP BY il.clientid, c.client
+    LEFT JOIN unit_counts uc ON uc.clientid = il.clientid
+    GROUP BY il.clientid, c.client, uc.job_count
   `
 
   const addOnQuery = `
@@ -1502,17 +1532,19 @@ const getIncomePerClientReport = async (client, month, year) => {
   }
 }
 
-// Work Volume per Client — counts jobs (m1_controller rows) per client for the
-// month. Unlike income, each child instruction in a group still gets its own
-// subbie assignment, so counting m1_controller rows directly (no group
-// dedup) is the correct "volume" basis.
+// Work Volume per Client — counts containers (see INSTRUCTION_UNITS_CTE) per
+// client for the month. Unlike income, each child instruction in a group still
+// gets its own subbie assignment, so summing units over m1_controller rows
+// directly (no group dedup) is the correct "volume" basis.
 const getWorkVolumePerClient = async (client, month, year) => {
   const { dateFrom, dateTo } = getDateRange(month, year)
 
   const query = `
-    SELECT m.client AS client_id, c.client AS client_name, COUNT(DISTINCT m.m1key) AS job_count
+    WITH ${INSTRUCTION_UNITS_CTE}
+    SELECT m.client AS client_id, c.client AS client_name, COALESCE(SUM(u.units), 0) AS job_count
     FROM m1_controller m
     JOIN m5_client c ON m.client = c.m5clientkey
+    LEFT JOIN instruction_units u ON u.m1key = m.m1key
     WHERE m.created_at >= $1 AND m.created_at < $2
     GROUP BY m.client, c.client
     ORDER BY job_count DESC

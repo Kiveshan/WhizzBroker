@@ -1214,14 +1214,15 @@ export const fixInvoiceSequence = async () => {
 };
 
 // ─── Instruction group assignments ────────────────────────────────────────────
-// In WhizzBroker an assignment is "one subcontractor + their truck per child
-// instruction" (single leg, legnumber = 1). The whole group is worked through a
-// carousel and finalised together, producing one combined invoice.
+// In WhizzBroker an assignment is "one subcontractor takes these containers off
+// this instruction" — one leg per subbie load, so a child instruction can carry
+// several legs. The group is finalised once every container is on a leg,
+// producing one combined invoice.
 
 /**
- * Returns a group with every child instruction shaped for the assignment
- * carousel: instruction info, containers, the current subbie/truck assignment,
- * uploaded documents, and completion flags.
+ * Returns a group with every child instruction shaped for the assignment screen:
+ * instruction info, containers (each carrying the legkey that claimed it),
+ * the assignments made so far, uploaded documents, and completion flags.
  */
 export const getGroupForAssignment = async (groupId) => {
   const groupResult = await pool.query(
@@ -1256,7 +1257,8 @@ export const getGroupForAssignment = async (groupId) => {
     const containers = isBreakBulk
       ? { rows: [] }
       : await pool.query(
-          `SELECT containerkey, containernum, container_type, weight, cargo_description
+          `SELECT containerkey, containernum, container_type, weight,
+                  cargo_description, legkey
            FROM public.container WHERE m1key = $1 ORDER BY containerkey`,
           [row.m1key]
         );
@@ -1269,18 +1271,26 @@ export const getGroupForAssignment = async (groupId) => {
         )
       : { rows: [] };
 
-    // Current assignment: the single leg (legnumber = 1) for this instruction.
+    // Every assignment leg for this instruction. An instruction now carries one
+    // leg per subcontractor load rather than a single leg for the whole thing,
+    // so this is a list; each leg names the containers it took.
     const legResult = await pool.query(
-      `SELECT l.legkey, l.driverid, l.truckregnumber, l.driverrate,
+      `SELECT l.legkey, l.legnumber, l.driverid, l.driverrate,
               l.startingpoint, l.destination, l.date,
               e.name AS driver_name, e.surname AS driver_surname
        FROM public.legs_m2 l
        LEFT JOIN public.m5_employee e ON e.userid = l.driverid
-       WHERE l.m1key = $1 AND l.legnumber = 1
-       ORDER BY l.legkey DESC LIMIT 1`,
+       WHERE l.m1key = $1
+       ORDER BY l.legnumber, l.legkey`,
       [row.m1key]
     );
-    const leg = legResult.rows[0] || null;
+
+    const containersByLeg = new Map();
+    for (const c of containers.rows) {
+      if (!c.legkey) continue;
+      if (!containersByLeg.has(c.legkey)) containersByLeg.set(c.legkey, []);
+      containersByLeg.get(c.legkey).push(c);
+    }
 
     const docsResult = await pool.query(
       `SELECT document_id, name, type, upload_date, s3key
@@ -1288,38 +1298,47 @@ export const getGroupForAssignment = async (groupId) => {
       [row.m1key]
     );
 
-    // "Assigned" now means rated too — an unrated leg pays the subbie R0.
-    const hasAssignment = !!(
-      leg &&
-      leg.driverid &&
-      leg.truckregnumber &&
-      Number(leg.driverrate) > 0
+    const assignments = legResult.rows.map((leg) => ({
+      legkey: leg.legkey,
+      legnumber: leg.legnumber,
+      subbieId: leg.driverid,
+      subbieName: leg.driver_name
+        ? `${leg.driver_name} ${leg.driver_surname || ""}`.trim()
+        : null,
+      driverrate: leg.driverrate,
+      startingpoint: leg.startingpoint,
+      destination: leg.destination,
+      legDate: leg.date,
+      containers: (containersByLeg.get(leg.legkey) || []).map((c) => ({
+        containerkey: c.containerkey,
+        containernum: c.containernum,
+        container_type: c.container_type,
+      })),
+    }));
+
+    // "Assigned" means a rated leg exists and no container is still loose.
+    // Stated this way it matches finaliseInstructionGroup's gate exactly, and
+    // covers break bulk (no containers to allocate) without a special case.
+    const ratedLegs = legResult.rows.filter(
+      (l) => l.driverid && Number(l.driverrate) > 0
     );
+    const unassignedContainers = containers.rows.filter((c) => !c.legkey);
+    const hasAssignment =
+      ratedLegs.length > 0 && unassignedContainers.length === 0;
     const hasDocuments = docsResult.rows.length > 0;
 
     instructions.push({
       ...row,
       containers: containers.rows,
       weightRows: weightRows.rows,
-      assignment: leg
-        ? {
-            legkey: leg.legkey,
-            subbieId: leg.driverid,
-            truck: leg.truckregnumber,
-            subbieName: leg.driver_name
-              ? `${leg.driver_name} ${leg.driver_surname || ""}`.trim()
-              : null,
-            driverrate: leg.driverrate,
-            startingpoint: leg.startingpoint,
-            destination: leg.destination,
-            legDate: leg.date,
-          }
-        : null,
+      assignments,
       documents: docsResult.rows.map((d) => ({
         id: d.document_id,
         name: d.name,
         type: d.type,
       })),
+      containerCount: containers.rows.length,
+      unassignedContainerCount: unassignedContainers.length,
       hasAssignment,
       hasDocuments,
       complete: hasAssignment && hasDocuments,
@@ -1334,6 +1353,10 @@ export const getGroupForAssignment = async (groupId) => {
  * the instruction mostly carries. Mirrors calculateLegDriverRate in the legacy
  * assignment UI so grouped and ungrouped instructions rate the same way.
  * Returns "12m", "6m" or "abnormal".
+ *
+ * Only used for break bulk now, which has no container rows to inspect — a
+ * container assignment rates off the containers actually being taken instead
+ * (see containerTypeForSelection).
  */
 const dominantContainerType = ({ num_six_meters, num_twelve_meters, num_abnormal }) => {
   const six = Number(num_six_meters) || 0;
@@ -1346,24 +1369,55 @@ const dominantContainerType = ({ num_six_meters, num_twelve_meters, num_abnormal
 };
 
 /**
- * Assigns a subcontractor and their truck to one child instruction as a single
- * leg (legnumber = 1). Re-assigning replaces the previous leg.
+ * The rate column for a specific set of containers. A subcontractor now takes a
+ * subset of an instruction's containers, so the instruction's overall 6m/12m
+ * counts are the wrong basis — a subbie taking only the 6m containers off a
+ * 12m-heavy instruction must be paid the 6m rate. Counts the selection itself.
+ */
+const containerTypeForSelection = (rows) => {
+  let six = 0;
+  let twelve = 0;
+  let abnormal = 0;
+  for (const { container_type } of rows) {
+    const t = String(container_type || "").trim().toLowerCase();
+    if (t === "12m") twelve += 1;
+    else if (t === "abnormal") abnormal += 1;
+    else six += 1;
+  }
+  if (twelve >= six && twelve >= abnormal && twelve > 0) return "12m";
+  if (abnormal > six && abnormal > twelve) return "abnormal";
+  return "6m";
+};
+
+/**
+ * Creates one assignment: a subcontractor takes a named set of an instruction's
+ * containers. Each call adds a leg, so an instruction ends up with as many legs
+ * as it has subcontractor loads. Containers claimed here are marked
+ * container.legkey and are no longer offered for assignment.
+ *
+ * containerKeys may be empty only for break bulk (shipment_type 4), which has
+ * no container rows — there the leg covers the whole instruction as before.
+ *
+ * The rate is flat per leg: one route rate regardless of how many containers
+ * the subbie takes. Which rate column applies is decided by the containers in
+ * this selection, not the instruction's overall counts.
  *
  * The route is passed in, NOT taken from m1_controller.pickup/dropoff. Those
  * columns describe the shipment and come from a different vocabulary than
  * m5_driver_rate.startingpoint/destination (which hold whole trip descriptions
  * like "Yard To Reid Innovation Mobeni To Terminal"). The two sets do not
  * overlap at all, so rating off pickup/dropoff always missed and silently left
- * the subbie on driverrate = 0. The controller now picks the route from the
- * same /starting-points + /destinations lists the legacy assignment screen uses.
+ * the subbie on driverrate = 0. The controller picks the route from the same
+ * /starting-points + /destinations lists the legacy assignment screen uses.
  *
  * Throws RATE_UNRESOLVED when the route + date has no usable subbie rate, so a
- * bad route surfaces at assignment time instead of becoming an unpaid leg.
+ * bad route surfaces at assignment time instead of becoming an unpaid leg, and
+ * CONTAINERS_TAKEN when another controller claimed a container first.
  */
-export const assignSubbieToInstruction = async ({
+export const createAssignment = async ({
   m1key,
   subbieId,
-  truck,
+  containerKeys = [],
   startingpoint,
   destination,
   legDate,
@@ -1375,16 +1429,61 @@ export const assignSubbieToInstruction = async ({
   }
 
   const instrResult = await pool.query(
-    `SELECT num_six_meters, num_twelve_meters, num_abnormal
+    `SELECT shipment_type, num_six_meters, num_twelve_meters, num_abnormal
      FROM public.m1_controller WHERE m1key = $1`,
     [m1key]
   );
   if (instrResult.rows.length === 0) {
     throw new Error(`Instruction ${m1key} not found`);
   }
+  const instruction = instrResult.rows[0];
+  const isBreakBulk = String(instruction.shipment_type) === "4";
+
+  // An instruction with no container rows is assigned as a whole — break bulk,
+  // and the odd container instruction captured without any containers, which
+  // would otherwise be impossible to assign at all.
+  const countResult = await pool.query(
+    `SELECT COUNT(*)::int AS n FROM public.container WHERE m1key = $1`,
+    [m1key]
+  );
+  const wholeInstruction = isBreakBulk || countResult.rows[0].n === 0;
+
+  const keys = (containerKeys || []).map(Number).filter((k) => Number.isInteger(k));
+  if (!wholeInstruction && keys.length === 0) {
+    const err = new Error("Select at least one container for this subcontractor");
+    err.code = "CONTAINERS_REQUIRED";
+    throw err;
+  }
+
+  // Rate off what is actually being taken. Read the selection up front so an
+  // unresolvable rate fails before anything is written.
+  let containerType;
+  if (keys.length === 0) {
+    containerType = dominantContainerType(instruction);
+  } else {
+    const selected = await pool.query(
+      `SELECT containerkey, container_type, legkey
+       FROM public.container
+       WHERE containerkey = ANY($1::int[]) AND m1key = $2`,
+      [keys, m1key]
+    );
+    if (selected.rows.length !== keys.length) {
+      const err = new Error("Some of the selected containers do not belong to this instruction");
+      err.code = "CONTAINERS_INVALID";
+      throw err;
+    }
+    const alreadyTaken = selected.rows.filter((c) => c.legkey);
+    if (alreadyTaken.length > 0) {
+      const err = new Error(
+        `${alreadyTaken.length} of the selected containers are already assigned to another subcontractor. Reload and try again.`
+      );
+      err.code = "CONTAINERS_TAKEN";
+      throw err;
+    }
+    containerType = containerTypeForSelection(selected.rows);
+  }
 
   const effectiveDate = legDate || new Date().toISOString().split("T")[0];
-  const containerType = dominantContainerType(instrResult.rows[0]);
 
   if (containerType === "abnormal") {
     const err = new Error(
@@ -1420,19 +1519,40 @@ export const assignSubbieToInstruction = async ({
   try {
     await client.query("BEGIN");
 
-    // One assignment leg per instruction: clear then insert.
-    await client.query(
-      `DELETE FROM public.legs_m2 WHERE m1key = $1 AND legnumber = 1`,
+    const seqResult = await client.query(
+      `SELECT COALESCE(MAX(legnumber), 0) + 1 AS next
+       FROM public.legs_m2 WHERE m1key = $1`,
       [m1key]
     );
+    const legnumber = seqResult.rows[0].next;
+
     const insertResult = await client.query(
       `INSERT INTO public.legs_m2
          (legnumber, startingpoint, destination, driverrate, m1key,
-          driverid, truckregnumber, m5ratekey, date, legstatus)
-       VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, 'Assigned')
+          driverid, m5ratekey, date, legstatus)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Assigned')
        RETURNING legkey`,
-      [startingpoint, destination, driverrate, m1key, subbieId, truck, m5ratekey, effectiveDate]
+      [legnumber, startingpoint, destination, driverrate, m1key, subbieId, m5ratekey, effectiveDate]
     );
+    const legkey = insertResult.rows[0].legkey;
+
+    if (keys.length > 0) {
+      // legkey IS NULL in the WHERE is the concurrency guard: if another
+      // controller claimed one of these containers between the check above and
+      // here, fewer rows update and the whole assignment rolls back.
+      const claimed = await client.query(
+        `UPDATE public.container SET legkey = $1
+         WHERE containerkey = ANY($2::int[]) AND m1key = $3 AND legkey IS NULL`,
+        [legkey, keys, m1key]
+      );
+      if (claimed.rowCount !== keys.length) {
+        const err = new Error(
+          "Some of the selected containers were assigned by someone else. Reload and try again."
+        );
+        err.code = "CONTAINERS_TAKEN";
+        throw err;
+      }
+    }
 
     // Move the instruction into "In Progress" once it has an assignment.
     await client.query(
@@ -1443,9 +1563,11 @@ export const assignSubbieToInstruction = async ({
 
     await client.query("COMMIT");
     return {
-      legkey: insertResult.rows[0].legkey,
+      legkey,
+      legnumber,
       driverrate,
       containerType,
+      containerKeys: keys,
       legDate: effectiveDate,
       startingpoint,
       destination,
@@ -1459,9 +1581,27 @@ export const assignSubbieToInstruction = async ({
 };
 
 /**
- * Finalises a whole group: requires every child to have a subbie+truck, a rated
- * leg and at least one document, then marks every child and the group Completed
- * and creates the single combined invoice row for the group.
+ * Removes one assignment leg. container.legkey is ON DELETE SET NULL, so the
+ * containers it held are released back into the unassigned pool automatically.
+ */
+export const deleteAssignment = async (legkey) => {
+  const result = await pool.query(
+    `DELETE FROM public.legs_m2 WHERE legkey = $1 RETURNING legkey, m1key`,
+    [legkey]
+  );
+  if (result.rows.length === 0) {
+    const err = new Error(`Assignment ${legkey} not found`);
+    err.code = "NOT_FOUND";
+    throw err;
+  }
+  return { success: true, ...result.rows[0] };
+};
+
+/**
+ * Finalises a whole group: requires every child to have at least one rated
+ * assignment leg, every container to be on one, and at least one document, then
+ * marks every child and the group Completed and creates the single combined
+ * invoice row for the group.
  */
 export const finaliseInstructionGroup = async (groupId) => {
   const client = await pool.connect();
@@ -1478,39 +1618,64 @@ export const finaliseInstructionGroup = async (groupId) => {
     const clientId = groupResult.rows[0].client;
 
     const children = await client.query(
-      `SELECT m1key FROM public.m1_controller WHERE instruction_group_id = $1`,
+      `SELECT m1key, shipment_type FROM public.m1_controller
+       WHERE instruction_group_id = $1`,
       [groupId]
     );
     if (children.rows.length === 0) {
       throw new Error("This group has no instructions to finalise");
     }
 
-    // Every child must have an assignment leg (subbie + truck) and a document.
+    // Every container must be on an assignment leg, and every child must have a
+    // document. Break bulk has no containers, so it still qualifies on having at
+    // least one leg.
     const incomplete = [];
+    const unassigned = [];
     // A leg that exists but is unrated would silently pay the subcontractor R0 —
     // the subbie statement generator sums legs_m2.driverrate and skips subbies
     // whose total is 0, so this must never reach a finalised group.
     const unrated = [];
-    for (const { m1key } of children.rows) {
-      const leg = await client.query(
+    for (const { m1key, shipment_type } of children.rows) {
+      const isBreakBulk = String(shipment_type) === "4";
+      const legs = await client.query(
         `SELECT driverrate FROM public.legs_m2
-         WHERE m1key = $1 AND legnumber = 1 AND driverid IS NOT NULL
-           AND truckregnumber IS NOT NULL LIMIT 1`,
+         WHERE m1key = $1 AND driverid IS NOT NULL`,
         [m1key]
       );
       const doc = await client.query(
         `SELECT 1 FROM public.documents WHERE m1key = $1 LIMIT 1`,
         [m1key]
       );
-      if (leg.rows.length === 0 || doc.rows.length === 0) {
+
+      if (legs.rows.length === 0 || doc.rows.length === 0) {
         incomplete.push(m1key);
-      } else if (!(Number(leg.rows[0].driverrate) > 0)) {
+        continue;
+      }
+      if (legs.rows.some((l) => !(Number(l.driverrate) > 0))) {
         unrated.push(m1key);
+        continue;
+      }
+      if (!isBreakBulk) {
+        const open = await client.query(
+          `SELECT COUNT(*)::int AS n FROM public.container
+           WHERE m1key = $1 AND legkey IS NULL`,
+          [m1key]
+        );
+        if (open.rows[0].n > 0) {
+          unassigned.push(`${m1key} (${open.rows[0].n} container${open.rows[0].n === 1 ? "" : "s"})`);
+        }
       }
     }
     if (incomplete.length > 0) {
       const err = new Error(
-        `Every instruction needs a subcontractor, truck and at least one document before finalising. Incomplete: ${incomplete.join(", ")}`
+        `Every instruction needs at least one subcontractor assignment and one document before finalising. Incomplete: ${incomplete.join(", ")}`
+      );
+      err.code = "GROUP_INCOMPLETE";
+      throw err;
+    }
+    if (unassigned.length > 0) {
+      const err = new Error(
+        `Every container must be assigned to a subcontractor before finalising. Still unassigned: ${unassigned.join(", ")}`
       );
       err.code = "GROUP_INCOMPLETE";
       throw err;

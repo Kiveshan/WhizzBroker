@@ -34,7 +34,8 @@ import {
   fixInvoiceSequence,
   updateLegNumber,
   getGroupForAssignment,
-  assignSubbieToInstruction,
+  createAssignment,
+  deleteAssignment,
   finaliseInstructionGroup,
 } from "../../models/assignments/assignmentModel.js";
 
@@ -690,30 +691,51 @@ export const getGroupForAssignmentHandler = async (req, res) => {
   }
 };
 
-export const assignSubbieHandler = async (req, res) => {
+// Anything the operator can fix by changing their selection is a 400 carrying
+// the model's message, not a server fault.
+const ASSIGNMENT_USER_ERRORS = new Set([
+  "ROUTE_REQUIRED",
+  "RATE_UNRESOLVED",
+  "CONTAINERS_REQUIRED",
+  "CONTAINERS_INVALID",
+  "CONTAINERS_TAKEN",
+]);
+
+export const createAssignmentHandler = async (req, res) => {
   try {
     const { m1key } = req.params;
-    const { subbieId, truck, startingpoint, destination, legDate } = req.body;
-    if (!subbieId || !truck) {
-      return res.status(400).json({ success: false, message: "Both subbieId and truck are required" });
+    const { subbieId, containerKeys, startingpoint, destination, legDate } = req.body;
+    if (!subbieId) {
+      return res.status(400).json({ success: false, message: "subbieId is required" });
     }
-    const result = await assignSubbieToInstruction({
+    const result = await createAssignment({
       m1key,
       subbieId,
-      truck,
+      containerKeys,
       startingpoint,
       destination,
       legDate,
     });
     res.status(200).json({ success: true, ...result });
   } catch (error) {
-    console.error("Error assigning subbie:", error);
-    // A missing route or unresolvable rate is the controller's to fix, not a
-    // server fault — surface it as a 400 with the message the model built.
-    if (error.code === "ROUTE_REQUIRED" || error.code === "RATE_UNRESOLVED") {
-      return res.status(400).json({ success: false, message: error.message, code: error.code });
+    console.error("Error creating assignment:", error);
+    if (ASSIGNMENT_USER_ERRORS.has(error.code)) {
+      // 409 for a lost race on containers so the client knows to reload.
+      const status = error.code === "CONTAINERS_TAKEN" ? 409 : 400;
+      return res.status(status).json({ success: false, message: error.message, code: error.code });
     }
     res.status(500).json({ success: false, message: "Failed to assign", error: error.message });
+  }
+};
+
+export const deleteAssignmentHandler = async (req, res) => {
+  try {
+    const result = await deleteAssignment(req.params.legkey);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error removing assignment:", error);
+    const status = error.code === "NOT_FOUND" ? 404 : 500;
+    res.status(status).json({ success: false, message: error.message, code: error.code });
   }
 };
 

@@ -15,6 +15,11 @@ tempifle.js
 /build
 client/build
 
+# accidental output of `--outfile=/dev/null` on Windows, where /dev/null is
+# treated as a relative path and creates a real directory tree
+client/dev/
+/dev/
+
 # misc
 .DS_Store
 .env.local

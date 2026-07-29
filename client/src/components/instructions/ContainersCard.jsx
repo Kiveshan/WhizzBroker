@@ -32,9 +32,20 @@ const TYPES = [
 
 const TYPE_OPTIONS = ["6m", "12m", "Abnormal"];
 
+/**
+ * Per-container surcharge picker. The configured extra-charge list can run long,
+ * so the popover is a filter box over a scrolling list rather than a plain stack
+ * of checkboxes. Selection is still multi-select checkboxes writing the same
+ * container fields (hazardous / addSurcharges / vgm) and the same
+ * selectedExtraCharges array — only the picking is different.
+ */
 function SurchargeSelect({ container, allowVgmUI, disabled, onChange, availableExtraCharges = [], onExtraChargeToggle }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
   const boxRef = useRef(null);
+  const filterRef = useRef(null);
+  const listRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -45,16 +56,101 @@ function SurchargeSelect({ container, allowVgmUI, disabled, onChange, availableE
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
 
+  // Opening starts from a clean filter, with the caret in the box so typing
+  // narrows the list immediately and the arrow keys have somewhere to land.
+  useEffect(() => {
+    if (!open) return;
+    setQuery("");
+    setActiveIndex(0);
+    filterRef.current?.focus();
+  }, [open]);
+
   const selectedExtraCharges = container.selectedExtraCharges || [];
   const isExtraChargeSelected = (chargeName) =>
     selectedExtraCharges.some((c) => c.charge_name === chargeName);
 
-  const selected = [
-    container.hazardous && "Hazardous",
-    container.addSurcharges && "Surcharge",
-    allowVgmUI && container.vgm && "VGM",
-    ...selectedExtraCharges.map((c) => c.charge_name),
-  ].filter(Boolean);
+  // One flat option list so the filter and keyboard nav treat the built-in
+  // flags and the configured extra charges identically.
+  const options = [
+    {
+      key: "hazardous",
+      label: "Hazardous",
+      checked: Boolean(container.hazardous),
+      toggle: (checked) => onChange(container.id, "hazardous", checked),
+    },
+    {
+      key: "addSurcharges",
+      label: "Surcharge",
+      checked: Boolean(container.addSurcharges),
+      toggle: (checked) => onChange(container.id, "addSurcharges", checked),
+    },
+    ...(allowVgmUI
+      ? [
+          {
+            key: "vgm",
+            label: "VGM",
+            checked: Boolean(container.vgm),
+            toggle: (checked) => onChange(container.id, "vgm", checked),
+          },
+        ]
+      : []),
+    ...availableExtraCharges.map((charge) => ({
+      key: `extra-${charge.charge_id ?? charge.charge_name}`,
+      label: charge.charge_name,
+      checked: isExtraChargeSelected(charge.charge_name),
+      toggle: (checked) => onExtraChargeToggle(container.id, charge, checked),
+    })),
+    // Charges the container still carries that the client rate no longer
+    // offers. Amounts are snapshotted per container, so fetchFreshAmounts keeps
+    // these on the container after the rate is edited — they are still billed
+    // and must stay visible (and removable) rather than silently disappearing.
+    ...selectedExtraCharges
+      .filter((sel) => !availableExtraCharges.some((c) => c.charge_name === sel.charge_name))
+      .map((sel) => ({
+        key: `extra-orphan-${sel.charge_name}`,
+        label: sel.charge_name,
+        checked: true,
+        toggle: (checked) => onExtraChargeToggle(container.id, sel, checked),
+      })),
+  ];
+
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? options.filter((o) => String(o.label ?? "").toLowerCase().includes(needle))
+    : options;
+
+  const selected = options.filter((o) => o.checked).map((o) => o.label);
+
+  const moveActive = (delta) => {
+    if (visible.length === 0) return;
+    const next = Math.min(Math.max(activeIndex + delta, 0), visible.length - 1);
+    setActiveIndex(next);
+    listRef.current?.children[next]?.scrollIntoView({ block: "nearest" });
+  };
+
+  // Enter toggles rather than Space: the filter box owns Space for typing.
+  const handleMenuKeyDown = (e) => {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setOpen(false);
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveActive(1);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveActive(-1);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const option = visible[activeIndex];
+      if (option) option.toggle(!option.checked);
+    }
+  };
 
   return (
     <div className="wb-surcharge-select" ref={boxRef}>
@@ -62,7 +158,15 @@ function SurchargeSelect({ container, allowVgmUI, disabled, onChange, availableE
         type="button"
         className="wb-surcharge-trigger"
         onClick={() => !disabled && setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (!disabled && !open && e.key === "ArrowDown") {
+            e.preventDefault();
+            setOpen(true);
+          }
+        }}
         disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={open}
       >
         <span className={selected.length ? "" : "wb-surcharge-placeholder"}>
           {selected.length ? selected.join(", ") : "Select Surcharge"}
@@ -70,43 +174,42 @@ function SurchargeSelect({ container, allowVgmUI, disabled, onChange, availableE
         <span aria-hidden="true">▾</span>
       </button>
       {open && (
-        <div className="wb-surcharge-menu">
-          <label>
-            <input
-              type="checkbox"
-              checked={Boolean(container.hazardous)}
-              onChange={(e) => onChange(container.id, "hazardous", e.target.checked)}
-            />
-            Hazardous
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={Boolean(container.addSurcharges)}
-              onChange={(e) => onChange(container.id, "addSurcharges", e.target.checked)}
-            />
-            Surcharge
-          </label>
-          {allowVgmUI && (
-            <label>
-              <input
-                type="checkbox"
-                checked={Boolean(container.vgm)}
-                onChange={(e) => onChange(container.id, "vgm", e.target.checked)}
-              />
-              VGM
-            </label>
-          )}
-          {availableExtraCharges.map((charge) => (
-            <label key={charge.charge_id ?? charge.charge_name}>
-              <input
-                type="checkbox"
-                checked={isExtraChargeSelected(charge.charge_name)}
-                onChange={(e) => onExtraChargeToggle(container.id, charge, e.target.checked)}
-              />
-              {charge.charge_name}
-            </label>
-          ))}
+        <div className="wb-surcharge-menu" onKeyDown={handleMenuKeyDown}>
+          <input
+            ref={filterRef}
+            type="text"
+            className="wb-surcharge-filter"
+            placeholder="Filter surcharges…"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIndex(0);
+            }}
+          />
+          {/* Deliberately not role="listbox"/"option": each row is a real
+              checkbox, and a checkbox inside an option is invalid ARIA that
+              screen readers mis-announce. Native semantics already carry the
+              checked state; the highlight below is only a keyboard affordance. */}
+          <div className="wb-surcharge-options" ref={listRef}>
+            {visible.length === 0 ? (
+              <div className="wb-surcharge-empty">No matching surcharges</div>
+            ) : (
+              visible.map((option, idx) => (
+                <label
+                  key={option.key}
+                  className={idx === activeIndex ? "wb-surcharge-active" : ""}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                >
+                  <input
+                    type="checkbox"
+                    checked={option.checked}
+                    onChange={(e) => option.toggle(e.target.checked)}
+                  />
+                  {option.label}
+                </label>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
