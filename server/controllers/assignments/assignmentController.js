@@ -35,6 +35,7 @@ import {
   updateLegNumber,
   getGroupForAssignment,
   createAssignment,
+  resolveAssignmentRate,
   deleteAssignment,
   finaliseInstructionGroup,
 } from "../../models/assignments/assignmentModel.js";
@@ -725,6 +726,32 @@ export const createAssignmentHandler = async (req, res) => {
       return res.status(status).json({ success: false, message: error.message, code: error.code });
     }
     res.status(500).json({ success: false, message: "Failed to assign", error: error.message });
+  }
+};
+
+// Live rate preview for the assignment screen. Runs createAssignment's own
+// calculation without writing, so what the operator sees while choosing is
+// exactly what gets saved. A rate that cannot be resolved is a normal answer
+// here, not an error — it comes back as success:false with the reason so the
+// screen can explain it inline instead of throwing on every keystroke.
+export const previewAssignmentRateHandler = async (req, res) => {
+  try {
+    const { m1key } = req.params;
+    const { containerKeys, startingpoint, destination, legDate } = req.body;
+    const result = await resolveAssignmentRate({
+      m1key,
+      containerKeys,
+      startingpoint,
+      destination,
+      legDate,
+    });
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    if (ASSIGNMENT_USER_ERRORS.has(error.code)) {
+      return res.status(200).json({ success: false, code: error.code, message: error.message });
+    }
+    console.error("Error previewing assignment rate:", error);
+    res.status(500).json({ success: false, message: "Failed to work out the rate", error: error.message });
   }
 };
 

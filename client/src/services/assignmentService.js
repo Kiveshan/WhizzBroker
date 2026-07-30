@@ -26,6 +26,19 @@ export async function createAssignment(m1key, { subbieId, containerKeys, startin
   return response.data;
 }
 
+// What this assignment would pay, without saving it. Never throws for a rate
+// that cannot be resolved — that comes back as { success: false, message } so
+// the screen can explain it inline while the operator is still choosing.
+export async function previewAssignmentRate(m1key, { containerKeys, startingpoint, destination, legDate }) {
+  const response = await api.post(`/instruction/${m1key}/rate-preview`, {
+    containerKeys,
+    startingpoint,
+    destination,
+    legDate,
+  });
+  return response.data;
+}
+
 // Removing an assignment releases its containers back into the unassigned pool.
 export async function deleteAssignment(legkey) {
   const response = await api.delete(`/assignment/${legkey}`);

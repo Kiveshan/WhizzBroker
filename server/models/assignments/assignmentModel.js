@@ -1414,9 +1414,16 @@ const containerTypeForSelection = (rows) => {
  * bad route surfaces at assignment time instead of becoming an unpaid leg, and
  * CONTAINERS_TAKEN when another controller claimed a container first.
  */
-export const createAssignment = async ({
+/**
+ * Works out what this assignment would pay, without writing anything. Shared by
+ * createAssignment and the rate preview the assignment screen calls while the
+ * operator is still choosing, so the number shown on screen and the number
+ * saved can never disagree — the preview IS the save's calculation.
+ *
+ * Throws the same coded errors createAssignment surfaces.
+ */
+export const resolveAssignmentRate = async ({
   m1key,
-  subbieId,
   containerKeys = [],
   startingpoint,
   destination,
@@ -1455,8 +1462,7 @@ export const createAssignment = async ({
     throw err;
   }
 
-  // Rate off what is actually being taken. Read the selection up front so an
-  // unresolvable rate fails before anything is written.
+  // Rate off what is actually being taken.
   let containerType;
   if (keys.length === 0) {
     containerType = dominantContainerType(instruction);
@@ -1513,7 +1519,34 @@ export const createAssignment = async ({
     err.code = "RATE_UNRESOLVED";
     throw err;
   }
-  const m5ratekey = rate.data.m5ratekey;
+
+  return {
+    driverrate,
+    containerType,
+    m5ratekey: rate.data.m5ratekey,
+    effectiveDate,
+    containerCount: keys.length,
+    wholeInstruction,
+  };
+};
+
+export const createAssignment = async ({
+  m1key,
+  subbieId,
+  containerKeys = [],
+  startingpoint,
+  destination,
+  legDate,
+}) => {
+  const { driverrate, containerType, m5ratekey, effectiveDate } = await resolveAssignmentRate({
+    m1key,
+    containerKeys,
+    startingpoint,
+    destination,
+    legDate,
+  });
+
+  const keys = (containerKeys || []).map(Number).filter((k) => Number.isInteger(k));
 
   const client = await pool.connect();
   try {

@@ -35,6 +35,7 @@ import {
   updateLegNumberHandler,
   getGroupForAssignmentHandler,
   createAssignmentHandler,
+  previewAssignmentRateHandler,
   deleteAssignmentHandler,
   finaliseGroupHandler,
 } from "../../controllers/assignments/assignmentController.js";
@@ -44,6 +45,7 @@ const router = express.Router();
 // ── Instruction group assignments ──
 router.get("/group/:groupId", getGroupForAssignmentHandler);
 router.post("/instruction/:m1key/assign", createAssignmentHandler);
+router.post("/instruction/:m1key/rate-preview", previewAssignmentRateHandler);
 router.delete("/assignment/:legkey", deleteAssignmentHandler);
 router.post("/group/:groupId/finalise", finaliseGroupHandler);
 

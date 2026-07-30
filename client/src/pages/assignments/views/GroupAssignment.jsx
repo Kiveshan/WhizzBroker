@@ -10,6 +10,7 @@ import {
   fetchSubbies,
   fetchRouteOptions,
   createAssignment,
+  previewAssignmentRate,
   deleteAssignment,
   finaliseGroup,
   fetchInstructionDocuments,
@@ -70,7 +71,13 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   const [draftOpen, setDraftOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [pickedContainers, setPickedContainers] = useState([]) // containerkeys
+  const [containerQuery, setContainerQuery] = useState("")
   const [docsByChild, setDocsByChild] = useState({}) // { m1key: [{id,name}] }
+
+  // Live rate for the draft, resolved server-side by the same code that saves
+  // it. { status: idle | loading | ok | error }
+  const [ratePreview, setRatePreview] = useState({ status: "idle" })
+  const rateRequestRef = useRef(0)
 
   // Accordions (collapsed by default like the mockup).
   const [openInfo, setOpenInfo] = useState(false)
@@ -150,10 +157,62 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   // draft straight away since there is no "+" to click yet.
   useEffect(() => {
     setPickedContainers([])
+    setContainerQuery("")
     setForm(emptyForm)
+    setRatePreview({ status: "idle" })
     setDraftOpen(!readOnly && assignments.length === 0 && hasWorkLeft(child))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedM1key])
+
+  // Resolve the rate as soon as there is enough to resolve it — route,
+  // destination, date and (unless the whole instruction goes as one) at least
+  // one container. Debounced, and guarded by a sequence number so a slow
+  // response can never overwrite a newer one.
+  const rateInputs = JSON.stringify({
+    m1key,
+    startingpoint: form.startingpoint,
+    destination: form.destination,
+    legDate: form.legDate,
+    containers: wholeInstruction ? [] : [...pickedContainers].sort((a, b) => a - b),
+  })
+
+  useEffect(() => {
+    if (!draftOpen || !m1key) return
+    const ready =
+      form.startingpoint && form.destination && (wholeInstruction || pickedContainers.length > 0)
+    if (!ready) {
+      setRatePreview({ status: "idle" })
+      return
+    }
+
+    const seq = ++rateRequestRef.current
+    setRatePreview({ status: "loading" })
+    const timer = setTimeout(async () => {
+      try {
+        const result = await previewAssignmentRate(m1key, {
+          containerKeys: wholeInstruction ? [] : pickedContainers,
+          startingpoint: form.startingpoint,
+          destination: form.destination,
+          legDate: form.legDate,
+        })
+        if (seq !== rateRequestRef.current) return
+        setRatePreview(
+          result.success
+            ? { status: "ok", driverrate: result.driverrate, containerType: result.containerType }
+            : { status: "error", message: result.message },
+        )
+      } catch (e) {
+        if (seq !== rateRequestRef.current) return
+        setRatePreview({
+          status: "error",
+          message: e.response?.data?.message || e.message || "Could not work out the rate",
+        })
+      }
+    }, 300)
+
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rateInputs, draftOpen])
 
   const totals = useMemo(() => {
     let total = 0
@@ -167,25 +226,59 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
 
   const allComplete = children.length > 0 && children.every((c) => c.complete)
 
+  // Container lists get long, so the picker filters on container number, type
+  // or cargo description. Select-all then applies to what is on screen.
+  const visibleContainers = useMemo(() => {
+    const needle = containerQuery.trim().toLowerCase()
+    if (!needle) return availableContainers
+    return availableContainers.filter((c) =>
+      [c.containernum, c.container_type, c.cargo_description]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(needle)),
+    )
+  }, [availableContainers, containerQuery])
+
+  const allVisiblePicked =
+    visibleContainers.length > 0 && visibleContainers.every((c) => pickedContainers.includes(c.containerkey))
+
   const toggleContainer = (containerkey) => {
     setPickedContainers((prev) =>
       prev.includes(containerkey) ? prev.filter((k) => k !== containerkey) : [...prev, containerkey],
     )
   }
 
-  const toggleAllContainers = () => {
+  const toggleAllVisible = () => {
+    const visibleKeys = visibleContainers.map((c) => c.containerkey)
     setPickedContainers((prev) =>
-      prev.length === availableContainers.length ? [] : availableContainers.map((c) => c.containerkey),
+      allVisiblePicked
+        ? prev.filter((k) => !visibleKeys.includes(k))
+        : [...new Set([...prev, ...visibleKeys])],
     )
   }
 
-  const canSave = Boolean(
-    m1key &&
-      form.subbieId &&
-      form.startingpoint &&
-      form.destination &&
-      (wholeInstruction || pickedContainers.length > 0),
-  )
+  // "6 × 6m, 2 × 12m" for the current selection, so the operator can see what
+  // the rate is being worked out from.
+  const selectionBreakdown = useMemo(() => {
+    const counts = new Map()
+    for (const key of pickedContainers) {
+      const c = availableContainers.find((x) => x.containerkey === key)
+      if (!c) continue
+      const t = c.container_type || "—"
+      counts.set(t, (counts.get(t) || 0) + 1)
+    }
+    return [...counts.entries()].map(([type, n]) => `${n} × ${type}`).join(", ")
+  }, [pickedContainers, availableContainers])
+
+  // Everything still outstanding, so the operator is told what to do rather
+  // than left with a greyed-out button.
+  const missing = []
+  if (!m1key) missing.push("an instruction")
+  if (!wholeInstruction && pickedContainers.length === 0) missing.push("at least one container")
+  if (!form.startingpoint) missing.push("a route")
+  if (!form.destination) missing.push("a destination")
+  if (!form.subbieId) missing.push("a subcontractor")
+
+  const canSave = missing.length === 0 && ratePreview.status === "ok"
 
   const handleSaveAssignment = async () => {
     if (!canSave) return
@@ -200,7 +293,9 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         legDate: form.legDate,
       })
       setPickedContainers([])
+      setContainerQuery("")
       setForm(emptyForm)
+      setRatePreview({ status: "idle" })
       // Close the draft: the next one is added deliberately, via "+".
       setDraftOpen(false)
       setNotice(
@@ -220,10 +315,18 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
     }
   }
 
-  const handleRemoveAssignment = async (legkey) => {
+  // Removing releases the containers back into the pool — cheap to redo, but
+  // silently undoing someone's work is worse than one click of friction.
+  const handleRemoveAssignment = async (assignment) => {
+    const carried = assignment.containers?.length || 0
+    const ok = window.confirm(
+      `Remove ${assignment.subbieName || "this subcontractor"}'s assignment?` +
+        (carried > 0 ? `\n\n${carried} container(s) will go back to unassigned.` : ""),
+    )
+    if (!ok) return
     try {
       setError("")
-      await deleteAssignment(legkey)
+      await deleteAssignment(assignment.legkey)
       await loadGroup()
     } catch (e) {
       setError(e.response?.data?.message || e.message || "Failed to remove assignment")
@@ -298,13 +401,32 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
     }
   }
 
+  // Terse, so the dropdown stays scannable: a tick when the instruction is
+  // finished, otherwise just what is left to do on it. The full reason lives in
+  // the blockers panel by the Finalise button rather than being repeated here.
   const instructionLabel = (c) => {
+    if (c.complete) return `✓  ${refOf(c)}`
     if (isWholeInstruction(c)) {
-      const done = (c.assignments || []).length > 0
-      return `${refOf(c)} — ${isBreakBulk(c) ? "break bulk" : "whole instruction"}${done ? " · assigned" : ""}`
+      return `${refOf(c)} — ${(c.assignments || []).length > 0 ? "assigned" : "to assign"}`
     }
     return `${refOf(c)} — ${c.unassignedContainerCount} of ${c.containerCount} left`
   }
+
+  // Which instructions are holding finalise up, named rather than counted.
+  const blockers = children
+    .filter((c) => !c.complete)
+    .map((c) => {
+      const why = []
+      if (!c.hasAssignment) {
+        why.push(
+          isWholeInstruction(c)
+            ? "no assignment"
+            : `${c.unassignedContainerCount} container(s) unassigned`,
+        )
+      }
+      if (!c.hasDocuments) why.push("no documents")
+      return `${refOf(c)} (${why.join(", ")})`
+    })
 
   const subbieOf = (id) => {
     const s = subbies.find((x) => String(x.userid) === String(id))
@@ -366,18 +488,19 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         {/* ── Instructions card ── */}
         <div className="wb-assign-card">
           <h3>
-            Instructions
-            <span style={{ fontWeight: 400, color: "#667085", fontSize: 13 }}>
-              {"  "}— {totals.assigned} of {totals.total} containers assigned across {children.length} instruction
-              {children.length === 1 ? "" : "s"}
-            </span>
+            <span className="wb-step">1</span>
+            Choose the instruction
+            <span className="wb-step-hint">Which instruction is this assignment for?</span>
           </h3>
 
-          <div className="wb-progress">
+          <div className="wb-progress" title={`${totals.assigned} of ${totals.total} containers assigned`}>
             <div
               className="wb-progress-bar"
               style={{ width: totals.total > 0 ? `${(totals.assigned / totals.total) * 100}%` : "0%" }}
             />
+          </div>
+          <div className="wb-progress-label">
+            {totals.assigned} of {totals.total} containers assigned in this group
           </div>
 
           {/* Which instruction this assignment is for. */}
@@ -504,11 +627,9 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         {child && (
           <div className="wb-assign-card">
             <h3>
-              Assignments
-              <span style={{ fontWeight: 400, color: "#667085", fontSize: 13 }}>
-                {"  "}— {refOf(child)}
-                {!wholeInstruction && `, ${child.unassignedContainerCount} of ${child.containerCount} still to assign`}
-              </span>
+              <span className="wb-step">2</span>
+              Assign containers to subcontractors
+              <span className="wb-step-hint">{refOf(child)}</span>
             </h3>
 
             {assignments.length === 0 && !draftOpen && (
@@ -536,7 +657,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                     {!readOnly && (
                       <button
                         className="wb-doc-remove"
-                        onClick={() => handleRemoveAssignment(a.legkey)}
+                        onClick={() => handleRemoveAssignment(a)}
                         title="Remove this assignment and release its containers"
                         aria-label="Remove assignment"
                       >
@@ -617,31 +738,62 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                   <div className="wb-container-picker">
                     <div className="wb-container-picker-head">
                       <span>Containers this subcontractor is taking</span>
-                      {availableContainers.length > 0 && (
-                        <button type="button" className="wb-link-btn" onClick={toggleAllContainers}>
-                          {pickedContainers.length === availableContainers.length ? "Clear all" : "Select all"}
+                      {visibleContainers.length > 0 && (
+                        <button type="button" className="wb-link-btn" onClick={toggleAllVisible}>
+                          {allVisiblePicked ? "Clear" : "Select"}
+                          {containerQuery.trim() ? " these" : " all"}
                         </button>
                       )}
                     </div>
+
                     {availableContainers.length === 0 ? (
                       <div className="wb-drop-sub">No unassigned containers left on this instruction.</div>
                     ) : (
-                      <div className="wb-container-options">
-                        {availableContainers.map((c) => (
-                          <label className="wb-container-option" key={c.containerkey}>
-                            <input
-                              type="checkbox"
-                              checked={pickedContainers.includes(c.containerkey)}
-                              onChange={() => toggleContainer(c.containerkey)}
-                            />
-                            <span className="wb-container-num">{c.containernum || `#${c.containerkey}`}</span>
-                            <span className="wb-container-meta">
-                              {c.container_type}
-                              {c.weight ? ` · ${c.weight}` : ""}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
+                      <>
+                        {availableContainers.length > 8 && (
+                          <input
+                            type="text"
+                            className="wb-container-filter"
+                            placeholder="Filter by container number, type or cargo…"
+                            value={containerQuery}
+                            onChange={(e) => setContainerQuery(e.target.value)}
+                          />
+                        )}
+
+                        {visibleContainers.length === 0 ? (
+                          <div className="wb-drop-sub">No containers match “{containerQuery}”.</div>
+                        ) : (
+                          <div className="wb-container-options">
+                            {visibleContainers.map((c) => (
+                              <label
+                                className={`wb-container-option ${
+                                  pickedContainers.includes(c.containerkey) ? "picked" : ""
+                                }`}
+                                key={c.containerkey}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={pickedContainers.includes(c.containerkey)}
+                                  onChange={() => toggleContainer(c.containerkey)}
+                                />
+                                <span className="wb-container-num">{c.containernum || `#${c.containerkey}`}</span>
+                                <span className="wb-container-meta">
+                                  {c.container_type}
+                                  {c.weight ? ` · ${c.weight}` : ""}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="wb-picker-summary">
+                          {pickedContainers.length === 0
+                            ? `None selected — ${availableContainers.length} available`
+                            : `${pickedContainers.length} of ${availableContainers.length} selected${
+                                selectionBreakdown ? ` · ${selectionBreakdown}` : ""
+                              }`}
+                        </div>
+                      </>
                     )}
                   </div>
                 ) : (
@@ -708,20 +860,48 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                       ))}
                     </select>
                   </div>
+
+                  {/* Resolved by the server as the route/date/containers change,
+                      using the same code the save runs — so this is the number
+                      that will be written, not an estimate. */}
+                  <div className="wb-assign-field">
+                    <label>Subcontractor Rate</label>
+                    <input
+                      type="text"
+                      readOnly
+                      className={`wb-rate-field ${ratePreview.status}`}
+                      value={
+                        ratePreview.status === "ok"
+                          ? `R ${Number(ratePreview.driverrate).toFixed(2)}`
+                          : ratePreview.status === "loading"
+                            ? "Checking…"
+                            : ratePreview.status === "error"
+                              ? "No rate"
+                              : "—"
+                      }
+                    />
+                  </div>
                   <div className="wb-assign-spacer" />
-                  <button
-                    className="wb-next-btn"
-                    onClick={handleSaveAssignment}
-                    disabled={!canSave || saving}
-                    title={
-                      !canSave
-                        ? "Pick containers, a route that resolves a rate and a subcontractor"
-                        : ""
-                    }
-                  >
+                  <button className="wb-next-btn" onClick={handleSaveAssignment} disabled={!canSave || saving}>
                     {saving ? "Saving…" : "Save Assignment"}
                   </button>
                 </div>
+
+                {/* Say what the rate is based on, or what is still missing —
+                    rather than leaving a greyed-out button unexplained. */}
+                {ratePreview.status === "ok" && (
+                  <div className="wb-rate-note ok">
+                    Rated as {ratePreview.containerType} for this route and date.
+                  </div>
+                )}
+                {ratePreview.status === "error" && (
+                  <div className="wb-rate-note err">{ratePreview.message}</div>
+                )}
+                {ratePreview.status !== "error" && missing.length > 0 && (
+                  <div className="wb-rate-note">
+                    Still needed: {missing.join(", ")}.
+                  </div>
+                )}
               </div>
             )}
 
@@ -747,7 +927,10 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
           <div className="wb-assign-card">
             <div className="wb-docs-head">
               <div>
-                <h3 style={{ margin: 0 }}>Documents</h3>
+                <h3 style={{ margin: 0 }}>
+                  <span className="wb-step">3</span>
+                  Upload documents
+                </h3>
                 <div className="wb-docs-sub">PODs and supporting documentation for {refOf(child)}.</div>
               </div>
               {!readOnly && (
@@ -832,6 +1015,24 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         )}
 
         {/* ── Footer actions ── */}
+        {!readOnly && (
+          <div className={`wb-finalise-blockers ${blockers.length === 0 ? "ready" : ""}`}>
+            <strong>
+              <span className="wb-step">4</span>
+              {blockers.length === 0
+                ? "Ready to finalise — this will raise the invoice for the whole group."
+                : "Before finalising:"}
+            </strong>
+            {blockers.length > 0 && (
+              <ul>
+                {blockers.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         <div className="wb-assign-actions">
           {!readOnly && (
             <button className="wb-btn-outline" onClick={loadGroup}>
@@ -846,9 +1047,6 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
               className="wb-btn-finalise"
               disabled={!allComplete || finalising}
               onClick={handleFinalise}
-              title={
-                !allComplete ? "Every container must be assigned and every instruction must have a document" : ""
-              }
             >
               {finalising ? "Finalising…" : "✓ Finalise Instruction"}
             </button>

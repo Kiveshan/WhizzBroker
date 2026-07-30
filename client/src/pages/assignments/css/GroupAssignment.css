@@ -37,6 +37,9 @@
   font-size: 16px;
   font-weight: 700;
   color: #101828;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* Accordion (Instruction Information / Containers) */
@@ -134,7 +137,37 @@
   color: #101828;
 }
 
+/* Numbered step badge in each card heading, so the order of the flow is
+   readable at a glance instead of inferred from the card order. */
+.wb-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: #1570ef;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.wb-step-hint {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #667085;
+}
+
 /* Group-wide container assignment progress */
+.wb-progress-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #667085;
+}
+
 .wb-progress {
   height: 8px;
   border-radius: 999px;
@@ -183,6 +216,29 @@
   text-decoration: underline;
 }
 
+.wb-container-filter {
+  width: 100%;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.wb-container-filter:focus {
+  outline: none;
+  border-color: #84caff;
+  box-shadow: 0 0 0 3px rgba(21, 112, 239, 0.12);
+}
+
+.wb-picker-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #475467;
+  font-weight: 600;
+}
+
 .wb-container-options {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -208,9 +264,45 @@
   background: #f5faff;
 }
 
+.wb-container-option.picked {
+  border-color: #84caff;
+  background: #eff8ff;
+}
+
 .wb-container-num {
   font-weight: 600;
   color: #101828;
+}
+
+/* Live rate readout on the draft assignment */
+.wb-rate-field.ok {
+  color: #027a48;
+  font-weight: 600;
+}
+
+.wb-rate-field.error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.wb-rate-field.loading {
+  color: #667085;
+  font-style: italic;
+}
+
+.wb-rate-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.wb-rate-note.ok {
+  color: #027a48;
+}
+
+.wb-rate-note.err {
+  color: #b42318;
+  font-weight: 600;
 }
 
 .wb-container-meta {
@@ -533,6 +625,37 @@
 }
 
 /* Footer action buttons */
+/* Why "Finalise" is still disabled, named per instruction */
+.wb-finalise-blockers {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px solid #fedf89;
+  background: #fffcf5;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #93370d;
+}
+
+.wb-finalise-blockers.ready {
+  border-color: #a6f4c5;
+  background: #f6fef9;
+  color: #027a48;
+}
+
+.wb-finalise-blockers strong {
+  display: flex;
+  align-items: center;
+}
+
+.wb-finalise-blockers ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.wb-finalise-blockers li {
+  margin-top: 2px;
+}
+
 .wb-assign-actions {
   display: flex;
   gap: 14px;
