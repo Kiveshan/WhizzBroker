@@ -1,20 +1,27 @@
 import ExcelJS from "exceljs"
 
 /**
- * Exports one assignment leg as a load sheet the subcontractor can be sent:
- * a header block of instruction/route/subbie detail, then one row per item the
- * leg is carrying (containers, or the instruction's weight entries for break
- * bulk, which is assigned whole rather than per entry).
+ * Exports one assignment leg as a load sheet the subcontractor can be sent.
  *
- * Client-side only — everything shown here already came down with the group.
+ * Styled to match the group invoice document (GroupInvoiceDocument.jsx):
+ * steel-blue banding, pale-blue table headers, Arial throughout — so a subbie
+ * receiving both recognises them as the same company's paperwork.
+ *
+ * Client-side only: everything here already came down with the group.
  */
 
-const LABEL_COL = 1
-const VALUE_COL = 2
+// Lifted from groupInvoiceDocStyles so the two documents cannot drift apart.
+const BRAND = "FF4682B4" // #4682b4 section banding
+const BRAND_SOFT = "FFB8D1F3" // #b8d1f3 table headers
+const RULE = "FFDDDDDD" // #ddd borders
+const INK = "FF101828"
+const MUTED = "FF667085"
 
-const BORDER = { style: "thin", color: { argb: "FFD0D5DD" } }
+const FONT = "Arial"
+const thin = { style: "thin", color: { argb: RULE } }
+const boxed = { top: thin, left: thin, bottom: thin, right: thin }
 
-const money = (n) => (Number(n) > 0 ? Number(n) : 0)
+const LAST_COL = 4
 
 const safeFilePart = (s) =>
   String(s || "")
@@ -22,95 +29,211 @@ const safeFilePart = (s) =>
     .replace(/\s+/g, "-")
     .slice(0, 60) || "assignment"
 
-export async function exportLegToExcel({ leg, instruction, group }) {
-  const workbook = new ExcelJS.Workbook()
-  workbook.created = new Date()
-  workbook.modified = new Date()
+const clean = (v) => (v === null || v === undefined || v === "" ? "—" : v)
 
-  const sheet = workbook.addWorksheet("Load Sheet")
-  sheet.columns = [
-    { width: 26 },
-    { width: 34 },
-    { width: 16 },
-    { width: 40 },
-  ]
-
-  const title = sheet.addRow(["Subcontractor Load Sheet"])
-  title.font = { size: 14, bold: true }
-  sheet.mergeCells(title.number, 1, title.number, 4)
-  sheet.addRow([])
-
-  const detail = [
-    ["Client", group?.client_name],
-    ["Group Reference", group?.group_ref],
-    ["Company File Reference", instruction?.ksmFileRef],
-    ["Client File Reference", instruction?.clientFileRef],
-    ["Booking Reference", instruction?.booking_ref],
-    ["Vessel", instruction?.vessel_name],
-    ["Shipment Type", instruction?.shipmenttype],
-    ["Pickup", instruction?.pickup],
-    ["Drop-Off", instruction?.dropoff],
-    ["Subcontractor", leg?.subbieName],
-    ["Route", leg?.startingpoint && leg?.destination ? `${leg.startingpoint} → ${leg.destination}` : null],
-    ["Date", leg?.legDate ? String(leg.legDate).split("T")[0] : null],
-  ]
-
-  for (const [label, value] of detail) {
-    const row = sheet.addRow([label, value || "—"])
-    row.getCell(LABEL_COL).font = { bold: true }
-    row.getCell(VALUE_COL).alignment = { wrapText: true }
-  }
-
-  const rateRow = sheet.addRow(["Subcontractor Rate", money(leg?.driverrate)])
-  rateRow.getCell(LABEL_COL).font = { bold: true }
-  rateRow.getCell(VALUE_COL).numFmt = "R #,##0.00"
-
-  sheet.addRow([])
-
-  // Break bulk carries no container rows — the leg covers the instruction's
-  // weight entries as a whole, so list those instead.
+/**
+ * Builds the workbook. Split from the download so it can be exercised outside a
+ * browser (no Blob/document here) — exportLegToExcel below does the saving.
+ */
+export function buildLegWorkbook({ leg, instruction, group }) {
+  const company = group?.company || {}
   const isBreakBulk = String(instruction?.shipment_type) === "4"
   const items = isBreakBulk ? instruction?.weightRows || [] : leg?.containers || []
 
-  const headerValues = isBreakBulk
-    ? ["DN Number", "Ticket Number", "Receipt Book Number", `Weight${instruction?.rateweight ? ` (${instruction.rateweight})` : ""}`]
+  const workbook = new ExcelJS.Workbook()
+  workbook.creator = company.companyname || "WhizzBroker"
+  workbook.created = new Date()
+  workbook.modified = new Date()
+
+  const sheet = workbook.addWorksheet("Load Sheet", {
+    views: [{ showGridLines: false }],
+    pageSetup: { paperSize: 9, orientation: "portrait", fitToPage: true, fitToWidth: 1, margins: {
+      left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3,
+    } },
+  })
+  sheet.columns = [{ width: 28 }, { width: 34 }, { width: 18 }, { width: 42 }]
+
+  // Every row inherits Arial; individual cells override size/weight below.
+  const row = (values = []) => {
+    const r = sheet.addRow(values)
+    r.font = { name: FONT, size: 10, color: { argb: INK } }
+    return r
+  }
+
+  const merge = (r, from = 1, to = LAST_COL) => sheet.mergeCells(r.number, from, r.number, to)
+
+  // ── Letterhead ──
+  const nameRow = row([company.companyname || "Load Sheet"])
+  nameRow.font = { name: FONT, size: 16, bold: true, color: { argb: INK } }
+  nameRow.height = 22
+  merge(nameRow)
+
+  const addressLine = [company.address, company.suburb, company.cluster_box].filter(Boolean).join(", ")
+  if (addressLine) {
+    const r = row([addressLine])
+    r.font = { name: FONT, size: 9, color: { argb: MUTED } }
+    merge(r)
+  }
+  const contactLine = [
+    company.phonenumber ? `Tel: ${company.phonenumber}` : null,
+    company.vat_reg_num ? `VAT Reg: ${company.vat_reg_num}` : null,
+  ]
+    .filter(Boolean)
+    .join("    ")
+  if (contactLine) {
+    const r = row([contactLine])
+    r.font = { name: FONT, size: 9, color: { argb: MUTED } }
+    merge(r)
+  }
+
+  row([])
+
+  // ── Title band ──
+  const title = row(["SUBCONTRACTOR LOAD SHEET"])
+  title.height = 26
+  merge(title)
+  const titleCell = title.getCell(1)
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND } }
+  titleCell.font = { name: FONT, size: 13, bold: true, color: { argb: "FFFFFFFF" } }
+  titleCell.alignment = { horizontal: "center", vertical: "middle" }
+
+  row([])
+
+  // ── Detail pairs, two per row so the sheet reads like the invoice header ──
+  const sectionHeader = (label) => {
+    const r = row([label])
+    r.height = 20
+    merge(r)
+    const c = r.getCell(1)
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_SOFT } }
+    c.font = { name: FONT, size: 10, bold: true, color: { argb: INK } }
+    c.alignment = { vertical: "middle" }
+    c.border = boxed
+    return r
+  }
+
+  const pairRow = (leftLabel, leftValue, rightLabel, rightValue) => {
+    const r = row([leftLabel, clean(leftValue), rightLabel, clean(rightValue)])
+    for (const col of [1, 3]) {
+      const c = r.getCell(col)
+      c.font = { name: FONT, size: 9, bold: true, color: { argb: MUTED } }
+      c.border = boxed
+      c.alignment = { vertical: "middle" }
+    }
+    for (const col of [2, 4]) {
+      const c = r.getCell(col)
+      c.border = boxed
+      c.alignment = { vertical: "middle", wrapText: true }
+    }
+    return r
+  }
+
+  sectionHeader("Instruction")
+  pairRow("Client", group?.client_name, "Group Reference", group?.group_ref)
+  pairRow("Company File Ref", instruction?.ksmFileRef, "Client File Ref", instruction?.clientFileRef)
+  pairRow("Booking Reference", instruction?.booking_ref, "Vessel", instruction?.vessel_name)
+  pairRow("Shipment Type", instruction?.shipmenttype, "Cargo", isBreakBulk ? "Break bulk" : "Containers")
+  pairRow("Pickup", instruction?.pickup, "Drop-Off", instruction?.dropoff)
+
+  row([])
+
+  sectionHeader("Assignment")
+  pairRow("Subcontractor", leg?.subbieName, "Date", leg?.legDate ? String(leg.legDate).split("T")[0] : null)
+  pairRow(
+    "Route",
+    leg?.startingpoint && leg?.destination ? `${leg.startingpoint} → ${leg.destination}` : null,
+    isBreakBulk ? "Weight Entries" : "Containers",
+    items.length,
+  )
+
+  // Rate gets its own emphasised row — it is the number that gets queried.
+  const rate = row(["Subcontractor Rate", Number(leg?.driverrate) || 0, "", ""])
+  rate.getCell(1).font = { name: FONT, size: 9, bold: true, color: { argb: MUTED } }
+  const rateValue = rate.getCell(2)
+  rateValue.numFmt = 'R #,##0.00'
+  rateValue.font = { name: FONT, size: 11, bold: true, color: { argb: INK } }
+  for (let c = 1; c <= LAST_COL; c += 1) rate.getCell(c).border = boxed
+
+  row([])
+
+  // ── Item table ──
+  const headers = isBreakBulk
+    ? ["DN Number", "Ticket Number", "Receipt Book No.", `Weight${instruction?.rateweight ? ` (${instruction.rateweight})` : ""}`]
     : ["Container Number", "Container Type", "Weight", "Cargo Description"]
 
-  const header = sheet.addRow(headerValues)
-  header.font = { bold: true }
-  header.eachCell((cell) => {
-    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F7FB" } }
-    cell.border = { top: BORDER, left: BORDER, bottom: BORDER, right: BORDER }
+  const head = row(headers)
+  head.height = 20
+  head.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_SOFT } }
+    cell.font = { name: FONT, size: 10, bold: true, color: { argb: INK } }
+    cell.border = boxed
+    cell.alignment = { vertical: "middle" }
   })
 
   if (items.length === 0) {
-    sheet.addRow([isBreakBulk ? "No weight entries" : "No containers on this assignment"])
+    const empty = row([isBreakBulk ? "No weight entries" : "No containers on this assignment"])
+    merge(empty)
+    empty.getCell(1).font = { name: FONT, size: 10, italic: true, color: { argb: MUTED } }
+    empty.getCell(1).border = boxed
   } else {
-    for (const item of items) {
-      const row = isBreakBulk
-        ? sheet.addRow([
-            item.ksm_dm_no || "—",
-            item.ticket_no || "—",
-            item.receipt_book_no || "—",
+    items.forEach((item, i) => {
+      const r = isBreakBulk
+        ? row([clean(item.ksm_dm_no), clean(item.ticket_no), clean(item.receipt_book_no), item.weight ?? "—"])
+        : row([
+            clean(item.containernum || `#${item.containerkey}`),
+            clean(item.container_type),
             item.weight ?? "—",
+            clean(item.cargo_description),
           ])
-        : sheet.addRow([
-            item.containernum || `#${item.containerkey}`,
-            item.container_type || "—",
-            item.weight ?? "—",
-            item.cargo_description || "—",
-          ])
-      row.eachCell((cell) => {
-        cell.border = { top: BORDER, left: BORDER, bottom: BORDER, right: BORDER }
+      r.eachCell((cell) => {
+        cell.border = boxed
+        cell.alignment = { vertical: "middle", wrapText: true }
+        // Banded rows: easier to follow across four columns on a printed page.
+        if (i % 2 === 1) {
+          cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7FAFC" } }
+        }
       })
-    }
+    })
 
-    const countRow = sheet.addRow([
-      isBreakBulk ? "Total weight entries" : "Total containers",
-      items.length,
-    ])
-    countRow.getCell(LABEL_COL).font = { bold: true }
+    const totalRow = row([isBreakBulk ? "Total weight entries" : "Total containers", items.length, "", ""])
+    totalRow.getCell(1).font = { name: FONT, size: 10, bold: true, color: { argb: INK } }
+    totalRow.getCell(2).font = { name: FONT, size: 10, bold: true, color: { argb: INK } }
+    for (let c = 1; c <= LAST_COL; c += 1) {
+      totalRow.getCell(c).border = boxed
+      totalRow.getCell(c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F0F0" } }
+    }
   }
+
+  row([])
+
+  // ── Sign-off, so the sheet doubles as a POD the driver can sign ──
+  const signHead = sectionHeader("Acknowledgement")
+  signHead.getCell(1).border = boxed
+  const sign = row(["Driver Name", "", "Signature", ""])
+  sign.height = 30
+  sign.getCell(1).font = { name: FONT, size: 9, bold: true, color: { argb: MUTED } }
+  sign.getCell(3).font = { name: FONT, size: 9, bold: true, color: { argb: MUTED } }
+  for (let c = 1; c <= LAST_COL; c += 1) sign.getCell(c).border = boxed
+
+  const footer = row([`Generated ${new Date().toLocaleDateString("en-ZA")} · ${company.companyname || ""}`])
+  merge(footer)
+  footer.getCell(1).font = { name: FONT, size: 8, italic: true, color: { argb: MUTED } }
+  footer.getCell(1).alignment = { horizontal: "center" }
+
+  // Freeze under the item-table header so long container lists stay readable.
+  sheet.views = [{ state: "frozen", ySplit: head.number, showGridLines: false }]
+
+  return workbook
+}
+
+export function legFileName({ leg, instruction }) {
+  return `load-sheet-${safeFilePart(
+    instruction?.ksmFileRef || instruction?.clientFileRef || instruction?.booking_ref || instruction?.m1key,
+  )}-${safeFilePart(leg?.subbieName)}.xlsx`
+}
+
+export async function exportLegToExcel({ leg, instruction, group }) {
+  const workbook = buildLegWorkbook({ leg, instruction, group })
 
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], {
@@ -119,9 +242,7 @@ export async function exportLegToExcel({ leg, instruction, group }) {
   const downloadUrl = window.URL.createObjectURL(blob)
   const link = document.createElement("a")
   link.href = downloadUrl
-  link.download = `load-sheet-${safeFilePart(
-    instruction?.ksmFileRef || instruction?.clientFileRef || instruction?.booking_ref || instruction?.m1key,
-  )}-${safeFilePart(leg?.subbieName)}.xlsx`
+  link.download = legFileName({ leg, instruction })
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

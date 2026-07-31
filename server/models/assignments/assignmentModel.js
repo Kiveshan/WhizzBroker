@@ -1235,6 +1235,15 @@ export const getGroupForAssignment = async (groupId) => {
   );
   if (groupResult.rows.length === 0) return null;
 
+  // Letterhead for the per-leg load sheet the assignment screen exports. Same
+  // source and shape the group invoice uses, so both documents carry identical
+  // company details.
+  const companyResult = await pool.query(
+    `SELECT companyname, address, suburb, vat_reg_num, cluster_box,
+            COALESCE(cell_num, cell_num2) AS phonenumber
+     FROM public.usertable WHERE roleid = 1 AND status = 'active' LIMIT 1`
+  );
+
   const childRows = await pool.query(
     `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
             m.shipment_type, s.shipmenttype, m.pickup, m.dropoff,
@@ -1345,7 +1354,7 @@ export const getGroupForAssignment = async (groupId) => {
     });
   }
 
-  return { ...groupResult.rows[0], instructions };
+  return { ...groupResult.rows[0], company: companyResult.rows[0] || {}, instructions };
 };
 
 /**
