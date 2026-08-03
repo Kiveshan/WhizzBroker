@@ -36,7 +36,7 @@ const CompanyHeader = ({ subtitle }) => {
     <div className="po-form-wrapper">
       {/* Letterhead — same-origin so html2canvas can rasterise it for the PDF */}
       <div className="po-letterhead">
-        <img className="po-logo" src={BRAND_LOGO_SRC} alt="" />
+        <img className="po-letterhead-logo" src={BRAND_LOGO_SRC} alt="" />
       </div>
 
       <div className="po-header">

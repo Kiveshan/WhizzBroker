@@ -15,7 +15,10 @@
   padding: 4px 0 10px;
 }
 
-.po-form-wrapper .po-logo {
+/* Named distinctly from the older, now-unused .po-logo rule further down
+   (a leftover from a logo that used to sit inside the blue banner) so the two
+   don't collide by source order. */
+.po-form-wrapper .po-letterhead-logo {
   height: 44px;
   width: auto;
 }
