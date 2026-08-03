@@ -22,6 +22,8 @@ const FinanceClerkWageSlip = () => {
   const [employeeData, setEmployeeData] = useState(null);
   const [legs, setLegs] = useState([]);
   const [downloading, setDownloading] = useState(false);
+  const [companyData, setCompanyData] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(true);
 
   const wageSlipRef = useRef(null);
   const [wageData, setWageData] = useState({
@@ -203,6 +205,22 @@ const FinanceClerkWageSlip = () => {
       return { success: false, error: true };
     }
   };
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const response = await api.get("/api/companies");
+        setCompanyData(response.data);
+      } catch (error) {
+        console.error("Error fetching company details:", error);
+        setCompanyData(null);
+      } finally {
+        setCompanyLoading(false);
+      }
+    };
+
+    fetchCompany();
+  }, []);
 
   // Update the useEffect hook to handle wage slip saving more carefully
   useEffect(() => {
@@ -730,7 +748,7 @@ if (!useStoredData) {
   return (
     <div className="wageslip-page-wrapper">
       <div className="wageslip-container">
-        {loading ? (
+        {loading || companyLoading ? (
           <div className="wageslip-loading-container">
             Loading employee data...
           </div>
@@ -748,11 +766,15 @@ if (!useStoredData) {
             <div className="wageslip-header">
               <div></div>
               <div className="wageslip-company-info">
-                <p className="wageslip-company-name">KSM Carriers</p>
-                <p className="wageslip-company-contact">
-                  accounts@ksmcarriers.co.za
+                <p className="wageslip-company-name">
+                  {companyData?.companyname || ""}
                 </p>
-                <p className="wageslip-company-contact">+27 71 675 2775</p>
+                <p className="wageslip-company-contact">
+                  {companyData?.email || ""}
+                </p>
+                <p className="wageslip-company-contact">
+                  {companyData?.cell_num || companyData?.cell_num2 || ""}
+                </p>
               </div>
             </div>
 
@@ -958,7 +980,7 @@ if (!useStoredData) {
           <button
             className="downloadwage1 wageslip-download-button"
             onClick={handleDownloadWageSlip}
-            disabled={downloading}
+            disabled={downloading || companyLoading || !companyData}
             style={{ marginLeft: "202px" }}
           >
             {downloading ? "Downloading..." : "Download Wage Slip"}
