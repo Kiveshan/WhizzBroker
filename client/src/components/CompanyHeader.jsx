@@ -2,6 +2,7 @@ import "../pages/Creditors/purchaseOrder/css/PO.css";
 
 import { useEffect, useState } from "react";
 import api from "../api";
+import { BRAND_LOGO_SRC } from "../utils/brandLogo.js";
 
 const CompanyHeader = ({ subtitle }) => {
   const [company, setCompany] = useState(null);
@@ -33,6 +34,11 @@ const CompanyHeader = ({ subtitle }) => {
   return (
     <>
     <div className="po-form-wrapper">
+      {/* Letterhead — same-origin so html2canvas can rasterise it for the PDF */}
+      <div className="po-letterhead">
+        <img className="po-logo" src={BRAND_LOGO_SRC} alt="" />
+      </div>
+
       <div className="po-header">
         <div className="po-header-left">
           <div className="po-title-container">

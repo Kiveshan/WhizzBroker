@@ -6,6 +6,7 @@ import api from "../../../api.js";
 import "./css/CreditNoteForm.css"; // Reuse the same CSS for layout
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import { BRAND_LOGO_SRC } from "../../../utils/brandLogo.js";
 
 const CreditNoteView = () => {
   const navigate = useNavigate();
@@ -215,6 +216,8 @@ const handleDownloadPDF = async () => {
         </div>
 
         <div className="company-header">
+          {/* Letterhead — same-origin so html2canvas can rasterise it */}
+          <img className="company-logo" src={BRAND_LOGO_SRC} alt="" />
           {companyError ? (
             <p className="error-message">{companyError}</p>
           ) : (

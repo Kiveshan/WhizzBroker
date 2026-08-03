@@ -1,4 +1,5 @@
 import ExcelJS from "exceljs"
+import { loadBrandLogo, BRAND_LOGO_ASPECT } from "../brandLogo.js"
 
 /**
  * Exports one assignment leg as a load sheet the subcontractor can be sent.
@@ -31,11 +32,19 @@ const safeFilePart = (s) =>
 
 const clean = (v) => (v === null || v === undefined || v === "" ? "—" : v)
 
+// Logo block at the top of the sheet, in pixels. Excel rows are sized in points,
+// so the spacer rows below convert back at 0.75pt/px.
+const LOGO_PX_WIDTH = 208
+const LOGO_ROWS = 4
+
 /**
  * Builds the workbook. Split from the download so it can be exercised outside a
  * browser (no Blob/document here) — exportLegToExcel below does the saving.
+ *
+ * `logo` is optional ({ base64, extension } from loadBrandLogo); without it the
+ * sheet falls back to the text-only letterhead.
  */
-export function buildLegWorkbook({ leg, instruction, group }) {
+export function buildLegWorkbook({ leg, instruction, group, logo = null }) {
   const company = group?.company || {}
   const isBreakBulk = String(instruction?.shipment_type) === "4"
   const items = isBreakBulk ? instruction?.weightRows || [] : leg?.containers || []
@@ -63,6 +72,22 @@ export function buildLegWorkbook({ leg, instruction, group }) {
   const merge = (r, from = 1, to = LAST_COL) => sheet.mergeCells(r.number, from, r.number, to)
 
   // ── Letterhead ──
+  // The logo floats over spacer rows: ExcelJS anchors images to the grid, so the
+  // rows exist purely to reserve the vertical space it occupies.
+  if (logo) {
+    const logoPxHeight = Math.round(LOGO_PX_WIDTH / BRAND_LOGO_ASPECT)
+    for (let i = 0; i < LOGO_ROWS; i += 1) {
+      row([]).height = (logoPxHeight / LOGO_ROWS) * 0.75
+    }
+
+    const imageId = workbook.addImage({ base64: logo.base64, extension: logo.extension })
+    sheet.addImage(imageId, {
+      tl: { col: 0, row: 0 },
+      ext: { width: LOGO_PX_WIDTH, height: logoPxHeight },
+      editAs: "oneCell",
+    })
+  }
+
   const nameRow = row([company.companyname || "Load Sheet"])
   nameRow.font = { name: FONT, size: 16, bold: true, color: { argb: INK } }
   nameRow.height = 22
@@ -233,7 +258,9 @@ export function legFileName({ leg, instruction }) {
 }
 
 export async function exportLegToExcel({ leg, instruction, group }) {
-  const workbook = buildLegWorkbook({ leg, instruction, group })
+  // Null just means the sheet gets the text-only letterhead.
+  const logo = await loadBrandLogo()
+  const workbook = buildLegWorkbook({ leg, instruction, group, logo })
 
   const buffer = await workbook.xlsx.writeBuffer()
   const blob = new Blob([buffer], {

@@ -5,6 +5,7 @@ import api from "../../../api";
 import "../css/finance-clerk-wageslip.css";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { BRAND_LOGO_SRC } from "../../../utils/brandLogo.js";
 
 const FinanceClerkWageSlip = () => {
   const navigate = useNavigate();
@@ -737,6 +738,12 @@ if (!useStoredData) {
           <div className="wageslip-error-container">{error}</div>
         ) : (
           <div className="wageslip-slip-container" ref={wageSlipRef}>
+            {/* Letterhead — kept on white above the blue band, since the logo
+                artwork carries its own white background. */}
+            <div className="wageslip-letterhead">
+              <img className="wageslip-logo" src={BRAND_LOGO_SRC} alt="" />
+            </div>
+
             {/* Header */}
             <div className="wageslip-header">
               <div></div>

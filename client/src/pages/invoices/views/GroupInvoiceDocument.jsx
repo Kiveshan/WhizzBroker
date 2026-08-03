@@ -10,6 +10,8 @@
  * InvoiceTemplate.css): Arial, black hairline banner borders, light-blue
  * table headers, steel-blue summary header, red italic thank-you line.
  */
+import { BRAND_LOGO_SRC } from "../../../utils/brandLogo.js"
+
 const money = (n) =>
   `R ${Number(n || 0).toLocaleString("en-ZA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
@@ -23,6 +25,11 @@ export function GroupInvoiceDocument({ data }) {
 
   return (
     <div className="wb-inv-paper">
+      {/* Letterhead — same-origin so html2canvas can rasterise it */}
+      <div className="wb-inv-letterhead">
+        <img className="wb-inv-logo" src={BRAND_LOGO_SRC} alt="" />
+      </div>
+
       {/* Company name banner */}
       <div className="wb-inv-transport">
         <div className="wb-inv-sectiontitle">{company.companyname || "Company"}</div>
@@ -166,6 +173,9 @@ export function GroupInvoiceDocument({ data }) {
 /** Shared styles for the group invoice document — mirrors InvoiceTemplate.css. */
 export const groupInvoiceDocStyles = `
   .wb-inv-paper { max-width: 800px; margin: 0 auto; background: #fff; font-family: Arial, sans-serif; padding: 20px; color: #000; }
+
+  .wb-inv-letterhead { padding-bottom: 12px; }
+  .wb-inv-logo { display: block; margin: 0 auto; height: 46px; width: auto; }
 
   .wb-inv-transport { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 10px 0; }
   .wb-inv-sectiontitle { text-align: center; font-size: 16px; font-weight: bold; }

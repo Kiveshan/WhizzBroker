@@ -6,6 +6,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import TransactionsTableWrapper from "./TransactionsTableWrapper.jsx";
 import api from "../../../api"; // Import the axios instance
+import { loadBrandLogo, brandLogoHeight } from "../../../utils/brandLogo.js";
 
 const ClientStatement = () => {
   const navigate = useNavigate();
@@ -182,11 +183,14 @@ const ClientStatement = () => {
   };
 
   // Generate PDF using jsPDF for consistent formatting
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (isGenerating) return;
     setIsGenerating(true);
 
     try {
+      // Null just means we fall back to the plain text header.
+      const logo = await loadBrandLogo();
+
       const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
       // Theme similar to ClientInvoice
@@ -201,18 +205,27 @@ const ClientStatement = () => {
       const pageHeight = doc.internal.pageSize.getHeight();
       let currentY = margins.top;
 
+      // Letterhead: the logo needs a white field behind it, so it sits above the
+      // dark band rather than inside it.
+      let bandTop = 0;
+      if (logo) {
+        const logoWidth = 42;
+        doc.addImage(logo.dataUrl, 'JPEG', margins.left, 5, logoWidth, brandLogoHeight(logoWidth));
+        bandTop = Math.round(5 + brandLogoHeight(logoWidth) + 4);
+      }
+
       // Header band
       doc.setFillColor(...brand.primary);
-      doc.rect(0, 0, pageWidth, 18, 'F');
+      doc.rect(0, bandTop, pageWidth, 18, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(fonts.title);
-      doc.text(statement.company_name || "", margins.left, 12);
+      doc.text(statement.company_name || "", margins.left, bandTop + 12);
       doc.setFontSize(fonts.header);
       doc.setFont('helvetica', 'normal');
-      doc.text('STATEMENT OF ACCOUNT', pageWidth - margins.right, 12, { align: 'right' });
+      doc.text('STATEMENT OF ACCOUNT', pageWidth - margins.right, bandTop + 12, { align: 'right' });
       doc.setTextColor(0, 0, 0);
-      currentY = 18 + 6;
+      currentY = bandTop + 18 + 6;
 
       // Two-column From / To
       const colGap = 8;

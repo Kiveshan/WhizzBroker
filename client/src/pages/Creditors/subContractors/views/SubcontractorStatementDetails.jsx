@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from "react";
 import api from "../../../../api";
 import jsPDF from "jspdf";
 import { Workbook } from "exceljs";
+import { loadBrandLogo, brandLogoHeight } from "../../../../utils/brandLogo.js";
 import "../css/SubcontractorStatementDetail.css";
 
 const SubcontractorStatementDetail = () => {
@@ -128,10 +129,13 @@ const SubcontractorStatementDetail = () => {
     fetchStatementDetail();
   }, [statementId, subcontractorId, subcontractorName, subei_reg_num, legids]);
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     if (isGenerating || !statement || !companyInfo || !subcontractorInfo)
       return;
     setIsGenerating(true);
+
+    // Null just means we fall back to the plain text header.
+    const logo = await loadBrandLogo();
 
     const doc = new jsPDF({
       orientation: "portrait",
@@ -150,29 +154,46 @@ const SubcontractorStatementDetail = () => {
     const darkGray = [26, 54, 93]; // #1a365d
     const mediumGray = [74, 85, 104]; // #4a5568
 
-    // Professional Header with gradient-like background
+    // Professional Header with gradient-like background. The box grows when the
+    // logo is present so the letterhead sits above the legal company name.
+    const logoWidth = 48;
+    const headerHeight = logo ? 32 : 25;
     doc.setFillColor(...lightBlue);
-    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, 25, 3, 3, "F");
+    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, headerHeight, 3, 3, "F");
 
     // Header border
     doc.setDrawColor(...primaryBlue);
     doc.setLineWidth(0.5);
-    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, 25, 3, 3, "S");
+    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, headerHeight, 3, 3, "S");
+
+    if (logo) {
+      doc.addImage(
+        logo.dataUrl,
+        "JPEG",
+        margin + pageWidth / 2 - logoWidth / 2,
+        y - 1,
+        logoWidth,
+        brandLogoHeight(logoWidth)
+      );
+    }
 
     // Company Name
-    doc.setFontSize(22);
+    doc.setFontSize(logo ? 12 : 22);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
-    doc.text(companyInfo.name, margin + pageWidth / 2, y + 8, {
-      align: "center",
-    });
+    doc.text(
+      companyInfo.name,
+      margin + pageWidth / 2,
+      logo ? y - 1 + brandLogoHeight(logoWidth) + 5 : y + 8,
+      { align: "center" }
+    );
 
     // Company Details
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...mediumGray);
 
-    y += 35;
+    y += headerHeight + 10;
 
     // Document Title
     doc.setFontSize(18);

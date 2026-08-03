@@ -9,6 +9,23 @@
   font-family: "Roboto", Arial, sans-serif;
 }
 
+.po-form-wrapper .po-letterhead {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 10px;
+}
+
+.po-form-wrapper .po-logo {
+  height: 44px;
+  width: auto;
+}
+
+/* The banner below bleeds to the container edge with a negative top margin;
+   cancel it so it doesn't ride up over the letterhead. */
+.po-form-wrapper .po-letterhead + .po-header {
+  margin-top: 0;
+}
+
 .po-form-wrapper .po-header {
   display: flex;
   justify-content: center;

@@ -17,6 +17,17 @@
     background-color: #fff;
   }
   
+  .wageslip-letterhead {
+    background-color: #fff;
+    padding: 10px 12px;
+  }
+
+  .wageslip-logo {
+    display: block;
+    height: 40px;
+    width: auto;
+  }
+
   .wageslip-header {
     background-color: #b8d1f3;
     padding: 8px 12px;

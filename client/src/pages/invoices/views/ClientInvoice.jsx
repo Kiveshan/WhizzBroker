@@ -5,6 +5,7 @@ import "../css/InvoiceTemplate.css";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../../api";
+import { loadBrandLogo, brandLogoHeight } from "../../../utils/brandLogo.js";
 
 // Utility function for formatting dates
 const formatDate = (dateString) => {
@@ -310,10 +311,14 @@ const ClientInvoice = forwardRef(({
     return 0;
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     setPdfLoading(true);
 
     try {
+      // Fetched before anything is drawn; null just means we fall back to the
+      // plain text header rather than failing the download.
+      const logo = await loadBrandLogo();
+
       const pdfContainers = finalInvoiceData.containers || [];
       const weightItems = finalInvoiceData.weightItems || [];
       const isWeightBased = Number(finalInvoiceData.shipment_type_key) === 4;
@@ -362,18 +367,27 @@ const ClientInvoice = forwardRef(({
       const pageHeight = doc.internal.pageSize.getHeight();
       let currentY = margins.top;
 
+      // Letterhead: the logo needs a white field behind it, so it sits above the
+      // dark band rather than inside it.
+      let bandTop = 0;
+      if (logo) {
+        const logoWidth = 42;
+        doc.addImage(logo.dataUrl, 'JPEG', margins.left, 5, logoWidth, brandLogoHeight(logoWidth));
+        bandTop = Math.round(5 + brandLogoHeight(logoWidth) + 4);
+      }
+
       // Header band
       doc.setFillColor(...brand.primary);
-      doc.rect(0, 0, pageWidth, 18, 'F');
+      doc.rect(0, bandTop, pageWidth, 18, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(fonts.title);
-      doc.text(finalInvoiceData.companyname || "", margins.left, 12);
+      doc.text(finalInvoiceData.companyname || "", margins.left, bandTop + 12);
       doc.setFontSize(fonts.header);
       doc.setFont('helvetica', 'normal');
-      doc.text('TAX INVOICE', pageWidth - margins.right, 12, { align: 'right' });
+      doc.text('TAX INVOICE', pageWidth - margins.right, bandTop + 12, { align: 'right' });
       doc.setTextColor(0, 0, 0);
-      currentY = 18 + 6;
+      currentY = bandTop + 18 + 6;
       // Two-column Company (From) and Client (Bill To)
       const colGap = 8;
       const colWidth = (pageWidth - margins.left - margins.right - colGap) / 2;
