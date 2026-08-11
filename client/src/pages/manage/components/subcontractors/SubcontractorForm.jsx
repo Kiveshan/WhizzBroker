@@ -5,19 +5,17 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    // Validate that we have at least one driver OR one truck (not both required)
     const validDrivers = (subcontractor.drivers || []).filter((driver) => driver.name && driver.name.trim())
-    const validTrucks = (subcontractor.trucks || []).filter((truck) => truck.truckregnum && truck.truckregnum.trim())
 
-    if (validDrivers.length === 0 && validTrucks.length === 0) {
-      alert("Please provide at least one driver OR one truck (or both).")
+    if (validDrivers.length === 0) {
+      alert("Please provide at least one driver.")
       return
     }
 
     const success = await onSave({
       ...subcontractor,
       drivers: validDrivers,
-      trucks: validTrucks,
+      trucks: [],
     })
 
     if (!success) {
@@ -105,46 +103,7 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
     }
   }
 
-  const addTruck = () => {
-    const newTrucks = [
-      ...(subcontractor.trucks || []),
-      {
-        truckregnum: "",
-        trailersize: "",
-        year: "",
-        model: "",
-        vin_num: "",
-      },
-    ]
-    onChange("trucks", newTrucks)
-    onChange("truck_count", newTrucks.length)
-  }
-
-  const removeTruck = (index) => {
-    const updatedTrucks = [...(subcontractor.trucks || [])]
-    updatedTrucks.splice(index, 1)
-    onChange("trucks", updatedTrucks)
-    onChange("truck_count", updatedTrucks.length)
-  }
-
-  const handleTruckChange = (index, field, value) => {
-    const updatedTrucks = [...(subcontractor.trucks || [])]
-    if (!updatedTrucks[index]) {
-      updatedTrucks[index] = {
-        truckregnum: "",
-        trailersize: "",
-        year: "",
-        model: "",
-        vin_num: "",
-      }
-    }
-    updatedTrucks[index] = { ...updatedTrucks[index], [field]: value }
-    onChange("trucks", updatedTrucks)
-  }
-
-  // Both drivers and trucks can be empty initially
   const drivers = subcontractor.drivers || []
-  const trucks = subcontractor.trucks || []
 
   return (
     <form onSubmit={handleSubmit} className="manage-subcontractor-form">
@@ -231,39 +190,11 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
         </div>
       </div>
 
-      {/* Flexible Options Notice */}
-      <div
-        style={{
-          marginBottom: "20px",
-          padding: "15px",
-          backgroundColor: "#fff3cd",
-          borderRadius: "6px",
-          border: "1px solid #ffeaa7",
-        }}
-      >
-        <h4 style={{ margin: "0 0 10px 0", color: "#856404" }}>📋 Flexible Options:</h4>
-        <p style={{ margin: "0", color: "#856404", fontSize: "14px" }}>You can choose to add:</p>
-        <ul style={{ margin: "5px 0 0 20px", color: "#856404", fontSize: "14px" }}>
-          <li>
-            <strong>Drivers only</strong> - Just add drivers without trucks
-          </li>
-          <li>
-            <strong>Trucks only</strong> - Just add trucks without drivers
-          </li>
-          <li>
-            <strong>Both</strong> - Add both drivers and trucks
-          </li>
-        </ul>
-        <p style={{ margin: "10px 0 0 0", color: "#856404", fontSize: "14px" }}>
-          <strong>Note:</strong> At least one driver OR one truck must be provided.
-        </p>
-      </div>
-
       {/* Drivers Section */}
       <div style={{ marginBottom: "20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "15px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <h3 className="manage-section-title" style={{ margin: 0 }}>Drivers (Optional)</h3>
+            <h3 className="manage-section-title" style={{ margin: 0 }}>Drivers</h3>
             <span style={{ 
               background: "#2196F3", 
               color: "white", 
@@ -369,8 +300,8 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
               backgroundColor: "#f9f9f9",
             }}
           >
-            {driverStatusFilter === "all" 
-              ? "No drivers added yet. Click \"Add Driver\" to get started, or skip to add trucks only."
+            {driverStatusFilter === "all"
+              ? "No drivers added yet. Click \"Add Driver\" to get started."
               : `No ${driverStatusFilter} drivers found.`}
           </div>
         ) : (
@@ -559,135 +490,6 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
         )}
       </div>
 
-      {/* Trucks Section */}
-      <div style={{ marginBottom: "20px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "15px" }}>
-          <h3 className="manage-section-title">Trucks (Optional)</h3>
-          <button
-            type="button"
-            className="add-truck-button"
-            onClick={addTruck}
-            style={{
-              background: "#2196F3",
-              color: "white",
-              border: "none",
-              padding: "8px 16px",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "14px",
-            }}
-          >
-            + Add Truck
-          </button>
-        </div>
-
-        {trucks.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              color: "#666",
-              border: "2px dashed #ddd",
-              borderRadius: "6px",
-              backgroundColor: "#f0f8ff",
-            }}
-          >
-            No trucks added yet. Click "Add Truck" to get started, or skip to add drivers only.
-          </div>
-        ) : (
-          trucks.map((truck, index) => (
-            <div
-              key={index}
-              className="truck-entry"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr) auto",
-                gap: "15px",
-                alignItems: "end",
-                padding: "15px",
-                border: "1px solid #ddd",
-                borderRadius: "6px",
-                marginBottom: "15px",
-                backgroundColor: "#f0f8ff",
-              }}
-            >
-              <label>
-                <strong>Truck Registration</strong>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={truck.truckregnum || ""}
-                  onChange={(e) => handleTruckChange(index, "truckregnum", e.target.value)}
-                  placeholder="e.g., ABC123GP"
-                />
-              </label>
-
-              <label>
-                <strong>Trailer Size</strong>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={truck.trailersize || ""}
-                  onChange={(e) => handleTruckChange(index, "trailersize", e.target.value)}
-                  placeholder="e.g., 34 Ton"
-                />
-              </label>
-
-              <label>
-                <strong>Year</strong>
-                <input
-                  type="number"
-                  className="form-input"
-                  value={truck.year || ""}
-                  onChange={(e) => handleTruckChange(index, "year", e.target.value)}
-                  placeholder="e.g., 2020"
-                />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => removeTruck(index)}
-                style={{
-                  background: "#f44336",
-                  color: "white",
-                  border: "none",
-                  padding: "8px 12px",
-                  borderRadius: "4px",
-                  cursor: "pointer",
-                  fontSize: "14px",
-                  height: "fit-content",
-                }}
-                title="Remove this truck"
-              >
-                Remove
-              </button>
-
-              <label style={{ gridColumn: "1 / 2" }}>
-                <strong>Model</strong>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={truck.model || ""}
-                  onChange={(e) => handleTruckChange(index, "model", e.target.value)}
-                  placeholder="e.g., Volvo FH"
-                />
-              </label>
-
-              <label style={{ gridColumn: "2 / 3" }}>
-                <strong>VIN Number</strong>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={truck.vin_num || ""}
-                  onChange={(e) => handleTruckChange(index, "vin_num", e.target.value)}
-                  placeholder="Vehicle identification number"
-                />
-              </label>
-            </div>
-          ))
-        )}
-      </div>
-
       {/* Form Actions */}
     <div className="subcontractor-button-container">
         <button type="submit" className="subcontractor-save-button" disabled={loading}>
@@ -712,27 +514,15 @@ const SubcontractorForm = ({ subcontractor, loading, isEditing, onSave, onCancel
         <h4 style={{ margin: "0 0 10px 0", color: "#0c5460" }}>Summary:</h4>
         <p style={{ margin: "0", color: "#0c5460" }}>
           This will create{" "}
-          {drivers.filter((d) => d.name).length > 0 && (
+          {drivers.filter((d) => d.name).length > 0 ? (
             <>
-              <strong>{drivers.filter((d) => d.name).length}</strong> driver record(s)
+              <strong>{drivers.filter((d) => d.name).length}</strong> driver record(s) for{" "}
+              <strong>{subcontractor.companyname || "this company"}</strong>
             </>
-          )}
-          {drivers.filter((d) => d.name).length > 0 && trucks.filter((t) => t.truckregnum).length > 0 && " and "}
-          {trucks.filter((t) => t.truckregnum).length > 0 && (
-            <>
-              <strong>{trucks.filter((t) => t.truckregnum).length}</strong> truck record(s)
-            </>
-          )}
-          {drivers.filter((d) => d.name).length === 0 && trucks.filter((t) => t.truckregnum).length === 0 && (
+          ) : (
             <span style={{ color: "#dc3545" }}>
-              <strong>No records</strong> - Please add at least one driver or truck
+              <strong>No records</strong> - Please add at least one driver
             </span>
-          )}
-          {(drivers.filter((d) => d.name).length > 0 || trucks.filter((t) => t.truckregnum).length > 0) && (
-            <>
-              {" "}
-              for <strong>{subcontractor.companyname || "this company"}</strong>
-            </>
           )}
           .
         </p>

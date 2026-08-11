@@ -57,7 +57,6 @@ const SubcontractorTable = ({
                   <th>Company Info</th>
                   <th>Contact Details</th>
                   <th>Drivers</th>
-                  <th>Trucks</th>
                   <th>Counts</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -66,7 +65,7 @@ const SubcontractorTable = ({
               <tbody>
                 {subcontractors.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="no-data">
+                    <td colSpan="6" className="no-data">
                       No subcontractors found
                     </td>
                   </tr>
@@ -95,11 +94,6 @@ const SubcontractorTable = ({
                         <div style={{ maxWidth: "200px", fontSize: "13px" }}>{sub.driver_names || "No drivers"}</div>
                       </td>
                       <td>
-                        <div style={{ maxWidth: "150px", fontSize: "13px" }}>
-                          {sub.truck_registrations || "No trucks"}
-                        </div>
-                      </td>
-                      <td>
                         <div style={{ textAlign: "center" }}>
                           <div
                             style={{
@@ -108,21 +102,9 @@ const SubcontractorTable = ({
                               borderRadius: "12px",
                               fontSize: "12px",
                               fontWeight: "bold",
-                              marginBottom: "4px",
                             }}
                           >
                             👥 {sub.driver_count || 0}
-                          </div>
-                          <div
-                            style={{
-                              background: "#f3e5f5",
-                              padding: "4px 8px",
-                              borderRadius: "12px",
-                              fontSize: "12px",
-                              fontWeight: "bold",
-                            }}
-                          >
-                            🚛 {sub.truck_count || 0}
                           </div>
                         </div>
                       </td>
