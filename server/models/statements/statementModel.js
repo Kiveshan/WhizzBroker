@@ -78,6 +78,7 @@ const getStatementDetails = async (statementId) => {
       m1."ksmFileRef" AS invoice_task,
       m1.pickup,
       m1.dropoff,
+      m1.rate_title,
       i.invoice_num,
       a2.addon_id,
       a2.date AS addon_date,
@@ -249,6 +250,7 @@ const getStatementDetails = async (statementId) => {
             invoice_num: row.invoice_num,
             pickup: row.pickup,
             dropoff: row.dropoff,
+            rate_title: row.rate_title,
           });
         }
       }

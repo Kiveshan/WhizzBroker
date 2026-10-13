@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../css/UploadInstructionDocuments.css";
 import api from "../../../api"; // Import the Axios instance
+import { finalDestination } from "../../../utils/assignments/finalDestination.js";
 
 const DirectorDocs = () => {
   // Update the modal animation for a smoother appearance
@@ -287,15 +288,16 @@ const countContainersReachingDestination = async () => {
   try {
     // Get instruction details to get the dropoff location
     const instructionResponse = await api.get(`/instructions/${instructionId}/details`);
-    const dropoff = instructionResponse.data.dropoff;
-    
-    // Normalize dropoff by converting to lowercase and removing spaces
-    const normalizedDropoff = dropoff?.toLowerCase().replace(/\s/g, '');
-    
     // Get all legs for this instruction
     const legsResponse = await api.get(`/legs/${instructionId}`);
     const legsData = legsResponse.data;
-    
+
+    // No dropoff (rate without a route) -> the last leg's destination
+    const dropoff = finalDestination(instructionResponse.data.dropoff, legsData);
+
+    // Normalize dropoff by converting to lowercase and removing spaces
+    const normalizedDropoff = dropoff?.toLowerCase().replace(/\s/g, '');
+
     // Track which containers reach the final destination
     const containersReachingDropoff = new Set();
     

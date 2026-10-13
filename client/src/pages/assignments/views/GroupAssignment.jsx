@@ -461,6 +461,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         ["Booking Ref", child.booking_ref],
         ["Client File Reference", child.clientFileRef],
         ["Company File Reference", child.ksmFileRef],
+        ...(child.rate_title ? [["Rate", child.rate_title]] : []),
         ["Pickup", child.pickup],
         ["Drop-Off", child.dropoff],
         ["Vessel Name", child.vessel_name],

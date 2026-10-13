@@ -1246,7 +1246,7 @@ export const getGroupForAssignment = async (groupId) => {
 
   const childRows = await pool.query(
     `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
-            m.shipment_type, s.shipmenttype, m.pickup, m.dropoff,
+            m.shipment_type, s.shipmenttype, m.pickup, m.dropoff, m.rate_title,
             m.vessel_name, m.stackdate, m."lastFreeDate", m.status,
             m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
             m.total_cost, m.vat, m.rateweight

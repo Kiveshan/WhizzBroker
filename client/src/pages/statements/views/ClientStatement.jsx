@@ -503,6 +503,9 @@ const ClientStatement = () => {
         return pickup.replace(/\s+/g, ' ').trim();
       } else if (dropoff) {
         return `→ ${dropoff}`.replace(/\s+/g, ' ').trim();
+      } else if (item.rate_title) {
+        // Rate picked by title with no route (migration 015)
+        return fixTokenSpacing(item.rate_title).replace(/\s+/g, ' ').trim();
       } else {
         return fixTokenSpacing(item.task || item.invoice_num || `Invoice #${item.ikey}`).replace(/\s+/g, ' ').trim();
       }
