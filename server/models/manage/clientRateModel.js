@@ -1,4 +1,5 @@
 import { pool } from "../../config/database.js"
+import { routeRateValues, cleanExtraCharges } from "../../utils/routeRateFields.js"
 
 const getAllClientsForRates = async (options = {}) => {
   let client
@@ -37,13 +38,14 @@ const getAllClientsForRates = async (options = {}) => {
 
     // Get paginated results with rate counts
     const dataQuery = `
-      SELECT 
+      SELECT
         c.*,
-        COUNT(cr.client_rate_id) as rate_count
-      FROM m5_client c 
-      LEFT JOIN m5_client_rate cr ON c.m5clientkey = cr.clientid
+        (SELECT COUNT(*) FROM m5_client_rate cr WHERE cr.clientid = c.m5clientkey) as rate_count,
+        (SELECT COALESCE(string_agg(rc.name, ', ' ORDER BY crc.priority), '')
+           FROM client_rate_card crc JOIN rate_card rc ON rc.rate_card_id = crc.rate_card_id
+           WHERE crc.clientid = c.m5clientkey) as rate_card_names
+      FROM m5_client c
       ${whereClause}
-      GROUP BY c.m5clientkey
       ORDER BY c.m5clientkey DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `
@@ -112,12 +114,44 @@ const getClientRatesByClientId = async (clientId) => {
       return { success: false, message: "Client not found" }
     }
 
+    const cardsResult = await client.query(
+      `SELECT crc.rate_card_id, rc.name, rc.status, crc.priority, crc.fuel_surcharge,
+              (SELECT COUNT(*) FROM rate_card_rate rr WHERE rr.rate_card_id = rc.rate_card_id)::int AS route_count
+       FROM client_rate_card crc
+       JOIN rate_card rc ON rc.rate_card_id = crc.rate_card_id
+       WHERE crc.clientid = $1
+       ORDER BY crc.priority, rc.name`,
+      [clientId],
+    )
+
+    // Every route this client inherits from its cards, with whether it is the
+    // one actually used: "active", "overridden" (the client has its own row
+    // for the lane) or "superseded" (a higher-priority card has the lane).
+    const cardRoutesResult = await client.query(
+      `SELECT * FROM (
+         SELECT er.*,
+                ROW_NUMBER() OVER (PARTITION BY er.starting_point, er.destination
+                                   ORDER BY er.source_rank, er.source_rate_id DESC) AS rn,
+                BOOL_OR(er.rate_source = 'client') OVER (PARTITION BY er.starting_point, er.destination) AS has_override
+         FROM client_effective_rate er
+         WHERE er.clientid = $1
+       ) ranked
+       WHERE rate_source = 'card'
+       ORDER BY starting_point, destination, source_rank`,
+      [clientId],
+    )
+
     const clientData = result.rows[0]
     return {
       success: true,
       data: {
         ...clientData,
         rates: clientData.rates || [],
+        rate_cards: cardsResult.rows,
+        card_routes: cardRoutesResult.rows.map(({ rn, has_override, ...route }) => ({
+          ...route,
+          resolution: rn === "1" || rn === 1 ? "active" : has_override ? "overridden" : "superseded",
+        })),
       },
     }
   } catch (err) {
@@ -128,7 +162,10 @@ const getClientRatesByClientId = async (clientId) => {
   }
 }
 
-const saveClientRates = async (clientId, rates) => {
+// rateCards: optional [{ rate_card_id, fuel_surcharge }] in priority order.
+// When provided it replaces the client's card assignments in the same
+// transaction; when undefined the assignments are left alone.
+const saveClientRates = async (clientId, rates, rateCards) => {
   let client
   try {
     client = await pool.connect()
@@ -147,24 +184,27 @@ const saveClientRates = async (clientId, rates) => {
       await client.query("DELETE FROM m5_client_rate WHERE clientid = $1", [clientId])
     }
 
+    if (Array.isArray(rateCards)) {
+      await client.query("DELETE FROM client_rate_card WHERE clientid = $1", [clientId])
+      for (const [index, card] of rateCards.entries()) {
+        await client.query(
+          `INSERT INTO client_rate_card (clientid, rate_card_id, priority, fuel_surcharge)
+           VALUES ($1, $2, $3, $4)`,
+          [
+            clientId,
+            card.rate_card_id,
+            index + 1,
+            card.fuel_surcharge === "" || card.fuel_surcharge === undefined || card.fuel_surcharge === null
+              ? null
+              : Number(card.fuel_surcharge),
+          ],
+        )
+      }
+    }
+
     const results = []
     for (const rate of rates) {
-      const surcharge6M = rate.surcharge6M ?? rate.surcharges
-      const surcharge12m = rate.surcharge12m
-
-      const values = [
-        clientId,
-        rate.starting_point || null,
-        rate.destination || null,
-        rate["6m_rate"] === "" || rate["6m_rate"] === undefined ? null : Number(rate["6m_rate"]),
-        rate["12m_rate"] === "" || rate["12m_rate"] === undefined ? null : Number(rate["12m_rate"]),
-        surcharge6M === "" || surcharge6M === undefined ? null : Number(surcharge6M),
-        surcharge12m === "" || surcharge12m === undefined ? null : Number(surcharge12m),
-        rate.hazardous === "" || rate.hazardous === undefined ? null : Number(rate.hazardous),
-        rate.vgm === "" || rate.vgm === undefined ? null : Number(rate.vgm),
-        rate.set_rate === "" || rate.set_rate === undefined ? null : Number(rate.set_rate),
-        rate.fuel_surcharge === "" || rate.fuel_surcharge === undefined ? null : Number(rate.fuel_surcharge),
-      ]
+      const values = [clientId, ...routeRateValues(rate)]
 
       let rateRow
       if (rate.client_rate_id) {
@@ -192,13 +232,11 @@ const saveClientRates = async (clientId, rates) => {
       // Replace this rate's extra charges wholesale
       await client.query("DELETE FROM client_rate_extra_charge WHERE client_rate_id = $1", [rateRow.client_rate_id])
 
-      const extraCharges = Array.isArray(rate.extra_charges) ? rate.extra_charges : []
-      for (const charge of extraCharges) {
-        if (!charge.charge_name || charge.charge_name.trim() === "") continue
+      for (const charge of cleanExtraCharges(rate)) {
         await client.query(
           `INSERT INTO client_rate_extra_charge (client_rate_id, charge_name, amount)
            VALUES ($1, $2, $3)`,
-          [rateRow.client_rate_id, charge.charge_name.trim(), charge.amount === "" || charge.amount === undefined ? 0 : Number(charge.amount)],
+          [rateRow.client_rate_id, charge.charge_name, charge.amount],
         )
       }
 

@@ -71,8 +71,13 @@ const ClientRatesTable = ({
                       <td>{client.companyaddress || "N/A"}</td>
                       <td>
                         <span className="rate-count-badge">
-                          {client.rate_count || 0} rate{(client.rate_count || 0) !== 1 ? "s" : ""}
+                          {client.rate_count || 0} rate{Number(client.rate_count || 0) !== 1 ? "s" : ""}
                         </span>
+                        {client.rate_card_names && (
+                          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                            Cards: {client.rate_card_names}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <span className={`status-badge ${client.status ? "active" : "inactive"}`}>

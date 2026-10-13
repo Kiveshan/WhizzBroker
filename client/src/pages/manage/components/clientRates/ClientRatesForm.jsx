@@ -1,87 +1,83 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { FaTrash } from "react-icons/fa";
+import { useState, useEffect, useRef } from "react"
+import {
+  FaArrowUp,
+  FaArrowDown,
+  FaTrash,
+  FaInfoCircle,
+  FaPlus,
+  FaSearch,
+  FaExclamationTriangle,
+  FaLayerGroup,
+} from "react-icons/fa"
+import api from "../../../../api.js"
+import { showAlert, showConfirmDialog } from "../../utils/alertUtils.js"
+import RouteRatesEditor, { emptyRate, rateFromApi, isRateComplete, isRateBlank, formatRand } from "./RouteRatesEditor"
+import { useFooterOffset } from "../rateCards/useFooterOffset"
+import "../../css/RateCards.css"
+
+const STATUS = {
+  active: {
+    text: "Charged",
+    className: "rc-pill-green",
+    title: "This is the price the client is charged on this route.",
+  },
+  overridden: {
+    text: "Client price used",
+    className: "rc-pill-amber",
+    title: "This client has its own price for this route, which is used instead.",
+  },
+  superseded: {
+    text: "Higher card used",
+    className: "",
+    title: "A rate card higher in this client's list has this route, so its price is used instead.",
+  },
+}
+
+// Strips UI-only fields so a snapshot can be compared for unsaved changes.
+const snapshot = (rates, cards) =>
+  JSON.stringify({
+    rates: rates.filter((r) => !isRateBlank(r)).map(({ _key, _openOnAdd, ...r }) => r),
+    cards: cards.map((c) => [c.rate_card_id, String(c.fuel_surcharge ?? "")]),
+  })
 
 const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
-  const [rates, setRates] = useState([
-    {
-      starting_point: "",
-      destination: "",
-      "6m_rate": "",
-      "12m_rate": "",
-      surcharge6M: "",
-      surcharge12m: "",
-      hazardous: "",
-      vgm: "",
-      set_rate: "",
-      fuel_surcharge: "",
-      extra_charges: [],
-    },
-  ])
-  const [isFormValid, setIsFormValid] = useState(false)
-  const [fuelSurchargeAll, setFuelSurchargeAll] = useState("")
+  const [rates, setRates] = useState([])
+  const [assignedCards, setAssignedCards] = useState([])
+  const [availableCards, setAvailableCards] = useState([])
+  const [cardToAdd, setCardToAdd] = useState("")
+  const [routeFilter, setRouteFilter] = useState("")
+  const [showErrors, setShowErrors] = useState(false)
+  const savedState = useRef(null)
+  const footerOffset = useFooterOffset()
 
   useEffect(() => {
-    console.log("ClientRatesForm received clientData:", clientData)
-    if (clientData) {
-      if (clientData.rates && clientData.rates.length > 0) {
-        setRates(
-          clientData.rates.map((rate) => ({
-            client_rate_id: rate.client_rate_id,
-            starting_point: rate.starting_point || "",
-            destination: rate.destination || "",
-            "6m_rate": rate["6m_rate"] !== null && rate["6m_rate"] !== undefined ? rate["6m_rate"] : "",
-            "12m_rate": rate["12m_rate"] !== null && rate["12m_rate"] !== undefined ? rate["12m_rate"] : "",
-            surcharge6M:
-              rate.surcharge6M !== null && rate.surcharge6M !== undefined
-                ? rate.surcharge6M
-                : rate.surcharges !== null && rate.surcharges !== undefined
-                  ? rate.surcharges
-                  : "",
-            surcharge12m: rate.surcharge12m !== null && rate.surcharge12m !== undefined ? rate.surcharge12m : "",
-            hazardous: rate.hazardous !== null && rate.hazardous !== undefined ? rate.hazardous : "",
-            vgm: rate.vgm !== null && rate.vgm !== undefined ? rate.vgm : "",
-            set_rate: rate.set_rate !== null && rate.set_rate !== undefined ? rate.set_rate : "",
-            fuel_surcharge:
-              rate.fuel_surcharge !== null && rate.fuel_surcharge !== undefined ? rate.fuel_surcharge : "",
-            extra_charges: Array.isArray(rate.extra_charges)
-              ? rate.extra_charges.map((c) => ({ charge_name: c.charge_name || "", amount: c.amount ?? "" }))
-              : [],
-          })),
-        )
-
-      } else {
-        setRates([
-          {
-            starting_point: "",
-            destination: "",
-            "6m_rate": "",
-            "12m_rate": "",
-            surcharge6M: "",
-            surcharge12m: "",
-            hazardous: "",
-            vgm: "",
-            set_rate: "",
-            fuel_surcharge: "",
-            extra_charges: [],
-          },
-        ])
-      }
-    }
+    if (!clientData) return
+    const ownRates = (clientData.rates || []).map((rate) => rateFromApi(rate, "client_rate_id"))
+    const cards = (clientData.rate_cards || []).map((card) => ({
+      rate_card_id: card.rate_card_id,
+      name: card.name,
+      status: card.status,
+      route_count: card.route_count,
+      fuel_surcharge: card.fuel_surcharge ?? "",
+    }))
+    setAssignedCards(cards)
+    // A client with nothing yet starts with one blank route to fill in; a
+    // client on rate cards may have no prices of its own.
+    const initialRates = ownRates.length > 0 || cards.length > 0 ? ownRates : [emptyRate()]
+    setRates(initialRates)
+    savedState.current = snapshot(initialRates, cards)
   }, [clientData])
 
   useEffect(() => {
-    const isValid = rates.every(
-      (rate) =>
-        rate.starting_point.trim() &&
-        rate.destination.trim() &&
-        (rate["6m_rate"] !== "" && rate["6m_rate"] !== undefined || rate["12m_rate"] !== "" && rate["12m_rate"] !== undefined),
-    )
-    setIsFormValid(isValid)
-  }, [rates])
+    api
+      .get("/api/rate-cards", { params: { active: "true" } })
+      .then((res) => setAvailableCards(res.data || []))
+      .catch((err) => console.error("Error loading rate cards:", err))
+  }, [])
 
-  if (loading) {
+  if (loading && !clientData) {
     return <div className="loading">Loading client rates...</div>
   }
 
@@ -89,462 +85,391 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
     return <div className="error">Error: No client data available</div>
   }
 
-  const handleRateChange = (index, field, value) => {
-    const updatedRates = [...rates]
-    updatedRates[index] = {
-      ...updatedRates[index],
-      [field]: value,
-    }
-    setRates(updatedRates)
-  }
+  const clientName = clientData.client || "this client"
+  const filledRates = rates.filter((rate) => !isRateBlank(rate))
+  const isDirty = savedState.current !== null && snapshot(rates, assignedCards) !== savedState.current
+  const savedCardIds = (clientData.rate_cards || []).map((c) => c.rate_card_id).join(",")
+  const cardsChanged = assignedCards.map((c) => c.rate_card_id).join(",") !== savedCardIds
 
-  const addRate = () => {
-    setRates([
-      ...rates,
+  const addCard = () => {
+    const card = availableCards.find((c) => String(c.rate_card_id) === String(cardToAdd))
+    if (!card || assignedCards.some((c) => c.rate_card_id === card.rate_card_id)) return
+    setAssignedCards([
+      ...assignedCards,
       {
-        starting_point: "",
-        destination: "",
-        "6m_rate": "",
-        "12m_rate": "",
-        surcharge6M: "",
-        surcharge12m: "",
-        hazardous: "",
-        vgm: "",
-        set_rate: "",
+        rate_card_id: card.rate_card_id,
+        name: card.name,
+        status: card.status,
+        route_count: card.route_count,
         fuel_surcharge: "",
-        extra_charges: [],
       },
     ])
+    setCardToAdd("")
   }
 
-  const addExtraCharge = (rateIndex) => {
-    const updatedRates = [...rates]
-    updatedRates[rateIndex] = {
-      ...updatedRates[rateIndex],
-      extra_charges: [...updatedRates[rateIndex].extra_charges, { charge_name: "", amount: "" }],
+  const moveCard = (index, delta) => {
+    const target = index + delta
+    if (target < 0 || target >= assignedCards.length) return
+    const next = [...assignedCards]
+    ;[next[index], next[target]] = [next[target], next[index]]
+    setAssignedCards(next)
+  }
+
+  const updateCardFuel = (index, value) =>
+    setAssignedCards(assignedCards.map((c, i) => (i === index ? { ...c, fuel_surcharge: value } : c)))
+
+  // Copy a card route into the client's own prices so a different price can
+  // be set for this client only.
+  const setClientPrice = (route) => {
+    const exists = rates.some((r) => r.starting_point === route.starting_point && r.destination === route.destination)
+    if (exists) {
+      showAlert(
+        "Already has a client price",
+        `${clientName} already has its own price for ${route.starting_point} → ${route.destination}. Edit it under "Client-specific prices".`,
+        "info",
+      )
+      return
     }
-    setRates(updatedRates)
+    const { client_rate_id, ...copy } = rateFromApi(route)
+    setRates([...rates.filter((r) => !isRateBlank(r)), { ...copy, _openOnAdd: true }])
   }
 
-  const handleExtraChargeChange = (rateIndex, chargeIndex, field, value) => {
-    const updatedRates = [...rates]
-    const updatedCharges = [...updatedRates[rateIndex].extra_charges]
-    updatedCharges[chargeIndex] = { ...updatedCharges[chargeIndex], [field]: value }
-    updatedRates[rateIndex] = { ...updatedRates[rateIndex], extra_charges: updatedCharges }
-    setRates(updatedRates)
-  }
-
-  const removeExtraCharge = (rateIndex, chargeIndex) => {
-    const updatedRates = [...rates]
-    updatedRates[rateIndex] = {
-      ...updatedRates[rateIndex],
-      extra_charges: updatedRates[rateIndex].extra_charges.filter((_, i) => i !== chargeIndex),
+  const handleCancel = async () => {
+    if (isDirty) {
+      const leave = await showConfirmDialog(
+        "Discard changes?",
+        "You have unsaved changes to this client's rates.",
+        "Discard changes",
+      )
+      if (!leave) return
     }
-    setRates(updatedRates)
-  }
-
-  // Apply a single fuel surcharge percentage to every rate at once.
-  const applyFuelSurchargeToAll = (value) => {
-    setRates((prev) => prev.map((rate) => ({ ...rate, fuel_surcharge: value })))
-  }
-
-  const removeRate = (index) => {
-    if (rates.length > 1) {
-      const updatedRates = rates.filter((rate, i) => i !== index)
-      console.log("Current rates before removing:", rates)
-      console.log("Updated rates after removing:", updatedRates)
-      setRates(updatedRates)
-    }
+    onCancel?.()
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!isFormValid) {
-      alert("Please provide at least one complete rate with starting point, destination, and either 6m or 12m rate for each route.")
+    if (filledRates.length === 0 && assignedCards.length === 0) {
+      showAlert(
+        "Nothing to charge from",
+        "Assign at least one rate card, or add a client-specific price, before saving.",
+        "warning",
+      )
       return
     }
-    const success = await onSave(rates)
-    if (success) {
-      // Form will be closed by parent component
+    if (!filledRates.every(isRateComplete)) {
+      setShowErrors(true)
+      showAlert(
+        "Some prices are incomplete",
+        "Each client-specific price needs a starting point, a destination, and a 6m or 12m rate. The incomplete ones are marked in red.",
+        "warning",
+      )
+      return
     }
+    await onSave(
+      filledRates,
+      assignedCards.map((c) => ({ rate_card_id: c.rate_card_id, fuel_surcharge: c.fuel_surcharge })),
+    )
   }
 
-  const rateRows = []
-  for (let i = 0; i < rates.length; i += 3) {
-    rateRows.push(rates.slice(i, i + 3))
-  }
-
-  console.log("Current rates state:", rates)
-  console.log("Rate rows for rendering:", rateRows)
+  const unassignedCards = availableCards.filter((c) => !assignedCards.some((a) => a.rate_card_id === c.rate_card_id))
+  const cardRoutes = clientData.card_routes || []
+  const filterText = routeFilter.trim().toLowerCase()
+  const visibleRoutes = filterText
+    ? cardRoutes.filter((r) =>
+        `${r.starting_point} ${r.destination} ${r.rate_card_name}`.toLowerCase().includes(filterText),
+      )
+    : cardRoutes
+  const chargedCount = cardRoutes.filter((r) => r.resolution === "active").length
 
   return (
-    <>
-      <style jsx>{`
-        .remove-rate-button {
-          color: red;
-          background: none;
-          border: none;
-          cursor: pointer;
-          font-size: 1.2rem;
-        }
-        .remove-rate-button:hover {
-          color: darkred;
-        }
-        .extra-charges-section {
-          margin-top: 1rem;
-          padding-top: 0.9rem;
-          border-top: 1px dashed #dfe4ff;
-        }
-        .extra-charges-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 0.6rem;
-        }
-        .extra-charges-header strong {
-          color: #2c3e50;
-          font-size: 0.95rem;
-        }
-        .add-extra-charge-button {
-          display: flex;
-          align-items: center;
-          gap: 0.35rem;
-          background: #eef1ff;
-          color: #4169e1;
-          border: 1px solid #c7d0ff;
-          border-radius: 6px;
-          padding: 0.35rem 0.75rem;
-          cursor: pointer;
-          font-size: 0.8rem;
-          font-weight: 600;
-          transition: background-color 0.2s ease, border-color 0.2s ease;
-        }
-        .add-extra-charge-button:hover {
-          background: #dfe4ff;
-          border-color: #4169e1;
-        }
-        .extra-charges-column-labels {
-          display: grid;
-          grid-template-columns: 2fr 1fr 32px;
-          gap: 0.6rem;
-          margin-bottom: 0.35rem;
-          padding: 0 0.75rem;
-        }
-        .extra-charges-column-labels span {
-          font-size: 0.72rem;
-          font-weight: 600;
-          color: #8a93a6;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-        }
-        .extra-charge-row {
-          display: grid;
-          grid-template-columns: 2fr 1fr 32px;
-          gap: 0.6rem;
-          align-items: center;
-          background: #f8f9fd;
-          border: 1px solid #e6e9f5;
-          border-radius: 6px;
-          padding: 0.4rem 0.75rem;
-          margin-bottom: 0.5rem;
-        }
-        .extra-charge-row input {
-          border: 1px solid #dfe4ff;
-          border-radius: 5px;
-          background: #fff;
-          height: 42px;
-          padding: 0 10px;
-        }
-        .extra-charge-row input:focus {
-          outline: none;
-          border-color: #4169e1;
-          box-shadow: 0 0 4px rgba(65, 105, 225, 0.25);
-        }
-        .extra-charge-row .remove-rate-button {
-          justify-self: center;
-          font-size: 1rem;
-        }
-        .extra-charges-empty {
-          font-size: 0.82rem;
-          color: #8a93a6;
-          font-style: italic;
-          padding: 0.25rem 0.75rem 0.5rem;
-        }
-      `}</style>
-      <form className="manage-add-client-rate-form" onSubmit={handleSubmit} noValidate>
-        <div className="rates-section">
-          <div className="rates-header">
-            <h3>Client Rates</h3>
-            <div className="fuel-surcharge-all">
-              <label>
-                <strong>Fuel Surcharge (%)</strong>
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={fuelSurchargeAll}
-                onChange={(e) => setFuelSurchargeAll(e.target.value)}
-                placeholder="e.g., 10"
-              />
-              <button
-                type="button"
-                className="fuel-surcharge-apply-btn"
-                onClick={() => applyFuelSurchargeToAll(fuelSurchargeAll)}
-              >
-                Apply to all rates
-              </button>
+    <form className="rc-page" style={footerOffset} onSubmit={handleSubmit} noValidate>
+      <div className="rc-page-header">
+        <div>
+          <h2 className="rc-page-title">Rates for {clientName}</h2>
+          <p className="rc-page-subtitle">
+            Choose the rate cards this client is charged from, and add client-specific prices only where they differ.
+          </p>
+        </div>
+      </div>
+
+      <div className="rc-callout">
+        <FaInfoCircle size={16} />
+        <div>
+          <strong>How this client's price is chosen for a route</strong>
+          <ol>
+            <li>If the client has its own price for the route, that price is used.</li>
+            <li>Otherwise, the first rate card in the list below that has the route is used.</li>
+          </ol>
+        </div>
+      </div>
+
+      {/* Step 1: rate cards */}
+      <section className="rc-section">
+        <div className="rc-section-header">
+          <div className="rc-section-heading">
+            <span className="rc-step">1</span>
+            <div>
+              <h3 className="rc-section-title">Rate cards</h3>
+              <p className="rc-section-desc">
+                Shared price lists set up on the Rate Cards tab. Use the arrows to set which card comes first when two
+                cards have the same route.
+              </p>
             </div>
           </div>
+        </div>
 
-          {rateRows.map((row, rowIndex) => (
-            <div key={rowIndex} className="rate-row">
-              {row.map((rate, index) => (
-                <div key={rowIndex * 3 + index} className="rate-entry">
-                  <div className="rate-entry-header">
-                    <h4>Rate #{rowIndex * 3 + index + 1}</h4>
-                    {rates.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeRate(rowIndex * 3 + index)}
-                        className="remove-rate-button"
-                        aria-label="Remove rate"
-                      >
-                         <FaTrash />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="manage-form-grid">
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Starting Point *</strong>
-                      </label>
-                      <input
-                        type="text"
-                        value={rate.starting_point}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "starting_point", e.target.value)}
-                        placeholder="e.g., Johannesburg"
-                        required
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Destination *</strong>
-                      </label>
-                      <input
-                        type="text"
-                        value={rate.destination}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "destination", e.target.value)}
-                        placeholder="e.g., Cape Town"
-                        required
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>6m Rate (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate["6m_rate"]}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "6m_rate", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>12m Rate (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate["12m_rate"]}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "12m_rate", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Surcharge 6M (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.surcharge6M}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "surcharge6M", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Surcharge 12M (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.surcharge12m}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "surcharge12m", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Hazardous (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.hazardous}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "hazardous", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>VGM (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.vgm}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "vgm", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Break Bulk (R)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.set_rate}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "set_rate", e.target.value)}
-                        placeholder="0.00"
-                      />
-                    </div>
-
-                    <div className="manage-form-group">
-                      <label>
-                        <strong>Fuel Surcharge (%)</strong>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={rate.fuel_surcharge}
-                        onChange={(e) => handleRateChange(rowIndex * 3 + index, "fuel_surcharge", e.target.value)}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="extra-charges-section">
-                    <div className="extra-charges-header">
-                      <strong>Optional Extra Charges</strong>
-                      <button
-                        type="button"
-                        className="add-extra-charge-button"
-                        onClick={() => addExtraCharge(rowIndex * 3 + index)}
-                      >
-                        + Add Charge
-                      </button>
-                    </div>
-                    {rate.extra_charges.length === 0 ? (
-                      <p className="extra-charges-empty">No extra charges added for this rate.</p>
-                    ) : (
-                      <>
-                        <div className="extra-charges-column-labels">
-                          <span>Charge Name</span>
-                          <span>Amount (R)</span>
-                          <span />
-                        </div>
-                        {rate.extra_charges.map((charge, chargeIndex) => (
-                          <div key={chargeIndex} className="extra-charge-row">
-                            <input
-                              type="text"
-                              value={charge.charge_name}
-                              onChange={(e) =>
-                                handleExtraChargeChange(
-                                  rowIndex * 3 + index,
-                                  chargeIndex,
-                                  "charge_name",
-                                  e.target.value,
-                                )
-                              }
-                              placeholder="e.g., Toll fee"
-                            />
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={charge.amount}
-                              onChange={(e) =>
-                                handleExtraChargeChange(rowIndex * 3 + index, chargeIndex, "amount", e.target.value)
-                              }
-                              placeholder="0.00"
-                            />
-                            <button
-                              type="button"
-                              className="remove-rate-button"
-                              aria-label="Remove extra charge"
-                              onClick={() => removeExtraCharge(rowIndex * 3 + index, chargeIndex)}
-                            >
-                              <FaTrash />
-                            </button>
-                          </div>
-                        ))}
-                      </>
+        {assignedCards.length === 0 ? (
+          <p className="rc-hint" style={{ margin: "0 0 12px", fontSize: 14 }}>
+            No rate cards assigned yet.
+          </p>
+        ) : (
+          <div className="rc-assigned">
+            {assignedCards.map((card, index) => (
+              <div key={card.rate_card_id} className="rc-assigned-row">
+                <span className="rc-order" title={index === 0 ? "First choice" : `Choice ${index + 1}`}>
+                  {index + 1}
+                </span>
+                <div style={{ minWidth: 0 }}>
+                  <div className="rc-cell-title">{card.name}</div>
+                  <div className="rc-cell-sub">
+                    {card.route_count ?? 0} route{card.route_count === 1 ? "" : "s"}
+                    {card.status === false && (
+                      <span className="rc-pill rc-pill-red" style={{ marginLeft: 8 }}>
+                        Inactive: not used for pricing
+                      </span>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          ))}
+                <div className="rc-field">
+                  <div className="rc-affix">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      className="rc-input rc-has-suffix"
+                      value={card.fuel_surcharge}
+                      onChange={(e) => updateCardFuel(index, e.target.value)}
+                      placeholder="Card's fuel %"
+                      aria-label={`Fuel surcharge for ${clientName} on ${card.name}`}
+                    />
+                    <span className="rc-affix-label rc-suffix">%</span>
+                  </div>
+                  <span className="rc-hint">Fuel % for this client (optional)</span>
+                </div>
+                <div className="rc-actions">
+                  <button
+                    type="button"
+                    className="rc-icon-btn"
+                    onClick={() => moveCard(index, -1)}
+                    disabled={index === 0}
+                    title="Move up"
+                    aria-label="Move up"
+                  >
+                    <FaArrowUp size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="rc-icon-btn"
+                    onClick={() => moveCard(index, 1)}
+                    disabled={index === assignedCards.length - 1}
+                    title="Move down"
+                    aria-label="Move down"
+                  >
+                    <FaArrowDown size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    className="rc-icon-btn rc-danger"
+                    onClick={() => setAssignedCards(assignedCards.filter((_, i) => i !== index))}
+                    title="Remove card from this client"
+                    aria-label="Remove card from this client"
+                  >
+                    <FaTrash size={13} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-          <div className="rates-summary">
-            <p>
-              <strong>Total Rates:</strong>{" "}
-              {
-                rates.filter(
-                  (rate) =>
-                    rate.starting_point.trim() &&
-                    rate.destination.trim() &&
-                    (rate["6m_rate"] !== "" && rate["6m_rate"] !== undefined || rate["12m_rate"] !== "" && rate["12m_rate"] !== undefined),
-                ).length
-              }
-            </p>
-            <p className="rates-note">* At least one rate (6m or 12m) is required for each route</p>
+        <div className="rc-add-card">
+          <select
+            className="rc-select"
+            value={cardToAdd}
+            onChange={(e) => setCardToAdd(e.target.value)}
+            aria-label="Rate card to assign"
+            disabled={unassignedCards.length === 0}
+          >
+            <option value="">
+              {unassignedCards.length === 0
+                ? availableCards.length === 0
+                  ? "No rate cards set up yet"
+                  : "All rate cards are assigned"
+                : "Choose a rate card…"}
+            </option>
+            {unassignedCards.map((card) => (
+              <option key={card.rate_card_id} value={card.rate_card_id}>
+                {card.name} ({card.route_count} route{card.route_count === 1 ? "" : "s"})
+              </option>
+            ))}
+          </select>
+          <button type="button" className="rc-btn rc-btn-secondary" onClick={addCard} disabled={!cardToAdd}>
+            <FaPlus size={12} /> Assign card
+          </button>
+        </div>
+
+        {(cardRoutes.length > 0 || cardsChanged) && (
+          <div style={{ marginTop: 20 }}>
+            <div className="rc-toolbar">
+              <div>
+                <p className="rc-group-title" style={{ margin: 0 }}>
+                  Routes from these cards
+                </p>
+                {cardRoutes.length > 0 && (
+                  <span className="rc-hint">
+                    {chargedCount} of {cardRoutes.length} card route{cardRoutes.length === 1 ? "" : "s"} charged to
+                    this client
+                  </span>
+                )}
+              </div>
+              {cardRoutes.length > 8 && (
+                <div className="rc-search">
+                  <FaSearch size={13} />
+                  <input
+                    type="text"
+                    className="rc-input"
+                    value={routeFilter}
+                    onChange={(e) => setRouteFilter(e.target.value)}
+                    placeholder="Filter routes…"
+                    aria-label="Filter routes"
+                  />
+                </div>
+              )}
+            </div>
+
+            {cardsChanged && (
+              <div className="rc-callout rc-callout-warn" style={{ marginBottom: 12 }}>
+                <FaExclamationTriangle size={14} />
+                <div>You've changed this client's cards. Save to update this list.</div>
+              </div>
+            )}
+
+            {visibleRoutes.length > 0 && (
+              <div className="rc-table-wrap">
+                <table className="rc-table">
+                  <thead>
+                    <tr>
+                      <th>Route</th>
+                      <th>Card</th>
+                      <th className="rc-num">6m</th>
+                      <th className="rc-num">12m</th>
+                      <th className="rc-num">Break bulk</th>
+                      <th className="rc-num">Fuel</th>
+                      <th>Status</th>
+                      <th />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {visibleRoutes.map((route) => {
+                      const status = STATUS[route.resolution] || STATUS.active
+                      return (
+                        <tr
+                          key={`${route.rate_card_id}-${route.source_rate_id}`}
+                          className={route.resolution === "active" ? "" : "rc-row-muted"}
+                        >
+                          <td>
+                            {route.starting_point} → {route.destination}
+                          </td>
+                          <td>{route.rate_card_name}</td>
+                          <td className="rc-num">{formatRand(route["6m_rate"])}</td>
+                          <td className="rc-num">{formatRand(route["12m_rate"])}</td>
+                          <td className="rc-num">{formatRand(route.set_rate)}</td>
+                          <td className="rc-num">
+                            {route.fuel_surcharge !== null && route.fuel_surcharge !== undefined
+                              ? `${route.fuel_surcharge}%`
+                              : "—"}
+                          </td>
+                          <td>
+                            <span className={`rc-pill ${status.className}`} title={status.title}>
+                              {status.text}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            {route.resolution !== "overridden" && (
+                              <button
+                                type="button"
+                                className="rc-btn rc-btn-ghost rc-btn-sm"
+                                onClick={() => setClientPrice(route)}
+                                title="Copy this route into the client-specific prices so you can give this client a different price"
+                              >
+                                Set client price
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {cardRoutes.length > 0 && visibleRoutes.length === 0 && (
+              <p className="rc-hint">No routes match "{routeFilter}".</p>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Step 2: client-specific prices */}
+      <section className="rc-section">
+        <div className="rc-section-header">
+          <div className="rc-section-heading">
+            <span className="rc-step">2</span>
+            <div>
+              <h3 className="rc-section-title">Client-specific prices</h3>
+              <p className="rc-section-desc">
+                Only needed when {clientName} pays a different price from its rate cards, or for a route that isn't on
+                any card. These always take priority over rate cards.
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="manage-button-container">
-          <button type="submit" className="manage-save-button" disabled={loading || !isFormValid}>
-            {loading ? "Saving..." : "Save"}
+        <RouteRatesEditor
+          rates={rates}
+          onChange={setRates}
+          showErrors={showErrors}
+          addLabel="Add client price"
+          emptyState={
+            <div className="rc-empty" style={{ marginBottom: 4 }}>
+              <FaLayerGroup size={22} className="rc-empty-icon" />
+              <div className="rc-empty-title">No client-specific prices</div>
+              <p>
+                {assignedCards.length > 0
+                  ? `${clientName} is charged entirely from its rate cards. Use "Set client price" on a card route, or add a price below, if this client pays something different.`
+                  : "Assign a rate card above, or add this client's prices below."}
+              </p>
+            </div>
+          }
+        />
+      </section>
+
+      <div className="rc-actionbar">
+        <div className="rc-actionbar-summary">
+          <strong>{assignedCards.length}</strong> rate card{assignedCards.length === 1 ? "" : "s"} ·{" "}
+          <strong>{filledRates.length}</strong> client-specific price{filledRates.length === 1 ? "" : "s"}
+          {isDirty && <span className="rc-pill rc-pill-amber" style={{ marginLeft: 10 }}>Unsaved changes</span>}
+        </div>
+        <div className="rc-actionbar-buttons">
+          <button type="button" className="rc-btn rc-btn-secondary" onClick={handleCancel}>
+            Cancel
           </button>
-          
-          <button type="button" onClick={addRate} className="add-rate-button">
-            + Add
+          <button type="submit" className="rc-btn rc-btn-primary" disabled={loading}>
+            {loading ? "Saving…" : "Save changes"}
           </button>
         </div>
-      </form>
-    </>
+      </div>
+    </form>
   )
 }
 

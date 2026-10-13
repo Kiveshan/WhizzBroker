@@ -629,11 +629,11 @@ export const saveInstruction = async ({
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
@@ -662,11 +662,11 @@ export const saveInstruction = async ({
         try {
           const hazardousQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const hazardousResult = await client.query(hazardousQuery, [
@@ -697,11 +697,11 @@ export const saveInstruction = async ({
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const vgmResult = await client.query(vgmQuery, [
@@ -1667,7 +1667,7 @@ export const getActiveClients = async () => {
 export const getClientStartingPoints = async (clientId) => {
   const sql = `
     SELECT DISTINCT starting_point
-    FROM public.m5_client_rate
+    FROM public.client_effective_rate
     WHERE clientid = $1 
       AND starting_point IS NOT NULL 
       AND starting_point IS DISTINCT FROM ''
@@ -1699,7 +1699,7 @@ export const getClientDestinations = async (clientId, startingPoint) => {
 
   const sql = `
     SELECT DISTINCT destination
-    FROM public.m5_client_rate
+    FROM public.client_effective_rate
     WHERE clientid = $1 
       AND starting_point = $2
       AND destination IS NOT NULL 
@@ -1726,7 +1726,7 @@ export const checkClientHasRates = async (clientId) => {
   const sql = `
     SELECT EXISTS (
       SELECT 1 
-      FROM public.m5_client_rate 
+      FROM public.client_effective_rate
       WHERE clientid = $1
       AND starting_point IS NOT NULL 
       AND starting_point IS DISTINCT FROM ''
@@ -1763,7 +1763,10 @@ export const getClientRates = async (clientId, start, destination) => {
 
   const sql = `
     SELECT
-      cr.client_rate_id as "clientRateId",
+      cr.source_rate_id as "clientRateId",
+      cr.rate_source as "rateSource",
+      cr.rate_card_id as "rateCardId",
+      cr.rate_card_name as "rateCardName",
       cr."6m_rate" as "sixMeterRate",
       cr."12m_rate" as "twelveMeterRate",
       cr.set_rate as "setRate",
@@ -1774,23 +1777,12 @@ export const getClientRates = async (clientId, start, destination) => {
       cr.fuel_surcharge as "fuelSurcharge",
       cr.starting_point as "startingPoint",
       cr.destination,
-      COALESCE(ec.charges, '[]'::json) as "extraCharges"
-    FROM public.m5_client_rate cr
-    LEFT JOIN LATERAL (
-      SELECT json_agg(
-        json_build_object(
-          'charge_id', e.charge_id,
-          'charge_name', e.charge_name,
-          'amount', e.amount
-        ) ORDER BY e.charge_id
-      ) as charges
-      FROM client_rate_extra_charge e
-      WHERE e.client_rate_id = cr.client_rate_id
-    ) ec ON true
+      cr.extra_charges as "extraCharges"
+    FROM public.client_effective_rate cr
     WHERE cr.clientid = $1
       AND cr.starting_point = $2
       AND cr.destination = $3
-    ORDER BY cr.client_rate_id DESC
+    ORDER BY cr.source_rank, cr.source_rate_id DESC
     LIMIT 1
   `;
 
@@ -2682,11 +2674,11 @@ export const updateFCInstructionAndContainers = async (
 
           const hazardousRateQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
 
@@ -2753,11 +2745,11 @@ export const updateFCInstructionAndContainers = async (
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const vgmResult = await client.query(vgmQuery, [
@@ -2816,11 +2808,11 @@ export const updateFCInstructionAndContainers = async (
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
@@ -2921,11 +2913,11 @@ export const updateFCInstructionAndContainers = async (
             // Query to fetch hazardous amount from m5_client_rate table
             const hazardousRateQuery = `
               SELECT hazardous
-              FROM public.m5_client_rate
+              FROM public.client_effective_rate
               WHERE clientid = $1
                 AND starting_point = $2
                 AND destination = $3
-              ORDER BY client_rate_id DESC
+              ORDER BY source_rank, source_rate_id DESC
               LIMIT 1
             `;
             
@@ -2963,11 +2955,11 @@ export const updateFCInstructionAndContainers = async (
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
@@ -3298,11 +3290,11 @@ export const saveInstructionAndContainers = async (
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing surcharge query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3354,11 +3346,11 @@ export const saveInstructionAndContainers = async (
         try {
           const hazardousQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing hazardous query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3410,11 +3402,11 @@ export const saveInstructionAndContainers = async (
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
+            FROM public.client_effective_rate
             WHERE clientid = $1
               AND starting_point = $2
               AND destination = $3
-            ORDER BY client_rate_id DESC
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing VGM query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3586,9 +3578,9 @@ export const deleteInstruction = async (instructionId) => {
 export const getClientSetRate = async (clientId, starting_point, destination) => {
   const sql = `
     SELECT set_rate, fuel_surcharge
-    FROM public.m5_client_rate
+    FROM public.client_effective_rate
     WHERE clientid = $1 AND starting_point = $2 AND destination = $3
-    ORDER BY client_rate_id DESC
+    ORDER BY source_rank, source_rate_id DESC
     LIMIT 1
   `;
 

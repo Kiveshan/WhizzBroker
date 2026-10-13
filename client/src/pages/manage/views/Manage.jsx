@@ -46,6 +46,9 @@ import SubcontractorForm from "../components/subcontractors/SubcontractorForm"
 import ClientRatesTable from "../components/clientRates/ClientRatesTable"
 import ClientRatesForm from "../components/clientRates/ClientRatesForm"
 
+// Rate Card Components
+import RateCardsTab from "../components/rateCards/RateCardsTab"
+
 // Creditors Components
 import CreditorsTab from "../components/creditors/CreditorsTab"
 
@@ -370,6 +373,12 @@ const Manage = () => {
           Client Rates
         </button>
         <button
+          className={`manage-tab-button ${state.activeTab === "rateCards" ? "active" : ""}`}
+          onClick={() => actions.setActiveTab("rateCards")}
+        >
+          Rate Cards
+        </button>
+        <button
           className={`manage-tab-button ${state.activeTab === "rates" ? "active" : ""}`}
           onClick={() => actions.setActiveTab("rates")}
         >
@@ -502,7 +511,7 @@ const Manage = () => {
               clientData={state.newClientRate}
               loading={state.loading}
               isEditing={!!state.editingClientRateId}
-              onSave={(ratesData) => api.saveClientRates(ratesData)}
+              onSave={(ratesData, rateCards) => api.saveClientRates(ratesData, rateCards)}
               onCancel={handleClientRateCancel}
               onChange={handleClientRateFormChange}
               onDeleteRate={api.deleteClientRate}
@@ -523,6 +532,9 @@ const Manage = () => {
           )}
         </>
       )}
+
+      {/* Rate Cards Tab */}
+      {state.activeTab === "rateCards" && <RateCardsTab />}
 
       {/* Trucks Tab */}
       {state.activeTab === "trucks" && (
