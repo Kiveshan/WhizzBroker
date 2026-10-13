@@ -331,6 +331,7 @@ const Instructions = () => {
       { header: "Client Ref", key: "clientRef", width: 20 },
       { header: "File Ref", key: "fileRef", width: 20 },
       { header: "Type", key: "type", width: 20 },
+      { header: "Rate", key: "rate", width: 32 },
       { header: "Status", key: "status", width: 15 },
       { header: "Creation Date", key: "creationDate", width: 18 },
     ]
@@ -357,6 +358,7 @@ const Instructions = () => {
         clientRef: item.client_ref || "N/A",
         fileRef: item.ksm_file_ref || "N/A",
         type: getTypeText(item),
+        rate: item.rate_title || "",
         status: item.status || "",
         creationDate: (item.startingdate || item.pickupdate)
           ? new Date(item.startingdate || item.pickupdate).toLocaleDateString()
@@ -569,6 +571,7 @@ const Instructions = () => {
                   <th>Client Ref</th>
                   <th>File Ref</th>
                   <th>Type</th>
+                  <th>Rate</th>
                   <th>Status</th>
                   <th>Creation Date</th>
                   <th>Instruction</th>
@@ -578,11 +581,11 @@ const Instructions = () => {
 <tbody>
   {containerSearchLoading ? (
     <tr>
-      <td colSpan="10">Searching...</td>
+      <td colSpan="11">Searching...</td>
     </tr>
   ) : currentInstructions.length === 0 ? (
     <tr>
-      <td colSpan="10">No instructions found</td>
+      <td colSpan="11">No instructions found</td>
     </tr>
   ) : (
     currentInstructions.map((item) => {
@@ -621,6 +624,7 @@ const Instructions = () => {
                         ? "add-on"
                         : item.type)}
           </td>
+          <td>{item.rate_title || (item.pickup && item.dropoff ? `${item.pickup} → ${item.dropoff}` : "—")}</td>
           <td>{renderStatus(item.status)}</td>
           <td>
             {(item.startingdate || item.pickupdate)

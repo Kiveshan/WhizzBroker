@@ -1,8 +1,5 @@
 import { useCallback } from "react";
-import {
-  fetchStartingPoints as fetchStartingPointsService,
-  fetchDestinations as fetchDestinationsService,
-} from "../services/instructionService.js";
+import { fetchRateTitles as fetchRateTitlesService } from "../services/instructionService.js";
 
 /**
  * Provides all change handlers for the create instruction form.
@@ -18,10 +15,9 @@ export function useCreateFormHandlers({
   setWeightRows,
   setFieldErrors,
   setRateLockStatus,
-  setClientStartingPoints,
-  setClientDestinations,
+  clientRateOptions,
+  setClientRateOptions,
   setIsLoadingLocations,
-  setIsLoading,
   setShowNoRatesModal,
 }) {
   const handleClientChange = useCallback(
@@ -38,6 +34,7 @@ export function useCreateFormHandlers({
         representative: selectedClient?.representative || "",
         contactDetails: selectedClient?.cellnum || "",
         email: selectedClient?.email || "",
+        rate_title: "",
         pickup: "",
         dropoff: "",
         selectedStartingPoint: "",
@@ -59,39 +56,37 @@ export function useCreateFormHandlers({
       if (clientId) {
         setIsLoadingLocations(true);
         try {
-          const startingPointsData = await fetchStartingPointsService(clientId);
-          const startingPoints = startingPointsData.map((point) => ({
-            value: point.starting_point,
-            label: point.starting_point,
-          }));
-          setClientStartingPoints(startingPoints);
-          setFormData((prev) => ({ ...prev, startingPoints }));
-        } catch (error) {
-          console.error("Error loading starting points:", error);
-          setClientStartingPoints([]);
-          if (error.response?.status === 404) {
+          const rateOptions = await fetchRateTitlesService(clientId);
+          setClientRateOptions(Array.isArray(rateOptions) ? rateOptions : []);
+          if (!Array.isArray(rateOptions) || rateOptions.length === 0) {
             setShowNoRatesModal(true);
           }
+        } catch (error) {
+          console.error("Error loading client rates:", error);
+          setClientRateOptions([]);
         } finally {
           setIsLoadingLocations(false);
         }
       } else {
-        setClientStartingPoints([]);
-        setClientDestinations([]);
+        setClientRateOptions([]);
       }
     },
     [clients]
   );
 
-  const handlePickupChange = useCallback(
-    async (e) => {
-      const pickup = e.target.value;
+  // Picking a rate by title also fills in its route (blank when the rate
+  // has none). Prices are then fetched by the page's rate effect.
+  const handleRateChange = useCallback(
+    (e) => {
+      const title = e.target.value;
+      const rate = (clientRateOptions || []).find((r) => r.title === title);
       setFormData((prev) => ({
         ...prev,
-        pickup: pickup,
-        selectedStartingPoint: pickup,
-        dropoff: "",
-        selectedDestination: "",
+        rate_title: title,
+        pickup: rate?.starting_point || "",
+        dropoff: rate?.destination || "",
+        selectedStartingPoint: rate?.starting_point || "",
+        selectedDestination: rate?.destination || "",
         sixMeterRate: "",
         twelveMeterRate: "",
         abnormalRate: "",
@@ -103,54 +98,14 @@ export function useCreateFormHandlers({
 
       setFieldErrors((prev) => {
         const newErrors = { ...prev };
+        delete newErrors.rate_title;
         delete newErrors.pickup;
+        delete newErrors.dropoff;
         return newErrors;
       });
-
-      if (pickup && formData.clientId) {
-        setIsLoading((prev) => ({ ...prev, destinations: true }));
-        try {
-          const destinationsData = await fetchDestinationsService(formData.clientId, pickup);
-          const destinations = destinationsData.map((dest) => ({
-            value: dest.destination,
-            label: dest.destination,
-          }));
-          setClientDestinations(destinations);
-          setFormData((prev) => ({ ...prev, destinations }));
-        } catch (error) {
-          console.error("Error loading destinations:", error);
-          setClientDestinations([]);
-        } finally {
-          setIsLoading((prev) => ({ ...prev, destinations: false }));
-        }
-      } else {
-        setClientDestinations([]);
-      }
     },
-    [formData.clientId]
+    [clientRateOptions]
   );
-
-  const handleDropoffChange = useCallback((e) => {
-    const dropoff = e.target.value;
-    setFormData((prev) => ({
-      ...prev,
-      dropoff: dropoff,
-      selectedDestination: dropoff,
-      sixMeterRate: "",
-      twelveMeterRate: "",
-      abnormalRate: "",
-      rateper_breakbulk: "",
-      surchargesAmount: "",
-      surcharges: false,
-    }));
-    setRateLockStatus({ sixMeter: false, twelveMeter: false });
-
-    setFieldErrors((prev) => {
-      const newErrors = { ...prev };
-      delete newErrors.dropoff;
-      return newErrors;
-    });
-  }, []);
 
   const handleShipmentTypeChange = useCallback(
     (e) => {
@@ -235,8 +190,7 @@ export function useCreateFormHandlers({
 
   return {
     handleClientChange,
-    handlePickupChange,
-    handleDropoffChange,
+    handleRateChange,
     handleShipmentTypeChange,
     handleContainerCountChange,
     openCalendar,

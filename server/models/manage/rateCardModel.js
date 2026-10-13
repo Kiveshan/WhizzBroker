@@ -46,7 +46,7 @@ const getRateCardById = async (rateCardId) => {
        ), '[]'::json) AS extra_charges
      FROM rate_card_rate rr
      WHERE rr.rate_card_id = $1
-     ORDER BY rr.starting_point, rr.destination, rr.rate_card_rate_id`,
+     ORDER BY rr.title, rr.rate_card_rate_id`,
     [rateCardId],
   )
 
@@ -71,6 +71,13 @@ const saveRateCardRates = async (client, rateCardId, rates) => {
     rateCardId,
     keptIds,
   ])
+  // Titles are unique per card; park kept rows on temporary titles so renames
+  // that swap titles between rows don't collide mid-save.
+  await client.query(
+    `UPDATE rate_card_rate SET title = '__saving__' || rate_card_rate_id
+     WHERE rate_card_id = $1 AND rate_card_rate_id = ANY($2::int[])`,
+    [rateCardId, keptIds],
+  )
 
   for (const rate of rates) {
     const values = routeRateValues(rate)
@@ -79,8 +86,8 @@ const saveRateCardRates = async (client, rateCardId, rates) => {
       const result = await client.query(
         `UPDATE rate_card_rate
          SET starting_point = $2, destination = $3, "6m_rate" = $4, "12m_rate" = $5, surcharges = $6,
-             surcharge12m = $7, hazardous = $8, vgm = $9, set_rate = $10, fuel_surcharge = $11
-         WHERE rate_card_rate_id = $12 AND rate_card_id = $1
+             surcharge12m = $7, hazardous = $8, vgm = $9, set_rate = $10, fuel_surcharge = $11, title = $12
+         WHERE rate_card_rate_id = $13 AND rate_card_id = $1
          RETURNING rate_card_rate_id`,
         [rateCardId, ...values, rate.rate_card_rate_id],
       )
@@ -89,8 +96,8 @@ const saveRateCardRates = async (client, rateCardId, rates) => {
     if (!row) {
       const result = await client.query(
         `INSERT INTO rate_card_rate (rate_card_id, starting_point, destination, "6m_rate", "12m_rate", surcharges,
-                                     surcharge12m, hazardous, vgm, set_rate, fuel_surcharge)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                     surcharge12m, hazardous, vgm, set_rate, fuel_surcharge, title)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING rate_card_rate_id`,
         [rateCardId, ...values],
       )
@@ -127,28 +134,28 @@ const syncCardClients = async (client, rateCardId, clientIds) => {
   )
 }
 
-// For each client, the card routes that would NOT be used because the client
-// already has a winning price for that lane: its own rate, or a card above
-// this one in its list. lanes are taken from the form so unsaved edits count.
-// A client not yet on the card is treated as getting it at the bottom.
-const findAssignmentConflicts = async (rateCardId, lanes, clientIds) => {
-  if (!lanes.length || !clientIds.length) return []
+// For each client, the card rates that would NOT be used because the client
+// already has a winning price with the same title: its own rate, or a card
+// above this one in its list. Titles are taken from the form so unsaved edits
+// count. A client not yet on the card is treated as getting it at the bottom.
+const findAssignmentConflicts = async (rateCardId, titles, clientIds) => {
+  if (!titles.length || !clientIds.length) return []
   const result = await pool.query(
-    `WITH lanes AS (
-       SELECT DISTINCT * FROM unnest($2::text[], $3::text[]) AS l(starting_point, destination)
+    `WITH titles AS (
+       SELECT DISTINCT ON (rate_title_key(t)) t AS title, rate_title_key(t) AS title_key
+       FROM unnest($2::text[]) AS t
      ),
-     picked AS (SELECT DISTINCT unnest($4::int[]) AS clientid)
-     SELECT p.clientid, c.client, l.starting_point, l.destination,
+     picked AS (SELECT DISTINCT unnest($3::int[]) AS clientid)
+     SELECT p.clientid, c.client, l.title,
             win.rate_source AS winning_source, win.rate_card_name AS winning_card
      FROM picked p
      JOIN m5_client c ON c.m5clientkey = p.clientid
-     CROSS JOIN lanes l
+     CROSS JOIN titles l
      JOIN LATERAL (
        SELECT er.rate_source, er.rate_card_name
        FROM client_effective_rate er
        WHERE er.clientid = p.clientid
-         AND er.starting_point = l.starting_point
-         AND er.destination = l.destination
+         AND er.title_key = l.title_key
          -- any price other than this card's own rows ($1 is null for a new card)
          AND (er.rate_source = 'client' OR $1::int IS NULL OR er.rate_card_id <> $1::int)
          AND er.source_rank < COALESCE(
@@ -158,8 +165,8 @@ const findAssignmentConflicts = async (rateCardId, lanes, clientIds) => {
        ORDER BY er.source_rank, er.source_rate_id DESC
        LIMIT 1
      ) win ON true
-     ORDER BY c.client, l.starting_point, l.destination`,
-    [rateCardId || null, lanes.map((l) => l.starting_point), lanes.map((l) => l.destination), clientIds],
+     ORDER BY c.client, l.title`,
+    [rateCardId || null, titles, clientIds],
   )
   return result.rows
 }
@@ -199,7 +206,13 @@ const saveRateCard = async (rateCardId, { name, description, status = true, rate
   } catch (err) {
     await client.query("ROLLBACK")
     if (err.code === "23505") {
-      return { success: false, message: `A rate card named "${name}" already exists` }
+      return {
+        success: false,
+        message:
+          err.constraint === "uq_rate_card_name"
+            ? `A rate card named "${name}" already exists`
+            : "Two rates on this card have the same title. Each title can only be used once.",
+      }
     }
     throw err
   } finally {

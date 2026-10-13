@@ -77,6 +77,7 @@ const getClientRatesByClientId = async (clientId) => {
         json_agg(
           json_build_object(
             'client_rate_id', cr.client_rate_id,
+            'title', cr.title,
             'starting_point', cr.starting_point,
             'destination', cr.destination,
             '6m_rate', cr."6m_rate",
@@ -89,7 +90,7 @@ const getClientRatesByClientId = async (clientId) => {
             'set_rate', cr.set_rate,
             'fuel_surcharge', cr.fuel_surcharge,
             'extra_charges', COALESCE(ec.charges, '[]'::json)
-          ) ORDER BY cr.client_rate_id
+          ) ORDER BY cr.title, cr.client_rate_id
         ) FILTER (WHERE cr.client_rate_id IS NOT NULL) as rates
       FROM m5_client c
       LEFT JOIN m5_client_rate cr ON c.m5clientkey = cr.clientid
@@ -124,20 +125,20 @@ const getClientRatesByClientId = async (clientId) => {
       [clientId],
     )
 
-    // Every route this client inherits from its cards, with whether it is the
-    // one actually used: "active", "overridden" (the client has its own row
-    // for the lane) or "superseded" (a higher-priority card has the lane).
+    // Every rate this client inherits from its cards, with whether it is the
+    // one actually used: "active", "overridden" (the client has its own rate
+    // with the same title) or "superseded" (a higher-priority card has it).
     const cardRoutesResult = await client.query(
       `SELECT * FROM (
          SELECT er.*,
-                ROW_NUMBER() OVER (PARTITION BY er.starting_point, er.destination
+                ROW_NUMBER() OVER (PARTITION BY er.title_key
                                    ORDER BY er.source_rank, er.source_rate_id DESC) AS rn,
-                BOOL_OR(er.rate_source = 'client') OVER (PARTITION BY er.starting_point, er.destination) AS has_override
+                BOOL_OR(er.rate_source = 'client') OVER (PARTITION BY er.title_key) AS has_override
          FROM client_effective_rate er
          WHERE er.clientid = $1
        ) ranked
        WHERE rate_source = 'card'
-       ORDER BY starting_point, destination, source_rank`,
+       ORDER BY title_key, source_rank`,
       [clientId],
     )
 
@@ -202,6 +203,14 @@ const saveClientRates = async (clientId, rates, rateCards) => {
       }
     }
 
+    // Titles are unique per client; park the kept rows on temporary titles so
+    // renames that swap titles between rows don't collide mid-save.
+    await client.query(
+      `UPDATE m5_client_rate SET title = '__saving__' || client_rate_id
+       WHERE clientid = $1 AND client_rate_id = ANY($2::int[])`,
+      [clientId, keptRateIds],
+    )
+
     const results = []
     for (const rate of rates) {
       const values = [clientId, ...routeRateValues(rate)]
@@ -211,8 +220,9 @@ const saveClientRates = async (clientId, rates, rateCards) => {
         const result = await client.query(
           `UPDATE m5_client_rate
            SET starting_point = $2, destination = $3, "6m_rate" = $4, "12m_rate" = $5,
-               surcharges = $6, surcharge12m = $7, hazardous = $8, vgm = $9, set_rate = $10, fuel_surcharge = $11
-           WHERE client_rate_id = $12 AND clientid = $1
+               surcharges = $6, surcharge12m = $7, hazardous = $8, vgm = $9, set_rate = $10, fuel_surcharge = $11,
+               title = $12
+           WHERE client_rate_id = $13 AND clientid = $1
            RETURNING *`,
           [...values, rate.client_rate_id],
         )
@@ -221,8 +231,8 @@ const saveClientRates = async (clientId, rates, rateCards) => {
 
       if (!rateRow) {
         const result = await client.query(
-          `INSERT INTO m5_client_rate (clientid, starting_point, destination, "6m_rate", "12m_rate", surcharges, surcharge12m, hazardous, vgm, set_rate, fuel_surcharge)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `INSERT INTO m5_client_rate (clientid, starting_point, destination, "6m_rate", "12m_rate", surcharges, surcharge12m, hazardous, vgm, set_rate, fuel_surcharge, title)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            RETURNING *`,
           values,
         )
@@ -253,6 +263,9 @@ const saveClientRates = async (clientId, rates, rateCards) => {
   } catch (err) {
     // Rollback on error
     await client.query("ROLLBACK")
+    if (err.code === "23505") {
+      return { success: false, message: "Two of this client's rates have the same title. Each title can only be used once." }
+    }
     console.error(`Error saving client rates for client ${clientId}:`, err)
     throw err
   } finally {

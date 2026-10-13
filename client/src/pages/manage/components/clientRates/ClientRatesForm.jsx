@@ -13,7 +13,15 @@ import {
 } from "react-icons/fa"
 import api from "../../../../api.js"
 import { showAlert, showConfirmDialog } from "../../utils/alertUtils.js"
-import RouteRatesEditor, { emptyRate, rateFromApi, isRateComplete, isRateBlank, formatRand } from "./RouteRatesEditor"
+import RouteRatesEditor, {
+  emptyRate,
+  rateFromApi,
+  isRateComplete,
+  isRateBlank,
+  formatRand,
+  titleKey,
+  duplicateTitleKeys,
+} from "./RouteRatesEditor"
 import { useFooterOffset } from "../rateCards/useFooterOffset"
 import "../../css/RateCards.css"
 
@@ -21,17 +29,17 @@ const STATUS = {
   active: {
     text: "Charged",
     className: "rc-pill-green",
-    title: "This is the price the client is charged on this route.",
+    title: "This is the price the client is charged for this rate.",
   },
   overridden: {
     text: "Client price used",
     className: "rc-pill-amber",
-    title: "This client has its own price for this route, which is used instead.",
+    title: "This client has its own price with the same title, which is used instead.",
   },
   superseded: {
     text: "Higher card used",
     className: "",
-    title: "A rate card higher in this client's list has this route, so its price is used instead.",
+    title: "A rate card higher in this client's list has a rate with this title, so its price is used instead.",
   },
 }
 
@@ -63,7 +71,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
       fuel_surcharge: card.fuel_surcharge ?? "",
     }))
     setAssignedCards(cards)
-    // A client with nothing yet starts with one blank route to fill in; a
+    // A client with nothing yet starts with one blank rate to fill in; a
     // client on rate cards may have no prices of its own.
     const initialRates = ownRates.length > 0 || cards.length > 0 ? ownRates : [emptyRate()]
     setRates(initialRates)
@@ -118,14 +126,14 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
   const updateCardFuel = (index, value) =>
     setAssignedCards(assignedCards.map((c, i) => (i === index ? { ...c, fuel_surcharge: value } : c)))
 
-  // Copy a card route into the client's own prices so a different price can
-  // be set for this client only.
+  // Copy a card rate into the client's own prices (same title, so it takes
+  // priority) so a different price can be set for this client only.
   const setClientPrice = (route) => {
-    const exists = rates.some((r) => r.starting_point === route.starting_point && r.destination === route.destination)
+    const exists = rates.some((r) => titleKey(r.title) === titleKey(route.title))
     if (exists) {
       showAlert(
         "Already has a client price",
-        `${clientName} already has its own price for ${route.starting_point} → ${route.destination}. Edit it under "Client-specific prices".`,
+        `${clientName} already has its own "${route.title}" price. Edit it under "Client-specific prices".`,
         "info",
       )
       return
@@ -156,11 +164,11 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
       )
       return
     }
-    if (!filledRates.every(isRateComplete)) {
+    if (!filledRates.every(isRateComplete) || duplicateTitleKeys(filledRates).size > 0) {
       setShowErrors(true)
       showAlert(
         "Some prices are incomplete",
-        "Each client-specific price needs a starting point, a destination, and a 6m or 12m rate. The incomplete ones are marked in red.",
+        "Each client-specific price needs a unique title, a 6m or 12m price, and either both a starting point and destination or neither. The ones that need attention are marked in red with the reason.",
         "warning",
       )
       return
@@ -176,7 +184,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
   const filterText = routeFilter.trim().toLowerCase()
   const visibleRoutes = filterText
     ? cardRoutes.filter((r) =>
-        `${r.starting_point} ${r.destination} ${r.rate_card_name}`.toLowerCase().includes(filterText),
+        `${r.title} ${r.starting_point || ""} ${r.destination || ""} ${r.rate_card_name}`.toLowerCase().includes(filterText),
       )
     : cardRoutes
   const chargedCount = cardRoutes.filter((r) => r.resolution === "active").length
@@ -195,10 +203,10 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
       <div className="rc-callout">
         <FaInfoCircle size={16} />
         <div>
-          <strong>How this client's price is chosen for a route</strong>
+          <strong>How this client's price is chosen</strong>
           <ol>
-            <li>If the client has its own price for the route, that price is used.</li>
-            <li>Otherwise, the first rate card in the list below that has the route is used.</li>
+            <li>If the client has its own price with that title, that price is used.</li>
+            <li>Otherwise, the first rate card in the list below that has a rate with that title is used.</li>
           </ol>
         </div>
       </div>
@@ -212,7 +220,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
               <h3 className="rc-section-title">Rate cards</h3>
               <p className="rc-section-desc">
                 Shared price lists set up on the Rate Cards tab. Use the arrows to set which card comes first when two
-                cards have the same route.
+                cards have a rate with the same title.
               </p>
             </div>
           </div>
@@ -232,7 +240,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                 <div style={{ minWidth: 0 }}>
                   <div className="rc-cell-title">{card.name}</div>
                   <div className="rc-cell-sub">
-                    {card.route_count ?? 0} route{card.route_count === 1 ? "" : "s"}
+                    {card.route_count ?? 0} rate{card.route_count === 1 ? "" : "s"}
                     {card.status === false && (
                       <span className="rc-pill rc-pill-red" style={{ marginLeft: 8 }}>
                         Inactive: not used for pricing
@@ -309,7 +317,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
             </option>
             {unassignedCards.map((card) => (
               <option key={card.rate_card_id} value={card.rate_card_id}>
-                {card.name} ({card.route_count} route{card.route_count === 1 ? "" : "s"})
+                {card.name} ({card.route_count} rate{card.route_count === 1 ? "" : "s"})
               </option>
             ))}
           </select>
@@ -323,11 +331,11 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
             <div className="rc-toolbar">
               <div>
                 <p className="rc-group-title" style={{ margin: 0 }}>
-                  Routes from these cards
+                  Rates from these cards
                 </p>
                 {cardRoutes.length > 0 && (
                   <span className="rc-hint">
-                    {chargedCount} of {cardRoutes.length} card route{cardRoutes.length === 1 ? "" : "s"} charged to
+                    {chargedCount} of {cardRoutes.length} card rate{cardRoutes.length === 1 ? "" : "s"} charged to
                     this client
                   </span>
                 )}
@@ -340,8 +348,8 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                     className="rc-input"
                     value={routeFilter}
                     onChange={(e) => setRouteFilter(e.target.value)}
-                    placeholder="Filter routes…"
-                    aria-label="Filter routes"
+                    placeholder="Filter rates…"
+                    aria-label="Filter rates"
                   />
                 </div>
               )}
@@ -359,7 +367,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                 <table className="rc-table">
                   <thead>
                     <tr>
-                      <th>Route</th>
+                      <th>Rate</th>
                       <th>Card</th>
                       <th className="rc-num">6m</th>
                       <th className="rc-num">12m</th>
@@ -378,7 +386,12 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                           className={route.resolution === "active" ? "" : "rc-row-muted"}
                         >
                           <td>
-                            {route.starting_point} → {route.destination}
+                            <div className="rc-cell-title">{route.title}</div>
+                            {route.starting_point && route.destination && (
+                              <div className="rc-cell-sub">
+                                {route.starting_point} → {route.destination}
+                              </div>
+                            )}
                           </td>
                           <td>{route.rate_card_name}</td>
                           <td className="rc-num">{formatRand(route["6m_rate"])}</td>
@@ -400,7 +413,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
                                 type="button"
                                 className="rc-btn rc-btn-ghost rc-btn-sm"
                                 onClick={() => setClientPrice(route)}
-                                title="Copy this route into the client-specific prices so you can give this client a different price"
+                                title="Copy this rate into the client-specific prices so you can give this client a different price"
                               >
                                 Set client price
                               </button>
@@ -414,7 +427,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
               </div>
             )}
             {cardRoutes.length > 0 && visibleRoutes.length === 0 && (
-              <p className="rc-hint">No routes match "{routeFilter}".</p>
+              <p className="rc-hint">No rates match "{routeFilter}".</p>
             )}
           </div>
         )}
@@ -428,7 +441,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
             <div>
               <h3 className="rc-section-title">Client-specific prices</h3>
               <p className="rc-section-desc">
-                Only needed when {clientName} pays a different price from its rate cards, or for a route that isn't on
+                Only needed when {clientName} pays a different price from its rate cards, or for a rate that isn't on
                 any card. These always take priority over rate cards.
               </p>
             </div>
@@ -446,7 +459,7 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
               <div className="rc-empty-title">No client-specific prices</div>
               <p>
                 {assignedCards.length > 0
-                  ? `${clientName} is charged entirely from its rate cards. Use "Set client price" on a card route, or add a price below, if this client pays something different.`
+                  ? `${clientName} is charged entirely from its rate cards. Use "Set client price" on a card rate, or add a price below, if this client pays something different.`
                   : "Assign a rate card above, or add this client's prices below."}
               </p>
             </div>

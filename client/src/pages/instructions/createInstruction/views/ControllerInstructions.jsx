@@ -53,6 +53,7 @@ const ControllerInstructions = ({
     clientId: null,
     shipmentTypeId: null,
     task: null,
+    rate_title: null,
     pickup: null,
     dropoff: null,
     stackDate: null,
@@ -80,12 +81,12 @@ const ControllerInstructions = ({
   const [showConfirmationPopup, setShowConfirmationPopup] = useState(false)
   const [confirmationMessage, setConfirmationMessage] = useState("")
 
-  const [clientStartingPoints, setClientStartingPoints] = useState([])
-  const [clientDestinations, setClientDestinations] = useState([])
+  // The selected client's rates, one per title, for the Rate dropdown
+  const [clientRateOptions, setClientRateOptions] = useState([])
   const [isLoadingLocations, setIsLoadingLocations] = useState(false)
   const [showNoRatesModal, setShowNoRatesModal] = useState(false)
 
-  const [locationIsLoading, setIsLoading] = useState({ startingPoints: false, destinations: false })
+  const [locationIsLoading] = useState({ startingPoints: false, destinations: false })
 
   const { clients, shipmentTypes, isLoading: hookIsLoading } = useInstructionData({
     onError: (msg) => console.error("[CREATE] data load error:", msg),
@@ -119,7 +120,7 @@ const ControllerInstructions = ({
   const isFieldValid = useCallback(
     (fieldName, value) => {
       switch (fieldName) {
-        case "clientId": case "shipmentTypeId": case "task": case "pickup": case "dropoff":
+        case "clientId": case "shipmentTypeId": case "task": case "rate_title": case "pickup": case "dropoff":
         case "pickupTime": case "pickupDate": case "deadline": case "bookingRef":
         case "fileRef": case "description":
           return value && value.trim() !== ""
@@ -154,7 +155,7 @@ const ControllerInstructions = ({
       clientId: "", clientName: "", representative: "", contactDetails: "", email: "",
       task: "", shipmentTypeId: "", shipmentTypeName: "", startingPoints: [],
       destinations: [], selectedStartingPoint: "", selectedDestination: "",
-      pickup: "", dropoff: "", surchargesAmount: "", stackDate: "", lastFreeDate: "",
+      rate_title: "", pickup: "", dropoff: "", surchargesAmount: "", stackDate: "", lastFreeDate: "",
       fileRef: "", bookingRef: "", vesselName: "", rateWeight: "Container", weight: "",
       vat: 15, description: "", rateper_6: "", rateper_12: "", abnormalRate: "",
       rateper_breakbulk: "", unitrate: "", setRateAmount: "", num_six_meters: 0,
@@ -177,6 +178,7 @@ const ControllerInstructions = ({
       ...locationData,
       pickup: preservedFormData?.pickup || location.state?.pickup || location.state?.controllerData?.pickup || locationData.selectedStartingPoint || locationData.pickup || "",
       dropoff: preservedFormData?.dropoff || location.state?.dropoff || location.state?.controllerData?.dropoff || locationData.selectedDestination || locationData.dropoff || "",
+      rate_title: preservedFormData?.rate_title || location.state?.rate_title || "",
       vat: preservedFormData && preservedFormData.vat !== undefined ? Number(preservedFormData.vat) : 15,
       total_cost: Number(preservedFormData?.total_cost) || 0,
     }
@@ -200,6 +202,7 @@ const ControllerInstructions = ({
     clientId: formData.clientId,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
+    rateTitle: formData.rate_title,
     shipmentTypeId: formData.shipmentTypeId,
     isAddOn,
     isReadOnly: false,
@@ -228,10 +231,10 @@ const ControllerInstructions = ({
       navigate,
     })
 
-  const fetchRates = useCallback(async (clientId, start, destination) => {
-    if (!clientId || !start || !destination) return null
+  const fetchRates = useCallback(async (clientId, start, destination, title) => {
+    if (!clientId || (!title && (!start || !destination))) return null
     try {
-      return await fetchRatesService(clientId, start, destination)
+      return await fetchRatesService(clientId, start, destination, title)
     } catch (error) {
       console.error("[fetchRates] Error fetching rates:", error)
       return null
@@ -240,8 +243,7 @@ const ControllerInstructions = ({
 
   const {
     handleClientChange,
-    handlePickupChange,
-    handleDropoffChange,
+    handleRateChange,
     handleShipmentTypeChange,
     handleContainerCountChange,
     openCalendar,
@@ -255,10 +257,9 @@ const ControllerInstructions = ({
     setWeightRows,
     setFieldErrors,
     setRateLockStatus,
-    setClientStartingPoints,
-    setClientDestinations,
+    clientRateOptions,
+    setClientRateOptions,
     setIsLoadingLocations,
-    setIsLoading,
     setShowNoRatesModal,
   })
 
@@ -405,10 +406,10 @@ const ControllerInstructions = ({
 
   useEffect(() => {
     const fetchSetRate = async () => {
-      const { clientId, pickup, dropoff } = formData
-      if (!isSetRate || !clientId || !pickup || !dropoff) return
+      const { clientId, pickup, dropoff, rate_title: rateTitle } = formData
+      if (!isSetRate || !clientId || (!rateTitle && (!pickup || !dropoff))) return
       try {
-        const data = await fetchSetRateService(clientId, pickup, dropoff)
+        const data = await fetchSetRateService(clientId, pickup, dropoff, rateTitle)
         if (data && data.set_rate != null) {
           const n = Number(data.set_rate)
           setSetRateValue(Number.isNaN(n) ? 0 : n)
@@ -420,12 +421,12 @@ const ControllerInstructions = ({
       }
     }
     fetchSetRate()
-  }, [isSetRate, formData.clientId, formData.pickup, formData.dropoff])
+  }, [isSetRate, formData.clientId, formData.pickup, formData.dropoff, formData.rate_title])
 
   useEffect(() => {
     if (isWeightBased || isAddOn) { setRateLockStatus({ sixMeter: false, twelveMeter: false }); return }
-    const { pickup, dropoff, clientId } = formData
-    if (!clientId || !pickup || !dropoff) {
+    const { pickup, dropoff, clientId, rate_title: rateTitle } = formData
+    if (!clientId || (!rateTitle && (!pickup || !dropoff))) {
       setFormData((prev) => ({ ...prev, sixMeterRate: "", twelveMeterRate: "", abnormalRate: "", rateper_breakbulk: "", surchargesAmount: "" }))
       setRateLockStatus({ sixMeter: false, twelveMeter: false })
       setAvailableExtraCharges([])
@@ -433,7 +434,7 @@ const ControllerInstructions = ({
     }
     const fetchAndUpdateRates = async () => {
       try {
-        const rates = await fetchRates(clientId, pickup, dropoff)
+        const rates = await fetchRates(clientId, pickup, dropoff, rateTitle)
         setFormData((prev) => {
           const updates = { ...prev }
           const newLock = { sixMeter: false, twelveMeter: false }
@@ -456,7 +457,7 @@ const ControllerInstructions = ({
       }
     }
     fetchAndUpdateRates()
-  }, [formData.clientId, formData.pickup, formData.dropoff, fetchRates, isWeightBased, isAddOn])
+  }, [formData.clientId, formData.pickup, formData.dropoff, formData.rate_title, fetchRates, isWeightBased, isAddOn])
 
   useEffect(() => {
     const newState = {
@@ -507,10 +508,8 @@ const ControllerInstructions = ({
       setFieldErrors={setFieldErrors}
       fieldRefs={fieldRefs}
       handleClientChange={handleClientChangeForLayout}
-      handlePickupChange={handlePickupChange}
-      clientStartingPoints={clientStartingPoints}
-      handleDropoffChange={handleDropoffChange}
-      clientDestinations={clientDestinations}
+      handleRateChange={handleRateChange}
+      clientRateOptions={clientRateOptions}
       isLoading={isLoading}
       isWeightBased={isWeightBased}
       isSetRateMode={isSetRateMode}

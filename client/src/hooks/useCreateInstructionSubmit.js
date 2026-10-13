@@ -35,9 +35,15 @@ export function useCreateInstructionSubmit({
     {
       // Fetch set rate on-the-fly if Set Rate checkbox is checked (prevents race condition)
       let currentSetRateValue = setRateValue;
-      if (isSetRate && formData.clientId && formData.pickup && formData.dropoff) {
+      const hasRate = formData.rate_title || (formData.pickup && formData.dropoff);
+      if (isSetRate && formData.clientId && hasRate) {
         try {
-          const data = await fetchSetRateService(formData.clientId, formData.pickup, formData.dropoff);
+          const data = await fetchSetRateService(
+            formData.clientId,
+            formData.pickup,
+            formData.dropoff,
+            formData.rate_title
+          );
           if (data && data.set_rate != null) {
             currentSetRateValue = Number(data.set_rate);
           } else {

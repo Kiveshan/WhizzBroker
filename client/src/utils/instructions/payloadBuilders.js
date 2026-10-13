@@ -36,6 +36,7 @@ export function buildUpdatePayload(
     client: formData.clientId,
     ksmFileRef: formData.ksmFileRef,
     shipment_type: formData.shipmentTypeId,
+    rate_title: formData.rate_title,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
     stackdate: formatDateForDB(formData.stackDate),
@@ -216,6 +217,22 @@ export function mapContainersFromDb(dbContainers, { isImportType, shipmentType }
       selectedExtraCharges: Array.isArray(container.extraCharges)
         ? container.extraCharges.map((c) => ({ charge_name: c.charge_name, amount: Number(c.amount || 0) }))
         : [],
+      // What was saved, so the update form can keep these amounts (rate
+      // changes apply to new instructions only; see fetchFreshAmounts).
+      _saved: {
+        containerType: container.container_type || "6m",
+        hazardous: hazardousValue,
+        hazardousAmount: Number(container["Hazardous Amount"] || 0),
+        addSurcharges: addSurchargesValue,
+        is_12m_surcharge: Boolean(container.is_12m_surcharge),
+        surchargeAmount: Number(container["Surcharge Amount"] || 0),
+        surcharge_12m_amount: Number(container.surcharge_12m_amount || 0),
+        vgm: vgmValue,
+        vgmAmount: Number(container["vgm amount"] || 0),
+        extraCharges: Array.isArray(container.extraCharges)
+          ? container.extraCharges.map((c) => ({ charge_name: c.charge_name, amount: Number(c.amount || 0) }))
+          : [],
+      },
     };
   });
 }

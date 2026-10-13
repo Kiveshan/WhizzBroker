@@ -320,6 +320,7 @@ const Viewcontrollerinstructions = ({
         shipmentTypeName: data.shipmenttype || "",
         ksmFileRef: data.ksmFileRef || "", // Updated from task to ksmFileRef
         pickup: data.pickup || "",
+        rate_title: data.rate_title || "",
         dropoff: data.dropoff || "",
         hazardous: Boolean(data.hazardous),
         surchages: Boolean(data.surchages), // Note: This matches the database field name (missing 'r')
@@ -755,10 +756,12 @@ const Viewcontrollerinstructions = ({
               onClientChange={() => {}}
               onChange={() => {}}
               showLocations={true}
-              startingPoints={formData.pickup ? [{ id: 'cur', startingpoint: formData.pickup }] : []}
-              destinations={formData.dropoff ? [{ id: 'cur', destination: formData.dropoff }] : []}
-              onPickupChange={() => {}}
-              onDropoffChange={() => {}}
+              rateOptions={
+                formData.rate_title
+                  ? [{ title: formData.rate_title, starting_point: formData.pickup, destination: formData.dropoff }]
+                  : []
+              }
+              onRateChange={() => {}}
             />
 
             {/* Instruction details */}

@@ -4,6 +4,7 @@ import {
   saveInstruction,
   getClientInstructionStats,
   getClientRates,
+  getClientRateTitles,
   getInstructions,
   getInstructionById,
   updateContainersByInstructionId,
@@ -13,6 +14,7 @@ import {
   checkClientHasRates,
   saveInstructionAndContainers,
   updateFCInstructionAndContainers,
+  freezeExistingContainerAmounts,
   deleteInstruction,
   checkContainerHasLegs,
   deleteContainerAndLegs,
@@ -116,13 +118,20 @@ const calculateTotalCost = (instructionData, containers = [], weightData = []) =
 }
 
 // Handler functions
+// Set (break bulk) rate by title (?title=) or, for older instructions, by
+// route (/:starting_point/:destination or ?start=&destination=).
 export const getClientSetRateHandler = async (req, res) => {
   try {
-    const { clientId, starting_point, destination } = req.params
+    const { clientId } = req.params
+    const starting_point = req.params.starting_point ?? req.query.start
+    const destination = req.params.destination ?? req.query.destination
+    const { title } = req.query
 
-    console.log(`[${new Date().toISOString()}] getClientSetRateHandler: Request for client ${clientId}, starting_point ${starting_point}, destination ${destination}`)
+    if (!title && (!starting_point || !destination)) {
+      return res.status(400).json({ error: "A rate title, or a starting point and destination, is required" })
+    }
 
-    const result = await getClientSetRate(clientId, starting_point, destination)
+    const result = await getClientSetRate(clientId, starting_point, destination, title)
 
     res.status(200).json(result)
   } catch (error) {
@@ -630,6 +639,17 @@ export const getClientDestinationsHandler = async (req, res) => {
   }
 }
 
+// The client's rates for the instruction form's Rate dropdown, one per title.
+export const getClientRateTitlesHandler = async (req, res) => {
+  try {
+    const titles = await getClientRateTitles(req.params.clientId)
+    res.json(titles)
+  } catch (error) {
+    console.error("Error fetching client rate titles:", error)
+    res.status(500).json({ error: "Failed to fetch client rates" })
+  }
+}
+
 export const checkClientRatesHandler = async (req, res) => {
   try {
     const { clientId } = req.params
@@ -651,16 +671,15 @@ export const checkClientRatesHandler = async (req, res) => {
 export const getClientRatesHandler = async (req, res) => {
   try {
     const { clientId } = req.params
-    const { start, destination } = req.query
+    const { start, destination, title } = req.query
 
     console.log("[getClientRatesHandler] Request received:", {
       params: req.params,
       query: req.query,
-      body: req.body,
     })
 
-    if (!start || !destination) {
-      const errorMsg = "Starting point and destination are required"
+    if (!title && (!start || !destination)) {
+      const errorMsg = "A rate title, or a starting point and destination, is required"
       console.error(`[getClientRatesHandler] ${errorMsg}`)
       return res.status(400).json({
         error: errorMsg,
@@ -671,12 +690,14 @@ export const getClientRatesHandler = async (req, res) => {
       `[getClientRatesHandler] Fetching rates for client ${clientId}, start: ${start}, destination: ${destination}`,
     )
 
-    const rates = await getClientRates(clientId, start, destination)
+    const rates = await getClientRates(clientId, start, destination, title)
 
     console.log("[getClientRatesHandler] getClientRates returned:", rates)
 
     if (!rates || Object.keys(rates).length === 0) {
-      const errorMsg = `No rates found for client ${clientId}, start: ${start}, destination: ${destination}`
+      const errorMsg = title
+        ? `No rate titled "${title}" found for this client`
+        : `No rates found for client ${clientId}, start: ${start}, destination: ${destination}`
       console.error(`[getClientRatesHandler] ${errorMsg}`)
       return res.status(404).json({
         error: errorMsg,
@@ -891,7 +912,11 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
     // reflected. For shipment type 5 (add-on), we keep total_cost at 0 even if
     // a non-zero value could be computed.
     const shipmentTypeStr = String(instructionData.shipmentTypeId || instructionData.shipment_type || "")
-    const backendCalculatedCost = calculateTotalCost(instructionData, containers, weightData)
+    // Rate changes apply to new instructions only: existing containers keep
+    // the amounts they were saved with for flags that were already on, and
+    // the total is calculated from those same amounts.
+    const pricedContainers = await freezeExistingContainerAmounts(id, containers)
+    const backendCalculatedCost = calculateTotalCost(instructionData, pricedContainers, weightData)
     const finalTotalCost = shipmentTypeStr === "5" ? 0 : backendCalculatedCost
     console.log(
       `[${new Date().toISOString()}] [CONTROLLER] updateFCInstructionAndContainersHandler: Backend-calculated total_cost (includes VGM/surcharges/hazardous):`,
@@ -912,7 +937,7 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
 
     // For shipment type 5 (add-on), we now allow containers to be saved while
     // keeping total_cost and rate fields at 0 from the frontend/backend.
-    const containersToSave = Array.isArray(containers) ? containers : []
+    const containersToSave = Array.isArray(pricedContainers) ? pricedContainers : []
 
     const result = await updateFCInstructionAndContainers(
       id,

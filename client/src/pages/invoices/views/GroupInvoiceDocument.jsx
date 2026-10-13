@@ -78,9 +78,14 @@ export function GroupInvoiceDocument({ data }) {
           <table className="wb-inv-details-table">
             <tbody>
               <tr>
-                <td className="label">Route</td>
+                <td className="label">{child.rateTitle ? "Rate" : "Route"}</td>
                 <td className="value">
-                  {child.shipmentType} — {child.pickup} → {child.dropoff}
+                  {child.shipmentType} —{" "}
+                  {child.rateTitle
+                    ? child.pickup && child.dropoff
+                      ? `${child.rateTitle} (${child.pickup} → ${child.dropoff})`
+                      : child.rateTitle
+                    : `${child.pickup || ""} → ${child.dropoff || ""}`}
                 </td>
               </tr>
               {child.companyFileRef && (

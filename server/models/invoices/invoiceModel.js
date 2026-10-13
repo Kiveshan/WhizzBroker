@@ -153,6 +153,7 @@ const getInvoiceDetails = async (id) => {
         m1.booking_ref,
         m1.pickup,
         m1.dropoff,
+        m1.rate_title,
         m1.vessel_name,
         -- Base rates from m1_controller
         m1.rateper_6,
@@ -753,6 +754,7 @@ const getInstructionDetailsForPreview = async (instructionId) => {
           m1.booking_ref,
           m1.pickup,
           m1.dropoff,
+          m1.rate_title,
           m1.vessel_name,
           m1.rateper_6,
           m1.rateper_12,
@@ -1044,7 +1046,7 @@ const getGroupInvoicePreview = async (groupId) => {
 
     const childRows = await client.query(
       `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
-              m.vessel_name, m.pickup, m.dropoff, m.vat, m.total_cost,
+              m.vessel_name, m.pickup, m.dropoff, m.rate_title, m.vat, m.total_cost,
               m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
               m.rateper_6, m.rateper_12, m.rateper_abnormal,
               m.shipment_type as shipment_type_key, m.unitrate,
@@ -1167,6 +1169,7 @@ const getGroupInvoicePreview = async (groupId) => {
         vesselName: row.vessel_name,
         pickup: row.pickup,
         dropoff: row.dropoff,
+        rateTitle: row.rate_title,
         vatRate,
         lines,
         subtotal: Number(childSubtotal.toFixed(2)),

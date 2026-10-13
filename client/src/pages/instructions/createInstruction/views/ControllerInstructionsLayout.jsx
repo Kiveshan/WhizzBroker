@@ -26,10 +26,8 @@ export function ControllerInstructionsLayout({
   setFieldErrors,
   fieldRefs,
   handleClientChange,
-  handlePickupChange,
-  clientStartingPoints,
-  handleDropoffChange,
-  clientDestinations,
+  handleRateChange,
+  clientRateOptions,
   isLoading,
   isWeightBased,
   isSetRateMode,
@@ -187,10 +185,8 @@ export function ControllerInstructionsLayout({
           onClientChange={handleClientChange}
           onChange={handleInputChange}
           showLocations={true}
-          startingPoints={clientStartingPoints}
-          destinations={clientDestinations}
-          onPickupChange={handlePickupChange}
-          onDropoffChange={handleDropoffChange}
+          rateOptions={clientRateOptions}
+          onRateChange={handleRateChange}
         />
 
         <BookingDetailsSection

@@ -68,7 +68,7 @@ const saveRateCardHandler = async (req, res) => {
       entityType: "rate_card",
       targetId: result.rateCardId,
       targetName: name.trim(),
-      details: `${rates.length} route(s): ${rates.map((r) => `${r.starting_point}->${r.destination}`).join(", ")}${
+      details: `${rates.length} route(s): ${rates.map((r) => r.title).join(", ")}${
         clients ? `; clients: [${clients.join(", ")}]` : ""
       }`,
     })
@@ -106,13 +106,13 @@ const deleteRateCardHandler = async (req, res) => {
 // be charged from because they already have a winning price for that lane.
 const assignmentConflictsHandler = async (req, res) => {
   try {
-    const { rateCardId = null, lanes = [], clientIds = [] } = req.body
+    const { rateCardId = null, titles = [], clientIds = [] } = req.body
     const clients = parseClientIds(clientIds)
-    if (!clients || !Array.isArray(lanes)) {
-      return res.status(400).json({ error: "lanes and clientIds must be arrays" })
+    if (!clients || !Array.isArray(titles)) {
+      return res.status(400).json({ error: "titles and clientIds must be arrays" })
     }
-    const validLanes = lanes.filter((l) => l && l.starting_point && l.destination)
-    const conflicts = await findAssignmentConflicts(rateCardId, validLanes, clients)
+    const validTitles = titles.filter((t) => typeof t === "string" && t.trim() !== "")
+    const conflicts = await findAssignmentConflicts(rateCardId, validTitles, clients)
     res.json(conflicts)
   } catch (err) {
     console.error("Error checking rate card assignment conflicts:", err)

@@ -110,7 +110,7 @@ const saveClientRatesHandler = async (req, res) => {
       targetId: clientId,
       targetName: `client ${clientId}`,
       details: `${rates.length} rate(s) saved for client ${clientId}: ${rates
-        .map((r) => `${r.starting_point}->${r.destination}`)
+        .map((r) => r.title)
         .join(", ")}${cardAssignments ? `; rate cards: [${cardAssignments.map((c) => c.rate_card_id).join(", ")}]` : ""}`,
     })
 

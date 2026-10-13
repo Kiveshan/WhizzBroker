@@ -3,12 +3,14 @@
  *
  * Mirrors the controller create form's first card exactly:
  *   Row 1: Client, Representative, Contact Details, Email
- *   Row 2: Pick-Up Location, Drop-Off Location
+ *   Row 2: Rate (picked by title), Route (read-only, from the chosen rate)
  *
- * Locations are optional (pass showLocations) so callers that render the route
- * elsewhere can omit them. FC's route-mismatch lock is supported via
- * pickupLocked + onLockedRouteClick (renders read-only inputs that open the
- * unlock confirmation on click).
+ * The rate row is optional (pass showLocations) so callers that render it
+ * elsewhere can omit it. Rates are identified by title; the route is
+ * informational and may be blank. Instructions captured before rate titles
+ * existed have no title and show their stored route instead. FC's
+ * route-mismatch lock is supported via pickupLocked + onLockedRouteClick
+ * (renders a read-only input that opens the unlock confirmation on click).
  *
  * @param {object}   props.formData
  * @param {Array}    props.clients
@@ -20,11 +22,9 @@
  * @param {object}   [props.nonEditableStyle]
  * @param {function} props.onClientChange
  * @param {function} props.onChange            Generic input change handler
- * @param {boolean}  [props.showLocations]     Render the Pick-Up / Drop-Off row
- * @param {Array}    [props.startingPoints]    [{ id, startingpoint }]
- * @param {Array}    [props.destinations]      [{ id, destination }]
- * @param {function} [props.onPickupChange]
- * @param {function} [props.onDropoffChange]
+ * @param {boolean}  [props.showLocations]     Render the Rate / Route row
+ * @param {Array}    [props.rateOptions]       [{ title, starting_point, destination, rate_card_name }]
+ * @param {function} [props.onRateChange]      (event) => void; event.target.value is the title
  * @param {boolean}  [props.pickupLocked]      FC route-mismatch: lock the route inputs
  * @param {function} [props.onLockedRouteClick]
  */
@@ -42,10 +42,8 @@ export function ClientInfoSection({
   onClientChange,
   onChange,
   showLocations = false,
-  startingPoints = [],
-  destinations = [],
-  onPickupChange,
-  onDropoffChange,
+  rateOptions = [],
+  onRateChange,
   pickupLocked = false,
   onLockedRouteClick,
 }) {
@@ -130,17 +128,24 @@ export function ClientInfoSection({
       </div>
       {showLocations && (
         <div className="controller-instructions-form-row">
-          <div className="controller-instructions-form-field">
-            <label>Pick-Up Location</label>
+          <div className="controller-instructions-form-field" style={{ flex: 2 }}>
+            <label>
+              Rate<span className="wb-required">*</span>
+            </label>
             <div
               className="controller-instructions-select-wrapper"
-              ref={fieldRefs?.pickup}
+              ref={fieldRefs?.rate_title}
             >
               {pickupLocked ? (
                 <input
                   type="text"
                   className="controller-instructions-form-input"
-                  value={formData.pickup || ""}
+                  value={
+                    formData.rate_title ||
+                    (formData.pickup && formData.dropoff
+                      ? `${formData.pickup} → ${formData.dropoff}`
+                      : "")
+                  }
                   readOnly
                   style={readOnlyStyle}
                   onClick={onLockedRouteClick}
@@ -148,71 +153,57 @@ export function ClientInfoSection({
               ) : (
                 <select
                   className={`dropdown ${
-                    fieldErrors.pickup ? "controller-instructions-error-field" : ""
+                    fieldErrors.rate_title ? "controller-instructions-error-field" : ""
                   }`}
-                  name="pickup"
-                  value={formData.pickup || ""}
-                  onChange={onPickupChange}
-                  disabled={isReadOnly}
+                  name="rate_title"
+                  value={formData.rate_title || ""}
+                  onChange={onRateChange}
+                  disabled={isReadOnly || !formData.clientId}
                   style={isReadOnly ? readOnlyStyle : {}}
                 >
                   <option value="" disabled>
-                    Select Pick-Up Location
+                    {!formData.clientId
+                      ? "Select a client first"
+                      : !formData.rate_title && formData.pickup && formData.dropoff
+                        ? `Route: ${formData.pickup} → ${formData.dropoff} (choose a rate to change)`
+                        : "Select Rate"}
                   </option>
-                  {startingPoints.map((point, index) => (
-                    <option
-                      key={point.id ?? index}
-                      value={point.startingpoint ?? point.value}
-                    >
-                      {point.startingpoint ?? point.label}
+                  {formData.rate_title &&
+                    !rateOptions.some((r) => r.title === formData.rate_title) && (
+                      <option value={formData.rate_title}>
+                        {formData.rate_title} (no longer on this client's rates)
+                      </option>
+                    )}
+                  {rateOptions.map((rate) => (
+                    <option key={rate.title} value={rate.title}>
+                      {rate.title}
+                      {rate.starting_point && rate.destination
+                        ? `  —  ${rate.starting_point} → ${rate.destination}`
+                        : ""}
                     </option>
                   ))}
                 </select>
               )}
-              <ErrorTooltip message={fieldErrors.pickup} />
+              <ErrorTooltip message={fieldErrors.rate_title} />
             </div>
           </div>
           <div className="controller-instructions-form-field">
-            <label>Drop-Off Location</label>
-            <div
-              className="controller-instructions-select-wrapper"
-              ref={fieldRefs?.dropoff}
-            >
-              {pickupLocked ? (
-                <input
-                  type="text"
-                  className="controller-instructions-form-input"
-                  value={formData.dropoff || ""}
-                  readOnly
-                  style={readOnlyStyle}
-                  onClick={onLockedRouteClick}
-                />
-              ) : (
-                <select
-                  className={`dropdown ${
-                    fieldErrors.dropoff ? "controller-instructions-error-field" : ""
-                  }`}
-                  name="dropoff"
-                  value={formData.dropoff || ""}
-                  onChange={onDropoffChange}
-                  disabled={isReadOnly}
-                  style={isReadOnly ? readOnlyStyle : {}}
-                >
-                  <option value="" disabled>
-                    Select Drop-Off Location
-                  </option>
-                  {destinations.map((dest, index) => (
-                    <option
-                      key={dest.id ?? index}
-                      value={dest.destination ?? dest.value}
-                    >
-                      {dest.destination ?? dest.label}
-                    </option>
-                  ))}
-                </select>
-              )}
-              <ErrorTooltip message={fieldErrors.dropoff} />
-            </div>
+            <label>Route</label>
+            <input
+              type="text"
+              className="controller-instructions-form-input"
+              value={
+                formData.pickup && formData.dropoff
+                  ? `${formData.pickup} → ${formData.dropoff}`
+                  : formData.rate_title
+                    ? "No route on this rate"
+                    : ""
+              }
+              placeholder="Filled in from the rate"
+              readOnly
+              disabled
+              style={nonEditableStyle}
+            />
           </div>
         </div>
       )}

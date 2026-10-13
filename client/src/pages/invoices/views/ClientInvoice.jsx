@@ -443,10 +443,16 @@ const ClientInvoice = forwardRef(({
       doc.setFontSize(fonts.small);
 
       // Destination Table - Updated to include additional destination info
+      // The rate title is what the client agreed to pay for; the route is
+      // optional on titled rates. Instructions captured before rate titles
+      // show their route as before.
+      const hasRoute = Boolean(finalInvoiceData.pickup && finalInvoiceData.dropoff);
       const destinationRoute = `${finalInvoiceData.pickup || ""} to ${
         finalInvoiceData.dropoff || ""
       }`;
-      const destinationData = [["Destination", destinationRoute]];
+      const destinationData = finalInvoiceData.rate_title
+        ? [["Rate", finalInvoiceData.rate_title], ...(hasRoute ? [["Route", destinationRoute]] : [])]
+        : [["Destination", destinationRoute]];
       
       // Add additional destination info if it exists
       if (finalInvoiceData.additional_destination_info) {
@@ -988,11 +994,19 @@ const ClientInvoice = forwardRef(({
 
           {/* Vessel/Ref and Destination - Updated */}
           <div className="vessel-destination">
-            <div className="vessel">Starting: {finalInvoiceData.pickup}</div>
+            <div className="vessel">
+              {finalInvoiceData.rate_title
+                ? <>Rate: {finalInvoiceData.rate_title}</>
+                : <>Starting: {finalInvoiceData.pickup}</>}
+            </div>
             <div className="destination" id="destination">
               <div className="dropoff-row">
                 <div className="dropoff" id="dropoff">
-                  Destination: {finalInvoiceData.dropoff}
+                  {finalInvoiceData.rate_title
+                    ? finalInvoiceData.pickup && finalInvoiceData.dropoff
+                      ? <>Route: {finalInvoiceData.pickup} → {finalInvoiceData.dropoff}</>
+                      : null
+                    : <>Destination: {finalInvoiceData.dropoff}</>}
                 </div>
                 {!isPreviewMode && !isPreview && isEditMode && (
                   <div className="additional-destination-edit">

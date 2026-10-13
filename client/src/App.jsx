@@ -274,7 +274,7 @@ function ContentWrapper() {
   const backTarget = getBackTarget();
 
   return (
-    <div className="content-area">
+    <div className={`content-area${shouldShowFooter ? " has-fixed-footer" : ""}`}>
       {shouldShowLogout && (
         showBackInTopBar ? (
           <div className="top-actions-bar">

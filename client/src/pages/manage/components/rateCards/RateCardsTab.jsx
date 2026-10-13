@@ -4,11 +4,17 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { FaPlus, FaSearch, FaTimes, FaLayerGroup, FaTrash, FaPen } from "react-icons/fa"
 import api from "../../../../api.js"
 import { showAlert, showConfirmDialog } from "../../utils/alertUtils.js"
-import RouteRatesEditor, { emptyRate, rateFromApi, isRateComplete, isRateBlank } from "../clientRates/RouteRatesEditor"
+import RouteRatesEditor, {
+  emptyRate,
+  rateFromApi,
+  isRateComplete,
+  isRateBlank,
+  duplicateTitleKeys,
+} from "../clientRates/RouteRatesEditor"
 import { useFooterOffset } from "./useFooterOffset"
 import "../../css/RateCards.css"
 
-// Shared rate cards: named route price lists that can be assigned to any
+// Shared rate cards: named price lists (rates identified by title) that can be assigned to any
 // number of clients. Self-contained (own state + API calls).
 
 const errorText = (err) => err.response?.data?.error || err.message
@@ -144,13 +150,13 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
   const isDirty = snapshot({ name, description, status }, rates, clientIds) !== savedState
 
   // Warn about newly added clients whose existing prices beat this card on
-  // some routes; returns false when the user backs out.
+  // of this card's rates; returns false when the user backs out.
   const confirmConflicts = async () => {
     const addedIds = clientIds.filter((id) => !originalClientIds.includes(id))
     if (addedIds.length === 0) return true
     const res = await api.post("/api/rate-cards/assignment-conflicts", {
       rateCardId: card?.rate_card_id || null,
-      lanes: filledRates.map((r) => ({ starting_point: r.starting_point, destination: r.destination })),
+      titles: filledRates.map((r) => r.title.trim()),
       clientIds: addedIds,
     })
     const conflicts = res.data || []
@@ -163,23 +169,23 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
       byClient
         .get(c.client)
         .push(
-          `${escapeHtml(`${c.starting_point} → ${c.destination}`)} <span style='color:#6b7280'>(uses ${escapeHtml(winner)})</span>`,
+          `${escapeHtml(c.title)} <span style='color:#6b7280'>(uses ${escapeHtml(winner)})</span>`,
         )
     }
     const html =
       "<div style='text-align:left;font-size:14px;line-height:1.5'>" +
-      "<p style='margin:0 0 8px'>These clients already have a price that takes priority on some of this card's routes, so <strong>those routes won't change for them</strong>:</p>" +
+      "<p style='margin:0 0 8px'>These clients already have a price that takes priority on some of this card's rates, so <strong>those rates won't change for them</strong>:</p>" +
       "<div style='max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:6px;padding:4px 12px'>" +
       [...byClient.entries()]
         .map(
-          ([client, routes]) =>
-            `<p style='margin:8px 0 2px'><strong>${escapeHtml(client)}</strong></p><ul style='margin:0 0 6px;padding-left:18px'>${routes
+          ([client, clientRates]) =>
+            `<p style='margin:8px 0 2px'><strong>${escapeHtml(client)}</strong></p><ul style='margin:0 0 6px;padding-left:18px'>${clientRates
               .map((r) => `<li>${r}</li>`)
               .join("")}</ul>`,
         )
         .join("") +
-      "</div><p style='margin:10px 0 0'>Every other route on the card will apply to them. To change the order, open the client on the Client Rates tab.</p></div>"
-    return showConfirmDialog("Some routes won't apply to these clients", html, "Save anyway", { html: true })
+      "</div><p style='margin:10px 0 0'>Every other rate on the card will apply to them. To change the order, open the client on the Client Rates tab.</p></div>"
+    return showConfirmDialog("Some rates won't apply to these clients", html, "Save anyway", { html: true })
   }
 
   const handleCancel = async () => {
@@ -192,15 +198,20 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!name.trim() || filledRates.length === 0 || !filledRates.every(isRateComplete)) {
+    if (
+      !name.trim() ||
+      filledRates.length === 0 ||
+      !filledRates.every(isRateComplete) ||
+      duplicateTitleKeys(filledRates).size > 0
+    ) {
       setShowErrors(true)
       showAlert(
         "A few things are missing",
         !name.trim()
           ? "Give the rate card a name."
           : filledRates.length === 0
-            ? "Add at least one route with its prices."
-            : "Each route needs a starting point, a destination, and a 6m or 12m rate. The incomplete ones are marked in red.",
+            ? "Add at least one rate with its prices."
+            : "Each rate needs a unique title, a 6m or 12m price, and either both a starting point and destination or neither. The ones that need attention are marked in red with the reason.",
         "warning",
       )
       return
@@ -287,15 +298,15 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
         </div>
       </section>
 
-      {/* Step 2: routes */}
+      {/* Step 2: rates */}
       <section className="rc-section">
         <div className="rc-section-header">
           <div className="rc-section-heading">
             <span className="rc-step">2</span>
             <div>
-              <h3 className="rc-section-title">Routes and prices</h3>
+              <h3 className="rc-section-title">Rates and prices</h3>
               <p className="rc-section-desc">
-                Click a route to edit its prices. Use the copy button to start a similar route quickly.
+                Each rate has a title that controllers pick on the instruction. Click a rate to edit it, or use the copy button to start a similar one.
               </p>
             </div>
           </div>
@@ -322,7 +333,7 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
 
       <div className="rc-actionbar">
         <div className="rc-actionbar-summary">
-          <strong>{plural(filledRates.length, "route")}</strong> · <strong>{plural(clientIds.length, "client")}</strong>
+          <strong>{plural(filledRates.length, "rate")}</strong> · <strong>{plural(clientIds.length, "client")}</strong>
           {isDirty && <span className="rc-pill rc-pill-amber" style={{ marginLeft: 10 }}>Unsaved changes</span>}
         </div>
         <div className="rc-actionbar-buttons">
@@ -377,7 +388,7 @@ const RateCardsTab = () => {
   const deleteCard = async (card) => {
     const confirmed = await showConfirmDialog(
       "Delete rate card?",
-      `"${card.name}" and its ${plural(card.route_count, "route")} will be permanently deleted.`,
+      `"${card.name}" and its ${plural(card.route_count, "rate")} will be permanently deleted.`,
       "Delete",
     )
     if (!confirmed) return
@@ -430,7 +441,7 @@ const RateCardsTab = () => {
           <FaLayerGroup size={28} className="rc-empty-icon" />
           <div className="rc-empty-title">No rate cards yet</div>
           <p>
-            Create a rate card with your standard routes and prices, then assign it to clients instead of entering
+            Create a rate card with your standard rates and prices, then assign it to clients instead of entering
             the same prices for each one.
           </p>
           <button type="button" className="rc-btn rc-btn-primary" onClick={() => setEditingCard({})}>
@@ -458,7 +469,7 @@ const RateCardsTab = () => {
               <thead>
                 <tr>
                   <th>Rate card</th>
-                  <th className="rc-num">Routes</th>
+                  <th className="rc-num">Rates</th>
                   <th className="rc-num">Clients</th>
                   <th>Status</th>
                   <th>Last updated</th>

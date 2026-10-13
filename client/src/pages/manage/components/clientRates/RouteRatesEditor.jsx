@@ -16,6 +16,7 @@ const newKey = () => `route-${nextKey++}`
 
 export const emptyRate = () => ({
   _key: newKey(),
+  title: "",
   starting_point: "",
   destination: "",
   "6m_rate": "",
@@ -36,6 +37,7 @@ const orBlank = (v) => (v !== null && v !== undefined ? v : "")
 export const rateFromApi = (rate, idField) => ({
   _key: newKey(),
   ...(idField && rate[idField] ? { [idField]: rate[idField] } : {}),
+  title: rate.title || "",
   starting_point: rate.starting_point || "",
   destination: rate.destination || "",
   "6m_rate": orBlank(rate["6m_rate"]),
@@ -55,12 +57,30 @@ const hasValue = (v) => v !== "" && v !== undefined && v !== null
 
 const hasBaseRate = (rate) => hasValue(rate["6m_rate"]) || hasValue(rate["12m_rate"])
 
-export const isRateComplete = (rate) =>
-  Boolean(rate.starting_point.trim() && rate.destination.trim() && hasBaseRate(rate))
+// Same normalisation as the server's rate_title_key(): case-insensitive,
+// whitespace collapsed. Titles identify a rate, so they must be unique within
+// one client's prices or one card.
+export const titleKey = (title) => String(title ?? "").trim().replace(/\s+/g, " ").toLowerCase()
+
+// Starting point and destination are optional, but go together.
+const routeHalfFilled = (rate) => Boolean(rate.starting_point.trim()) !== Boolean(rate.destination.trim())
+
+export const isRateComplete = (rate) => Boolean(rate.title.trim() && hasBaseRate(rate) && !routeHalfFilled(rate))
+
+// Title keys used by more than one non-blank row.
+export const duplicateTitleKeys = (rates) => {
+  const counts = new Map()
+  for (const rate of rates) {
+    const key = titleKey(rate.title)
+    if (key) counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  return new Set([...counts].filter(([, n]) => n > 1).map(([key]) => key))
+}
 
 // A row the user added but never filled in; dropped on save rather than
 // blocking it.
 export const isRateBlank = (rate) =>
+  !rate.title.trim() &&
   !rate.starting_point.trim() &&
   !rate.destination.trim() &&
   ["6m_rate", "12m_rate", "surcharge6M", "surcharge12m", "hazardous", "vgm", "set_rate", "fuel_surcharge"].every(
@@ -128,8 +148,15 @@ const PercentInput = ({ value, onChange, label, placeholder = "0" }) => (
   </div>
 )
 
-const RouteSummary = ({ rate, showErrors }) => {
+const RouteSummary = ({ rate, showErrors, duplicate }) => {
   const blank = isRateBlank(rate)
+  if (duplicate) {
+    return (
+      <div className="rc-route-summary">
+        <span className="rc-pill rc-pill-red">Duplicate title</span>
+      </div>
+    )
+  }
   if (!isRateComplete(rate) && (!blank || showErrors)) {
     return (
       <div className="rc-route-summary">
@@ -156,7 +183,7 @@ const RouteSummary = ({ rate, showErrors }) => {
   )
 }
 
-const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = null, addLabel = "Add route" }) => {
+const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = null, addLabel = "Add rate" }) => {
   // New (blank) rows start open; rows loaded from the server start closed.
   // Rows can arrive after mount (data loads, "Set client price"), so watch
   // for keys not seen before.
@@ -185,8 +212,13 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
 
   const duplicateRoute = (index) => {
     const { client_rate_id, rate_card_rate_id, ...source } = rates[index]
+    // Titles must be unique, so the copy gets a distinct one to edit
+    const usedKeys = new Set(rates.map((r) => titleKey(r.title)))
+    let title = source.title.trim() ? `${source.title.trim()} (copy)` : ""
+    for (let n = 2; title && usedKeys.has(titleKey(title)); n++) title = `${source.title.trim()} (copy ${n})`
     const copy = {
       ...source,
+      title,
       _key: newKey(),
       _openOnAdd: true,
       extra_charges: source.extra_charges.map((c) => ({ ...c })),
@@ -197,8 +229,8 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
   const removeRoute = async (index) => {
     const rate = rates[index]
     if (!isRateBlank(rate)) {
-      const label = rate.starting_point || rate.destination ? `${rate.starting_point} → ${rate.destination}` : "this route"
-      const confirmed = await showConfirmDialog("Remove route?", `${label} will be removed when you save.`, "Remove")
+      const label = rate.title.trim() ? `"${rate.title.trim()}"` : "This rate"
+      const confirmed = await showConfirmDialog("Remove rate?", `${label} will be removed when you save.`, "Remove")
       if (!confirmed) return
     }
     onChange(rates.filter((_, i) => i !== index))
@@ -210,6 +242,7 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
   }
 
   const allOpen = rates.length > 0 && rates.every((r) => openKeys.has(r._key))
+  const duplicates = duplicateTitleKeys(rates)
 
   return (
     <div>
@@ -219,11 +252,16 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
         <div className="rc-routes">
           {rates.map((rate, index) => {
             const open = openKeys.has(rate._key)
-            const invalid = showErrors && !isRateComplete(rate)
+            const isDuplicate = duplicates.has(titleKey(rate.title))
+            const invalid = isDuplicate || (showErrors && !isRateComplete(rate))
             const routeLabel =
-              rate.starting_point.trim() || rate.destination.trim()
-                ? `${rate.starting_point.trim() || "…"} → ${rate.destination.trim() || "…"}`
+              rate.starting_point.trim() && rate.destination.trim()
+                ? `${rate.starting_point.trim()} → ${rate.destination.trim()}`
                 : null
+            const titleError = !rate.title.trim()
+              ? showErrors && "Enter a title"
+              : isDuplicate && "Another rate already uses this title"
+            const routeError = showErrors && routeHalfFilled(rate) && "Fill in both, or leave both empty"
             return (
               <div
                 key={rate._key}
@@ -237,17 +275,23 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
                     aria-expanded={open}
                   >
                     <FaChevronRight className="rc-route-chevron" size={12} />
-                    <span className={`rc-route-name${routeLabel ? "" : " rc-placeholder"}`}>
-                      {routeLabel || "New route"}
+                    <span className="rc-route-titles">
+                      <span className={`rc-route-name${rate.title.trim() ? "" : " rc-placeholder"}`}>
+                        {rate.title.trim() || "New rate"}
+                      </span>
+                      {/* Older rates were auto-titled "Start → Destination"; don't repeat it */}
+                      {routeLabel && titleKey(routeLabel) !== titleKey(rate.title) && (
+                        <span className="rc-route-sub">{routeLabel}</span>
+                      )}
                     </span>
-                    <RouteSummary rate={rate} showErrors={showErrors} />
+                    <RouteSummary rate={rate} showErrors={showErrors} duplicate={isDuplicate} />
                   </button>
                   <button
                     type="button"
                     className="rc-icon-btn"
                     onClick={() => duplicateRoute(index)}
-                    title="Duplicate route"
-                    aria-label="Duplicate route"
+                    title="Duplicate rate"
+                    aria-label="Duplicate rate"
                   >
                     <FaCopy size={13} />
                   </button>
@@ -255,8 +299,8 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
                     type="button"
                     className="rc-icon-btn rc-danger"
                     onClick={() => removeRoute(index)}
-                    title="Remove route"
-                    aria-label="Remove route"
+                    title="Remove rate"
+                    aria-label="Remove rate"
                   >
                     <FaTrash size={13} />
                   </button>
@@ -265,39 +309,65 @@ const RouteRatesEditor = ({ rates, onChange, showErrors = false, emptyState = nu
                 {open && (
                   <div className="rc-route-body">
                     <div className="rc-group">
-                      <p className="rc-group-title">Route</p>
+                      <p className="rc-group-title">Rate</p>
                       <div className="rc-grid">
-                        <div className="rc-field">
+                        <div className="rc-field" style={{ gridColumn: "1 / -1", maxWidth: 520 }}>
                           <label className="rc-label">
-                            Starting point<span className="rc-required">*</span>
+                            Title<span className="rc-required">*</span>
                           </label>
                           <input
                             type="text"
-                            className={`rc-input${showErrors && !rate.starting_point.trim() ? " rc-invalid" : ""}`}
+                            className={`rc-input${titleError ? " rc-invalid" : ""}`}
+                            value={rate.title}
+                            onChange={(e) => updateRate(index, { title: e.target.value })}
+                            placeholder="e.g. DBN – JHB Express"
+                            maxLength={150}
+                          />
+                          {titleError ? (
+                            <span className="rc-error-text">{titleError}</span>
+                          ) : (
+                            <span className="rc-hint">
+                              What controllers pick on the instruction. Use a different title for each price on the
+                              same lane.
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rc-group">
+                      <p className="rc-group-title">Route (optional)</p>
+                      <div className="rc-grid">
+                        <div className="rc-field">
+                          <label className="rc-label">Starting point</label>
+                          <input
+                            type="text"
+                            className={`rc-input${routeError && !rate.starting_point.trim() ? " rc-invalid" : ""}`}
                             value={rate.starting_point}
                             onChange={(e) => updateRate(index, { starting_point: e.target.value })}
                             placeholder="e.g. Durban Port"
                           />
-                          {showErrors && !rate.starting_point.trim() && (
-                            <span className="rc-error-text">Enter a starting point</span>
-                          )}
                         </div>
                         <div className="rc-field">
-                          <label className="rc-label">
-                            Destination<span className="rc-required">*</span>
-                          </label>
+                          <label className="rc-label">Destination</label>
                           <input
                             type="text"
-                            className={`rc-input${showErrors && !rate.destination.trim() ? " rc-invalid" : ""}`}
+                            className={`rc-input${routeError && !rate.destination.trim() ? " rc-invalid" : ""}`}
                             value={rate.destination}
                             onChange={(e) => updateRate(index, { destination: e.target.value })}
                             placeholder="e.g. City Deep"
                           />
-                          {showErrors && !rate.destination.trim() && (
-                            <span className="rc-error-text">Enter a destination</span>
-                          )}
                         </div>
                       </div>
+                      {routeError ? (
+                        <p className="rc-error-text" style={{ margin: "6px 0 0" }}>
+                          {routeError}
+                        </p>
+                      ) : (
+                        <p className="rc-hint" style={{ margin: "6px 0 0" }}>
+                          Shown on the instruction and invoice when filled in.
+                        </p>
+                      )}
                     </div>
 
                     {PRICE_GROUPS.map((group) => (

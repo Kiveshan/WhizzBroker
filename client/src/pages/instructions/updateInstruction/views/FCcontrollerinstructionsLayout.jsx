@@ -36,8 +36,7 @@ export function FCcontrollerinstructionsLayout({
   instructionId,
   clients,
   shipmentTypes,
-  startingPoints,
-  destinations,
+  rateOptions,
   weightRows,
   containers,
   containerFieldErrors,
@@ -74,8 +73,7 @@ export function FCcontrollerinstructionsLayout({
   handleNumericInputChange,
   handleRateChange,
   handleShipmentTypeChange,
-  handlePickupChange,
-  handleDropoffChange,
+  handleRateTitleChange,
   // Handlers — weight rows
   updateWeightRow,
   handleRequestDeleteWeightRow,
@@ -140,16 +138,16 @@ export function FCcontrollerinstructionsLayout({
             onClientChange={handleClientChange}
             onChange={handleInputChange}
             showLocations={true}
-            startingPoints={startingPoints}
-            destinations={destinations}
-            onPickupChange={handlePickupChange}
-            onDropoffChange={handleDropoffChange}
+            rateOptions={rateOptions}
+            onRateChange={handleRateTitleChange}
             pickupLocked={routeEditMode === "locked" && hasRouteMismatch}
             onLockedRouteClick={() =>
               setConfirmationModal({
                 isOpen: true,
                 message:
-                  "The current route no longer matches any client rates. To edit it, you will need to select a new valid starting point and dropoff from the current lists. Do you want to continue?",
+                  formData.rate_title
+                    ? `The rate "${formData.rate_title}" is no longer on this client's rates. To change it you will need to choose one of the client's current rates. Containers already on this instruction keep their saved amounts. Do you want to continue?`
+                    : "This instruction was priced by route before rate titles were introduced. To change it you will need to choose one of the client's current rates. Containers already on this instruction keep their saved amounts. Do you want to continue?",
                 action: "unlock-route",
               })
             }
@@ -273,12 +271,15 @@ export function FCcontrollerinstructionsLayout({
             confirmationModal.action === "invoice" ? "Create Invoice" :
             confirmationModal.action === "delete-container" ? "Delete Container" :
             confirmationModal.action === "delete-weight" ? "Delete Weight Row" :
-            confirmationModal.action === "unlock-route" ? "Unlock Route" :
+            confirmationModal.action === "unlock-route" ? "Change this instruction's rate?" :
             "Confirm"
           }
           message={confirmationModal.message}
           onConfirm={handleConfirmAction}
           onCancel={handleCancelAction}
+          {...(confirmationModal.action === "unlock-route"
+            ? { confirmText: "Yes, choose a rate", cancelText: "No, keep it" }
+            : {})}
         />
         {/* Warning Modal (shipment type change) */}
         <ConfirmationModal

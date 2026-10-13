@@ -1044,7 +1044,8 @@ export function useApi(state, actions) {
 
         const validRates = ratesData
           .filter((rate) => {
-            return rate.starting_point && rate.destination && (hasValue(rate["6m_rate"]) || hasValue(rate["12m_rate"]))
+            // Rates are identified by title; the route is optional
+            return rate.title?.trim() && (hasValue(rate["6m_rate"]) || hasValue(rate["12m_rate"]))
           })
           .map((rate) => {
             const surcharge6M = rate.surcharge6M ?? rate.surcharges ?? ""
@@ -1060,7 +1061,7 @@ export function useApi(state, actions) {
 
         if (validRates.length !== ratesData.length || (validRates.length === 0 && rateCards.length === 0)) {
           actions.showAlert(
-            "Please provide valid starting point, destination, and at least one rate (6m or 12m) for each entry.",
+            "Each rate needs a title and a 6m or 12m price.",
           )
           return false
         }
