@@ -153,8 +153,12 @@ async function fetchPreviousStatementAging(dbClient, clientId, formattedGenDate)
 // ==================== NEW AGING CALCULATION FROM OUTSTANDING ITEMS ====================
 async function calculateAgingBucketsFromOutstanding(dbClient, clientId, genDate) {
   // 1. Outstanding instructions (m1_controller)
+  // Group-aware: a combined group invoice has invoice.m1key IS NULL and
+  // invoice.instruction_group_id set instead, so each child instruction in the
+  // group is aged as its own line against the group invoice's date. Paid state
+  // is per child (see paymentModel.js), so the per-child filter is unchanged.
   const instructionsQuery = `
-    SELECT 
+    SELECT
       i.date AS invoice_date,
       m1.total_cost,
       COALESCE(m1.vat, 0) AS vat,
@@ -162,6 +166,18 @@ async function calculateAgingBucketsFromOutstanding(dbClient, clientId, genDate)
     FROM invoice i
     JOIN m1_controller m1 ON i.m1key = m1.m1key
     WHERE i.clientid = $1
+      AND i.date <= $2
+      AND m1.payment_status IN ('unpaid', 'partial')
+    UNION ALL
+    SELECT
+      i.date AS invoice_date,
+      m1.total_cost,
+      COALESCE(m1.vat, 0) AS vat,
+      COALESCE(m1.paid_amount, 0) AS paid_amount
+    FROM invoice i
+    JOIN m1_controller m1 ON m1.instruction_group_id = i.instruction_group_id
+    WHERE i.m1key IS NULL
+      AND i.clientid = $1
       AND i.date <= $2
       AND m1.payment_status IN ('unpaid', 'partial')
   `;

@@ -74,7 +74,7 @@ const getStatementDetails = async (statementId) => {
       i.ikey,
       i.date AS invoice_date,
       m1.total_cost AS invoice_amount,
-      m1.vat AS invoice_vat,
+      m1.gross AS invoice_gross,
       m1."ksmFileRef" AS invoice_task,
       m1.pickup,
       m1.dropoff,
@@ -103,8 +103,25 @@ const getStatementDetails = async (statementId) => {
       ON i.clientid = s.clientid
       AND i.date >= DATE_TRUNC('month', s.generation_date - INTERVAL '1 month')
       AND i.date < s.generation_date
-    LEFT JOIN m1_controller m1 ON i.m1key = m1.m1key
-    LEFT JOIN add_ons a2 
+    -- Group-aware: a legacy invoice covers one instruction (i.m1key); a
+    -- combined group invoice (i.m1key IS NULL) covers every child in
+    -- i.instruction_group_id, so its amount is summed across the children.
+    LEFT JOIN LATERAL (
+      SELECT
+        SUM(c.total_cost) AS total_cost,
+        SUM(c.total_cost * (1 + COALESCE(c.vat, 0)::numeric / 100)) AS gross,
+        STRING_AGG(DISTINCT c."ksmFileRef", ', ') AS "ksmFileRef",
+        STRING_AGG(DISTINCT c.pickup, ', ') AS pickup,
+        STRING_AGG(DISTINCT c.dropoff, ', ') AS dropoff,
+        STRING_AGG(DISTINCT c.rate_title, ', ') AS rate_title
+      FROM (
+        SELECT m.* FROM m1_controller m WHERE m.m1key = i.m1key
+        UNION ALL
+        SELECT m.* FROM m1_controller m
+        WHERE i.m1key IS NULL AND m.instruction_group_id = i.instruction_group_id
+      ) c
+    ) m1 ON TRUE
+    LEFT JOIN add_ons a2
       ON a2.client_id = s.clientid
       AND a2.date >= DATE_TRUNC('month', s.generation_date - INTERVAL '1 month')
       AND a2.date < s.generation_date
@@ -236,11 +253,11 @@ const getStatementDetails = async (statementId) => {
     for (const row of result.rows) {
       if (row.ikey !== null && Number.parseFloat(row.invoice_amount || 0) > 0) {
         if (!invoiceMap.has(row.ikey)) {
-          const netAmount = Number.parseFloat(row.invoice_amount || 0);
-          const rawVat = Number(row.invoice_vat);
-          const vatRate = Number.isNaN(rawVat) ? 0 : rawVat;
-          const vatMultiplier = 1 + vatRate / 100;
-          const grossAmount = Number((netAmount * vatMultiplier).toFixed(2));
+          // VAT-inclusive, summed per child in SQL so a group invoice whose
+          // children carry different VAT rates is still exact
+          const grossAmount = Number(
+            Number.parseFloat(row.invoice_gross || 0).toFixed(2)
+          );
 
           invoiceMap.set(row.ikey, {
             ikey: row.ikey,
