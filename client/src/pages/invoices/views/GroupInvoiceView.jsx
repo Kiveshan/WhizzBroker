@@ -58,6 +58,9 @@ const GroupInvoiceView = () => {
       const opt = {
         margin: 0.3,
         image: { type: "jpeg", quality: 0.98 },
+        // Never slice a table row, instruction section or the totals/banking
+        // footer across pages (sections longer than a page still break by row).
+        pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".wb-inv-keep"] },
         html2canvas: { scale: 2 },
         jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
       }

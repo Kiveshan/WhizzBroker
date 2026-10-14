@@ -362,10 +362,11 @@ const getInvoiceDetails = async (id) => {
       const weightRes = await query(weightQuery, [id]);
       weightItems = weightRes.rows.map((r) => {
         const w = Number(r.weight || 0);
-        // For set rate: unitrate = historical_set_rate, price = set_rate × weight
-        // For normal weight-based: unitrate = unitrate, price = unitrate × weight
+        // Set rate is a flat amount per weight entry (matches calcBreakBulkCost,
+        // which priced total_cost as set_rate × row count); otherwise
+        // price = unitrate × weight.
         const rowUnitRate = isSetRate ? historicalSetRate : unitrate;
-        const price = Number((w * rowUnitRate).toFixed(2));
+        const price = Number((isSetRate ? rowUnitRate : w * rowUnitRate).toFixed(2));
         return {
           ksm_dm_no: r.ksm_dm_no || "",
           ticket_no: r.ticket_no || "",
@@ -931,7 +932,7 @@ const getInstructionDetailsForPreview = async (instructionId) => {
       // Weight-based items for preview when shipment_type_key = 4
       let weightItems = [];
       const unitratePrev = Number(m1Result.rows[0].unitrate || 0);
-      const isSetRatePrev = m1Result.rows[0].is_set_rate === true;
+      const isSetRatePrev = m1Result.rows[0].is_set_rate === true || m1Result.rows[0].rateweight === "SetRate";
       const historicalSetRatePrev = Number(m1Result.rows[0].historical_set_rate || 0);
       if (m1Result.rows[0].shipment_type_key === 4) {
         const weightQuery = `
@@ -947,10 +948,10 @@ const getInstructionDetailsForPreview = async (instructionId) => {
         const weightRes = await client.query(weightQuery, [instructionId]);
         weightItems = weightRes.rows.map((r) => {
           const w = Number(r.weight || 0);
-          // For set rate: unitrate = historical_set_rate, price = set_rate × weight
-          // For normal weight-based: unitrate = unitrate, price = unitrate × weight
+          // Set rate is a flat amount per weight entry (matches calcBreakBulkCost);
+          // otherwise price = unitrate × weight.
           const rowUnitRate = isSetRatePrev ? historicalSetRatePrev : unitratePrev;
-          const price = Number((w * rowUnitRate).toFixed(2));
+          const price = Number((isSetRatePrev ? rowUnitRate : w * rowUnitRate).toFixed(2));
           return {
             ksm_dm_no: r.ksm_dm_no || "",
             ticket_no: r.ticket_no || "",
@@ -1071,8 +1072,8 @@ const getGroupInvoicePreview = async (groupId) => {
         // Break-bulk instructions are weight-based (KSM DN/ticket/receipt
         // rows in m1_controller_weight), not container-based. Mirrors the
         // weight-item calculation in getInvoiceDetails /
-        // getInstructionDetailsForPreview: price = weight × unitrate, or
-        // weight × historical_set_rate when the instruction is set-rate.
+        // getInstructionDetailsForPreview: price = weight × unitrate, or a
+        // flat historical_set_rate per entry when the instruction is set-rate.
         const isSetRate = row.is_set_rate === true || row.rateweight === "SetRate";
         const rowUnitRate = isSetRate
           ? Number(row.historical_set_rate || 0)
@@ -1090,21 +1091,22 @@ const getGroupInvoicePreview = async (groupId) => {
           const refParts = [w.ksm_dm_no, w.ticket_no, w.receipt_book_no].filter(Boolean);
           lines.push({
             description: refParts.length ? `Break bulk — ${refParts.join(" / ")}` : "Break bulk",
-            quantity: weight,
+            quantity: isSetRate ? 1 : weight,
             rate: rowUnitRate,
-            amount: Number((weight * rowUnitRate).toFixed(2)),
+            amount: Number((isSetRate ? rowUnitRate : weight * rowUnitRate).toFixed(2)),
           });
         }
       } else {
         const typeSpecs = [
-          ["6m", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
-          ["12m", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
-          ["Abnormal", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
+          ["6m container", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
+          ["12m container", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
+          ["Abnormal load", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
         ];
         for (const [label, qty, rate] of typeSpecs) {
           if (qty > 0) {
+            // Qty has its own column, so the description is just the type.
             lines.push({
-              description: `${qty} x ${label}`,
+              description: label,
               quantity: qty,
               rate,
               amount: Number((qty * rate).toFixed(2)),

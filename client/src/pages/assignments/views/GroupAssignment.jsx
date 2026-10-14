@@ -32,7 +32,8 @@ import {
 // "Back" returns to the director's instruction list instead of the FC one.
 const today = new Date().toISOString().split("T")[0]
 
-const emptyForm = { subbieId: "", startingpoint: "", destination: "", legDate: today }
+// manualRate: break bulk has no route rate, so its subcontractor rate is typed.
+const emptyForm = { subbieId: "", startingpoint: "", destination: "", legDate: today, manualRate: "" }
 
 // Break bulk (cross-haul) is weight-based and has no container rows, so its
 // assignment covers the whole instruction and it is "done" once it has a leg.
@@ -178,6 +179,11 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
 
   useEffect(() => {
     if (!draftOpen || !m1key) return
+    // Break bulk is rated by hand (see the Subcontractor Rate field) — no lookup.
+    if (breakBulk) {
+      setRatePreview({ status: "idle" })
+      return
+    }
     const ready =
       form.startingpoint && form.destination && (wholeInstruction || pickedContainers.length > 0)
     if (!ready) {
@@ -277,8 +283,9 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
   if (!form.startingpoint) missing.push("a route")
   if (!form.destination) missing.push("a destination")
   if (!form.subbieId) missing.push("a subcontractor")
+  if (breakBulk && !(Number(form.manualRate) > 0)) missing.push("a subcontractor rate")
 
-  const canSave = missing.length === 0 && ratePreview.status === "ok"
+  const canSave = missing.length === 0 && (breakBulk || ratePreview.status === "ok")
 
   const handleSaveAssignment = async () => {
     if (!canSave) return
@@ -291,6 +298,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         startingpoint: form.startingpoint,
         destination: form.destination,
         legDate: form.legDate,
+        manualRate: breakBulk ? form.manualRate : undefined,
       })
       setPickedContainers([])
       setContainerQuery("")
@@ -867,6 +875,20 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                       that will be written, not an estimate. */}
                   <div className="wb-assign-field">
                     <label>Subcontractor Rate</label>
+                    {breakBulk ? (
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Enter rate (R)"
+                        value={form.manualRate}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          if (value === "" || /^[0-9]*\.?[0-9]*$/.test(value)) {
+                            setForm((f) => ({ ...f, manualRate: value }))
+                          }
+                        }}
+                      />
+                    ) : (
                     <input
                       type="text"
                       readOnly
@@ -881,6 +903,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                               : "—"
                       }
                     />
+                    )}
                   </div>
                   <div className="wb-assign-spacer" />
                   <button className="wb-next-btn" onClick={handleSaveAssignment} disabled={!canSave || saving}>
@@ -890,6 +913,11 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
 
                 {/* Say what the rate is based on, or what is still missing —
                     rather than leaving a greyed-out button unexplained. */}
+                {breakBulk && (
+                  <div className="wb-rate-note">
+                    Break bulk is weight-based, so there is no route rate — type what this subcontractor is paid.
+                  </div>
+                )}
                 {ratePreview.status === "ok" && (
                   <div className="wb-rate-note ok">
                     Rated as {ratePreview.containerType} for this route and date.

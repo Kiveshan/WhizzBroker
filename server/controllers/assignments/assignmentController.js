@@ -700,12 +700,13 @@ const ASSIGNMENT_USER_ERRORS = new Set([
   "CONTAINERS_REQUIRED",
   "CONTAINERS_INVALID",
   "CONTAINERS_TAKEN",
+  "MANUAL_RATE_REQUIRED",
 ]);
 
 export const createAssignmentHandler = async (req, res) => {
   try {
     const { m1key } = req.params;
-    const { subbieId, containerKeys, startingpoint, destination, legDate } = req.body;
+    const { subbieId, containerKeys, startingpoint, destination, legDate, manualRate } = req.body;
     if (!subbieId) {
       return res.status(400).json({ success: false, message: "subbieId is required" });
     }
@@ -716,6 +717,7 @@ export const createAssignmentHandler = async (req, res) => {
       startingpoint,
       destination,
       legDate,
+      manualRate,
     });
     res.status(200).json({ success: true, ...result });
   } catch (error) {
@@ -737,13 +739,14 @@ export const createAssignmentHandler = async (req, res) => {
 export const previewAssignmentRateHandler = async (req, res) => {
   try {
     const { m1key } = req.params;
-    const { containerKeys, startingpoint, destination, legDate } = req.body;
+    const { containerKeys, startingpoint, destination, legDate, manualRate } = req.body;
     const result = await resolveAssignmentRate({
       m1key,
       containerKeys,
       startingpoint,
       destination,
       legDate,
+      manualRate,
     });
     res.status(200).json({ success: true, ...result });
   } catch (error) {

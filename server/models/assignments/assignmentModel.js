@@ -1437,6 +1437,7 @@ export const resolveAssignmentRate = async ({
   startingpoint,
   destination,
   legDate,
+  manualRate,
 }) => {
   if (!startingpoint || !destination) {
     const err = new Error("A route (starting point and destination) is required to rate the assignment");
@@ -1463,6 +1464,27 @@ export const resolveAssignmentRate = async ({
     [m1key]
   );
   const wholeInstruction = isBreakBulk || countResult.rows[0].n === 0;
+
+  // Break bulk is weight-based, so no 6m/12m route rate applies — the
+  // controller types the subcontractor rate, as on the original assignment
+  // screen (no historical break-bulk leg has an m5ratekey).
+  if (isBreakBulk) {
+    const driverrate = Number(manualRate);
+    if (!Number.isFinite(driverrate) || driverrate <= 0) {
+      const err = new Error("Enter the subcontractor rate for this break bulk load");
+      err.code = "MANUAL_RATE_REQUIRED";
+      throw err;
+    }
+    return {
+      driverrate,
+      containerType: "break bulk",
+      m5ratekey: null,
+      effectiveDate: legDate || new Date().toISOString().split("T")[0],
+      containerCount: 0,
+      wholeInstruction: true,
+      manualRate: true,
+    };
+  }
 
   const keys = (containerKeys || []).map(Number).filter((k) => Number.isInteger(k));
   if (!wholeInstruction && keys.length === 0) {
@@ -1546,6 +1568,7 @@ export const createAssignment = async ({
   startingpoint,
   destination,
   legDate,
+  manualRate,
 }) => {
   const { driverrate, containerType, m5ratekey, effectiveDate } = await resolveAssignmentRate({
     m1key,
@@ -1553,6 +1576,7 @@ export const createAssignment = async ({
     startingpoint,
     destination,
     legDate,
+    manualRate,
   });
 
   const keys = (containerKeys || []).map(Number).filter((k) => Number.isInteger(k));

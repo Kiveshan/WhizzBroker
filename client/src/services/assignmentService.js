@@ -15,13 +15,15 @@ export async function fetchSubbies() {
 //
 // The route is the leg's route, picked from fetchRouteOptions below — not the
 // instruction's pickup/dropoff, which never match a m5_driver_rate row.
-export async function createAssignment(m1key, { subbieId, containerKeys, startingpoint, destination, legDate }) {
+// manualRate is the typed subcontractor rate for break bulk (no route rate applies).
+export async function createAssignment(m1key, { subbieId, containerKeys, startingpoint, destination, legDate, manualRate }) {
   const response = await api.post(`/instruction/${m1key}/assign`, {
     subbieId,
     containerKeys,
     startingpoint,
     destination,
     legDate,
+    manualRate,
   });
   return response.data;
 }
