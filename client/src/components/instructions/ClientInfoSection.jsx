@@ -63,7 +63,13 @@ export function ClientInfoSection({
             ref={fieldRefs?.clientId}
           >
             <select
-              style={isReadOnly ? readOnlyStyle : nonEditableStyle}
+              style={
+                isReadOnly
+                  ? readOnlyStyle
+                  : clientLocked
+                  ? nonEditableStyle
+                  : undefined
+              }
               className={`dropdown ${
                 fieldErrors.clientId ? "controller-instructions-error-field" : ""
               }`}
