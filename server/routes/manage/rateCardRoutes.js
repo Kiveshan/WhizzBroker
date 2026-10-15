@@ -7,7 +7,8 @@ import {
   assignmentConflictsHandler,
   rateUsageHandler,
 } from "../../controllers/manage/rateCardController.js"
-import { verifyToken } from "../../middleware/auth.js"
+import { verifyToken, requireRoles } from "../../middleware/auth.js"
+import { MANAGEMENT_ROLES } from "../../config/roles.js"
 
 const router = express.Router()
 
@@ -26,10 +27,10 @@ router.get("/api/rate-cards/:rateCardId", verifyToken, getRateCardHandler)
 
 // Create / update a card and replace its routes (and its client list, when
 // clientIds is sent)
-router.post("/api/rate-cards", verifyToken, saveRateCardHandler)
-router.put("/api/rate-cards/:rateCardId", verifyToken, saveRateCardHandler)
+router.post("/api/rate-cards", verifyToken, requireRoles(...MANAGEMENT_ROLES), saveRateCardHandler)
+router.put("/api/rate-cards/:rateCardId", verifyToken, requireRoles(...MANAGEMENT_ROLES), saveRateCardHandler)
 
 // Delete a card (refused while any client still uses it)
-router.delete("/api/rate-cards/:rateCardId", verifyToken, deleteRateCardHandler)
+router.delete("/api/rate-cards/:rateCardId", verifyToken, requireRoles(...MANAGEMENT_ROLES), deleteRateCardHandler)
 
 export default router

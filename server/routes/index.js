@@ -34,7 +34,8 @@ import creditNoteRoutes from "./creditNote/creditNoteRoutes.js";
 import profitLossRoutes from "./profit-loss/profitLossRoutes.js";
 import vatReconRoutes from "./vat-recon/vat-reconRoutes.js";
 import landingRoutes from "./landing/landingRoutes.js";
-import { verifyToken } from "../middleware/auth.js";
+import { verifyToken, requireRoles } from "../middleware/auth.js";
+import { STAFF_ROLES } from "../config/roles.js";
 
 const router = express.Router();
 
@@ -58,6 +59,9 @@ router.use(statementRoutes);
 // Global authentication guard — every route mounted below requires a valid JWT.
 // ---------------------------------------------------------------------------
 router.use(verifyToken);
+// Only roles with screens may use the API (see STAFF_ROLES). Area-specific
+// role guards sit on the individual routes in each module.
+router.use(requireRoles(...STAFF_ROLES));
 
 router.use(creditNoteRoutes);
 router.use(adminroutes);

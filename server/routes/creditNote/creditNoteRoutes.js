@@ -1,5 +1,6 @@
 import express from "express";
-import { verifyToken } from "../../middleware/auth.js";
+import { CREDITORS_ROLES } from "../../config/roles.js";
+import { verifyToken, requireRoles } from "../../middleware/auth.js";
 import { validate } from "../../middleware/validate.js";
 import { creditNoteCreateSchema } from "../../validation/financialSchemas.js";
 import {
@@ -19,11 +20,13 @@ const router = express.Router();
 router.get(
   "/api/credit-notes/:clientId",
   verifyToken,
+  requireRoles(...CREDITORS_ROLES),
   getClientCreditNotesHandler
 );
 router.get(
   "/api/credit-notes/instructions/:clientId",
   verifyToken,
+  requireRoles(...CREDITORS_ROLES),
   getInstructionsHandler
 );
 router.get("/api/containers/:m1key", verifyToken, getContainersHandler);
@@ -39,10 +42,11 @@ router.get(
   verifyToken,
   getInstructionDetailsHandler
 );
-router.post("/api/credit-notes", verifyToken, validate(creditNoteCreateSchema), createCreditNoteHandler);
+router.post("/api/credit-notes", verifyToken, requireRoles(...CREDITORS_ROLES), validate(creditNoteCreateSchema), createCreditNoteHandler);
 router.get(
   "/api/credit-notes/by-id/:creditNoteId",
   verifyToken,
+  requireRoles(...CREDITORS_ROLES),
   getCreditNoteByIdHandler
 );
 

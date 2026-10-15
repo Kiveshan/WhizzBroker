@@ -66,6 +66,33 @@ const verifyAdminAccess = (req, res, next) => {
   return next()
 }
 
+// Role guard. Use after verifyToken: requireRoles(...MANAGEMENT_ROLES).
+// Admins always pass. Apply it per route, never with router.use() inside a
+// route module — modules are mounted at "/", so a module-level guard would
+// also block every route mounted after it in routes/index.js.
+const requireRoles = (...roles) => (req, res, next) => {
+  if (req.isScheduledJob) return next()
+
+  if (!req.user) {
+    return res.status(401).json({
+      error: "Authentication required",
+      message: "You must be logged in to access this resource",
+      code: "NO_USER",
+    })
+  }
+
+  const roleid = Number(req.user.roleid)
+  if (roleid === ROLES.ADMIN || roles.includes(roleid)) {
+    return next()
+  }
+
+  return res.status(403).json({
+    error: "Unauthorized",
+    message: "You do not have permission to access this resource",
+    code: "INSUFFICIENT_PERMISSIONS",
+  })
+}
+
 // Authenticates the EventBridge/Lambda statement-generation jobs via a shared
 // API_SECRET bearer token, falling back to normal JWT auth for UI users.
 // Fail-closed: if API_SECRET is not configured, the job path is disabled rather
@@ -92,4 +119,4 @@ const authenticateScheduledJob = (req, res, next) => {
   return verifyToken(req, res, next)
 }
 
-export { verifyToken, verifyAdminAccess, authenticateScheduledJob }
+export { verifyToken, verifyAdminAccess, requireRoles, authenticateScheduledJob }

@@ -1,5 +1,6 @@
 import express from "express";
-import { verifyToken } from "../../middleware/auth.js";
+import { DEBTORS_ROLES } from "../../config/roles.js";
+import { verifyToken, requireRoles } from "../../middleware/auth.js";
 import {
   getClientStatementsHandler,
   getStatementDetailsHandler,
@@ -13,18 +14,22 @@ const router = express.Router();
 router.get(
   "/api/statements/:clientId",
   verifyToken,
+  requireRoles(...DEBTORS_ROLES),
   getClientStatementsHandler
 );
 router.get(
   "/api/statement/:statementId",
   verifyToken,
+  requireRoles(...DEBTORS_ROLES),
   getStatementDetailsHandler
 );
 
-// Update this route to use authenticateScheduledJob instead of verifyToken
+// The scheduled job authenticates with API_SECRET (requireRoles lets it through
+// via req.isScheduledJob); UI users need a JWT and a debtors role.
 router.post(
   "/api/statements/generate",
   authenticateScheduledJob,
+  requireRoles(...DEBTORS_ROLES),
   generateStatementsHandler
 );
 
