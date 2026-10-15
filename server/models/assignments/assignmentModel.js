@@ -1384,7 +1384,7 @@ export const getGroupForAssignment = async (groupId) => {
   const instructions = [];
   for (const row of childRows.rows) {
     // Cross-haul break bulk (shipment_type 4) is weight-based — its "container
-    // details" are KSM DN/ticket/receipt weight entries rather than containers.
+    // details" are DN/ticket/receipt weight entries rather than containers.
     const isBreakBulk = String(row.shipment_type) === "4";
 
     const containers = isBreakBulk

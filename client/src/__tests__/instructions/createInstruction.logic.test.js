@@ -252,7 +252,7 @@ describe("validateForm (create form)", () => {
     shipmentTypeId: "1",
     pickup: "Cape Town",
     dropoff: "Durban",
-    task: "KSM-001",
+    task: "TASK-001",
     lastFreeDate: "2026-05-01",
     bookingRef: "BR-001",
     fileRef: "FR-001",

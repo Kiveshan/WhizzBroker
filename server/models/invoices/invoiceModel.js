@@ -1073,7 +1073,7 @@ const getGroupInvoicePreview = async (groupId) => {
       const isBreakBulk = row.shipment_type_key === 4;
 
       if (isBreakBulk) {
-        // Break-bulk instructions are weight-based (KSM DN/ticket/receipt
+        // Break-bulk instructions are weight-based (DN/ticket/receipt
         // rows in m1_controller_weight), not container-based. Mirrors the
         // weight-item calculation in getInvoiceDetails /
         // getInstructionDetailsForPreview: price = weight × unitrate, or a

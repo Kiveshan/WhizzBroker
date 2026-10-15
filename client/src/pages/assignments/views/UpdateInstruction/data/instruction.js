@@ -29,7 +29,7 @@ export const checkIfWeightBased = async ({
   }
 };
 
-// Pulls the KSM DN Numbers (ksm_dm_no) from the instruction's weight table rows.
+// Pulls the DN Numbers (ksm_dm_no) from the instruction's weight table rows.
 // Used to populate the per-driver DN dropdown for cross-haul break bulk (shipment type 4).
 export const fetchDnOptions = async ({ api, instructionId, setDnOptions }) => {
   if (!instructionId) return;

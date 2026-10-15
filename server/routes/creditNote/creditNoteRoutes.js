@@ -30,7 +30,7 @@ router.get(
   getInstructionsHandler
 );
 router.get("/api/containers/:m1key", verifyToken, getContainersHandler);
-router.get("/api/company/ksm", verifyToken, getCompanyDetailsHandler);
+router.get("/api/company/details", verifyToken, getCompanyDetailsHandler);
 router.get("/clients/:clientId", verifyToken, getClientDetailsHandler);
 router.get(
   "/api/latest-document-number",
