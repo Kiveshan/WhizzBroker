@@ -25,7 +25,7 @@ beforeEach(() => jest.clearAllMocks());
 describe("WeightDetailsTable — rendering", () => {
   it("renders column headers", () => {
     render(<WeightDetailsTable {...defaultProps} />);
-    expect(screen.getByText("KSM DN Number")).toBeInTheDocument();
+    expect(screen.getByText("DN Number")).toBeInTheDocument();
     expect(screen.getByText("Ticket Number")).toBeInTheDocument();
     expect(screen.getByText("Receipt Book Number")).toBeInTheDocument();
     expect(screen.getByText("Weight (ton)")).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe("WeightDetailsTable — callbacks", () => {
 describe("WeightDetailsTable — empty rows", () => {
   it("renders header with no data rows when rows is empty", () => {
     render(<WeightDetailsTable {...defaultProps} rows={[]} />);
-    expect(screen.getByText("KSM DN Number")).toBeInTheDocument();
+    expect(screen.getByText("DN Number")).toBeInTheDocument();
     expect(screen.queryByDisplayValue("KSM001")).not.toBeInTheDocument();
   });
 });

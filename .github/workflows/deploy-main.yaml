@@ -39,7 +39,9 @@ jobs:
           echo "REACT_APP_API_URL=https://whizzbroker.co.za" > .env
 
       - name: Build React app
-        run: cd client && CI=false npm run build
+        # No source maps in production: they'd publicly expose the full client
+        # source and add ~16 MB to every deploy.
+        run: cd client && CI=false GENERATE_SOURCEMAP=false npm run build
 
       - name: Install server dependencies
         run: cd server && npm install
