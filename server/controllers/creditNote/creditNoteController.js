@@ -66,7 +66,7 @@ const getContainersHandler = async (req, res) => {
 };
 const getCompanyDetailsHandler = async (req, res) => {
   try {
-    console.log(`Fetching company details for KSM Carriers`);
+    console.log(`Fetching company details`);
 
     const result = await getCompanyDetails();
     res.json({

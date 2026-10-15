@@ -16,7 +16,13 @@ AWS.config.update({
 });
 
 const s3 = new AWS.S3();
-const bucketName = process.env.S3_BUCKET_NAME || "sherwyn-whizz-away";
+// No fallback: a default bucket name would silently send this company's
+// documents to whichever bucket that name belongs to (it used to default to the
+// Whizz-Away bucket). Unset means S3 calls fail with a missing-Bucket error.
+const bucketName = process.env.S3_BUCKET_NAME;
+if (!bucketName) {
+  console.error("S3_BUCKET_NAME is not set — document uploads and downloads will fail.");
+}
 
 const storage = multer.memoryStorage();
 
@@ -35,7 +41,7 @@ const checkBucket = async (bucketName) => {
   }
 };
 
-checkBucket(bucketName);
+if (bucketName) checkBucket(bucketName);
 
 const uploadPaymentProof = multer({
   storage: storage,

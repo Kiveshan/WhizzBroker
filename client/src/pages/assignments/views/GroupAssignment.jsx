@@ -577,7 +577,7 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                 <div className="wb-accordion-title">{breakBulk ? "Weight Details" : "Containers"}</div>
                 <div className="wb-accordion-sub">
                   {breakBulk
-                    ? "KSM DN, ticket and receipt book weight entries."
+                    ? "DN, ticket and receipt book weight entries."
                     : "Every container on this instruction and who is taking it."}
                 </div>
               </span>

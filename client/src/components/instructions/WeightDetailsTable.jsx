@@ -1,5 +1,5 @@
 /**
- * WeightDetailsTable — KSM DN Number / Ticket Number / Receipt Book Number /
+ * WeightDetailsTable — DN Number / Ticket Number / Receipt Book Number /
  * Weight table for cross-haul (break bulk, shipment type 4).
  *
  * The weight field only accepts numeric input; the caller controls whether

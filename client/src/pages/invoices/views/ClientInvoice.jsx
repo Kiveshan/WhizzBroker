@@ -518,7 +518,7 @@ const ClientInvoice = forwardRef(({
       if (isSetRate) {
         // Use weight table structure with Unit Rate column only (no Price for set rate)
         tableHeaders = [
-          "KSM/DM No",
+          "DN No",
           "Ticket No",
           "Receipt Book No",
           "Weight",
@@ -535,7 +535,7 @@ const ClientInvoice = forwardRef(({
           : [["No weight items", "", "", "", ""]];
       } else if (isWeightBased) {
         tableHeaders = [
-          "KSM/DM No",
+          "DN No",
           "Ticket No",
           "Receipt Book No",
           "Weight",
@@ -1058,7 +1058,7 @@ const ClientInvoice = forwardRef(({
                 <table className="container-table5">
                   <thead>
                     <tr>
-                      <th>KSM/DM No</th>
+                      <th>DN No</th>
                       <th>Ticket No</th>
                       <th>Receipt Book No</th>
                       <th>Weight</th>
@@ -1087,7 +1087,7 @@ const ClientInvoice = forwardRef(({
                 <table className="container-table5">
                   <thead>
                     <tr>
-                      <th>KSM/DM No</th>
+                      <th>DN No</th>
                       <th>Ticket No</th>
                       <th>Receipt Book No</th>
                       <th>Weight</th>

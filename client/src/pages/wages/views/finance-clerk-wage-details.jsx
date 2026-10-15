@@ -230,6 +230,19 @@ const filteredInstructions = driverInstructions.filter((instruction) => {
       // Extract just the numeric part of the ID if it contains a colon
       const cleanId = id.toString().split(":")[0];
 
+      // Letterhead details come from the company record (as on the wage slip
+      // page), never hard-coded.
+      let company = {};
+      try {
+        const companyResponse = await api.get("/api/companies");
+        company = companyResponse.data || {};
+      } catch (companyError) {
+        console.error("Error fetching company details for PDF:", companyError);
+      }
+      const companyName = company.companyname || "";
+      const companyEmail = company.email || "";
+      const companyPhone = company.cell_num || company.cell_num2 || "";
+
       // Fetch employee details if not already available
       let employeeInfo = employeeData;
       if (!employeeInfo) {
@@ -347,14 +360,11 @@ const filteredInstructions = driverInstructions.filter((instruction) => {
         });
       }
 
-      // If no deductions found, use default values
+      // No deductions captured for the month: say so and deduct nothing.
+      // (This used to invent R2,000 of tax/UIF/other deductions and take them
+      // off net pay.)
       if (deductions.length === 0) {
-        deductions = [
-          { description: "Income Tax", amount: "R 1500.00" },
-          { description: "UIF", amount: "R 200.00" },
-          { description: "Other Deductions", amount: "R 300.00" },
-        ];
-        totalDeductionsAmount = 2000;
+        deductions = [{ description: "No deductions captured", amount: "R 0.00" }];
       }
 
       // Create a new PDF document
@@ -366,8 +376,8 @@ const filteredInstructions = driverInstructions.filter((instruction) => {
           employeeInfo?.name || driverName
         } - ${selectedMonth} ${selectedYear}`,
         subject: "Monthly Wage Slip",
-        author: "Whizz Away Logistics",
-        creator: "Whizz Away Logistics",
+        author: companyName,
+        creator: companyName,
       });
 
       // Add company header
@@ -376,11 +386,11 @@ const filteredInstructions = driverInstructions.filter((instruction) => {
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(16);
       doc.setFont("helvetica", "bold");
-      doc.text("KSM Carriers", 150, 10, { align: "right" });
+      doc.text(companyName, 150, 10, { align: "right" });
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text("accounts@ksmcarriers.co.za", 150, 15, { align: "right" });
-      doc.text("+27 31 123 4567", 150, 20, { align: "right" });
+      doc.text(companyEmail, 150, 15, { align: "right" });
+      doc.text(companyPhone, 150, 20, { align: "right" });
 
       // Add title
       doc.setFontSize(18);

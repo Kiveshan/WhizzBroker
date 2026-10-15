@@ -800,7 +800,7 @@ const Viewcontrollerinstructions = ({
                         <thead>
                           <tr>
                             <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
-                              KSM DN Number
+                              DN Number
                             </th>
                             <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
                               Ticket Number
