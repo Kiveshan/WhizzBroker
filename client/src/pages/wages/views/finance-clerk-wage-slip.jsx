@@ -473,24 +473,12 @@ if (deductionsResponse.data) {
             
             
             else {
-              console.log(
-                "Failed to fetch deductions data:",
-                deductionsResponse.status
+              // No deductions data: take the error path below (no deductions,
+              // nothing saved). This used to invent R2,000 of deductions, put
+              // them on the slip and save them to the wages table.
+              throw new Error(
+                `No deductions data returned (status ${deductionsResponse.status})`
               );
-
-              // Use mock data for testing if API fails
-              deductions = [
-                {
-                  description: "Income Tax (API Error)",
-                  amount: "R 1500.00",
-                },
-                { description: "UIF (API Error)", amount: "R 200.00" },
-                {
-                  description: "Other Deductions (API Error)",
-                  amount: "R 300.00",
-                },
-              ];
-              totalDeductionsAmount = 2000; // Mock total
             }
 // Add loan deduction as negative earning (Less Loans) after we have deductionsData
 let loanAmount = 0;
