@@ -160,8 +160,6 @@ export const AUDIT_ROUTES = [
   { method: "POST", path: "/api/credit-notes", action: "CREDIT_NOTE_CREATED", entity: "credit_note" },
 
   // --- Statements ----------------------------------------------------------
-  { method: "POST", path: "/subcontractor/generate-statement", action: "SUBCONTRACTOR_STATEMENT_GENERATED", entity: "statement" },
-  { method: "POST", path: "/subcontractor/backfill-statements", action: "SUBCONTRACTOR_STATEMENTS_BACKFILLED", entity: "statement" },
 
   // Client statement export snapshots. The controller writes richer rows via
   // auditFromReq (balance, aging, content hash), so the middleware stands down

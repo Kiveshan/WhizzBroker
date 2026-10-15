@@ -5,9 +5,6 @@ import {
   getStatementDetailsHandler,
   getCompanyInfoHandler,
   getSubcontractorInfoHandler,
-  generateSubcontractorStatementHandler,
-  backfillSubcontractorStatementsHandler,
-  authenticateScheduledJob,
 } from "../../controllers/subcontractors/subContractorController.js";
 import {
   createStatementExportHandler,
@@ -30,19 +27,6 @@ router.get("/subcontractor/statements", verifySubcontractorStatementAccess, getS
 router.get("/subcontractor/statement-details", verifySubcontractorStatementAccess, getStatementDetailsHandler);
 router.get("/subcontractor/company-info", getCompanyInfoHandler);
 router.get("/subcontractor/info", getSubcontractorInfoHandler);
-
-// Update this route to use authenticateScheduledJob
-router.post(
-  "/subcontractor/generate-statement",
-  authenticateScheduledJob,
-  generateSubcontractorStatementHandler
-);
-
-router.post(
-  "/subcontractor/backfill-statements",
-  authenticateScheduledJob,
-  backfillSubcontractorStatementsHandler
-);
 
 // --- Statement export snapshots -------------------------------------------
 // This router is mounted below the global verifyToken guard in routes/index.js,
