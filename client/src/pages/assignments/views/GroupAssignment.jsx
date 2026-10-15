@@ -51,6 +51,21 @@ const hasWorkLeft = (child) =>
 
 const refOf = (c) => c?.ksmFileRef || c?.clientFileRef || c?.booking_ref || `Instruction ${c?.m1key}`
 
+// A load with more than one container size is paid one flat rate for the
+// whole leg, at the 12m rate if any 12m is on it (containerTypeFromMix on the
+// server). Say so before saving, so a mixed selection is a deliberate choice.
+const mixedLoadWarning = ({ containerMix, containerType }) => {
+  if (!containerMix) return null
+  const parts = [
+    [containerMix.six, "6m"],
+    [containerMix.twelve, "12m"],
+    [containerMix.abnormal, "abnormal"],
+  ].filter(([n]) => n > 0)
+  if (parts.length < 2) return null
+  const mix = parts.map(([n, size]) => `${n} × ${size}`).join(" + ")
+  return `Mixed load: ${mix}. The subcontractor is paid one ${containerType} rate for the whole load.`
+}
+
 const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {}) => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -204,7 +219,12 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
         if (seq !== rateRequestRef.current) return
         setRatePreview(
           result.success
-            ? { status: "ok", driverrate: result.driverrate, containerType: result.containerType }
+            ? {
+                status: "ok",
+                driverrate: result.driverrate,
+                containerType: result.containerType,
+                containerMix: result.containerMix,
+              }
             : { status: "error", message: result.message },
         )
       } catch (e) {
@@ -922,6 +942,9 @@ const GroupAssignment = ({ viewOnly = false, backRoute = "/instructions" } = {})
                   <div className="wb-rate-note ok">
                     Rated as {ratePreview.containerType} for this route and date.
                   </div>
+                )}
+                {ratePreview.status === "ok" && mixedLoadWarning(ratePreview) && (
+                  <div className="wb-rate-note warn">{mixedLoadWarning(ratePreview)}</div>
                 )}
                 {ratePreview.status === "error" && (
                   <div className="wb-rate-note err">{ratePreview.message}</div>

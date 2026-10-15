@@ -300,6 +300,11 @@
   color: #027a48;
 }
 
+.wb-rate-note.warn {
+  color: #b54708;
+  font-weight: 600;
+}
+
 .wb-rate-note.err {
   color: #b42318;
   font-weight: 600;

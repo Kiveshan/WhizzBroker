@@ -1481,45 +1481,37 @@ export const getGroupForAssignment = async (groupId) => {
   return { ...groupResult.rows[0], company: companyResult.rows[0] || {}, instructions };
 };
 
-/**
- * Picks which rate column applies to a child instruction: the container type
- * the instruction mostly carries. Mirrors calculateLegDriverRate in the legacy
- * assignment UI so grouped and ungrouped instructions rate the same way.
- * Returns "12m", "6m" or "abnormal".
- *
- * Only used for break bulk now, which has no container rows to inspect — a
- * container assignment rates off the containers actually being taken instead
- * (see containerTypeForSelection).
- */
-const dominantContainerType = ({ num_six_meters, num_twelve_meters, num_abnormal }) => {
-  const six = Number(num_six_meters) || 0;
-  const twelve = Number(num_twelve_meters) || 0;
-  const abnormal = Number(num_abnormal) || 0;
-
-  if (twelve >= six && twelve >= abnormal && twelve > 0) return "12m";
-  if (abnormal > six && abnormal > twelve) return "abnormal";
+// The rate column for a load, from how many of each size it carries. Any 12m
+// container on the leg pays the 12m rate (client decision, Oct 2026: a mixed
+// load is never paid below its largest container, since the rate is flat per
+// leg). Without a 12m, abnormal wins only when it outnumbers the 6m containers
+// (and is then refused — abnormal has no route rate); otherwise 6m.
+// driverRatesModel.js LEG_CONTAINER_TYPE_SQL mirrors this — change both together.
+export const containerTypeFromMix = ({ six = 0, twelve = 0, abnormal = 0 }) => {
+  if (twelve > 0) return "12m";
+  if (abnormal > six) return "abnormal";
   return "6m";
 };
 
-/**
- * The rate column for a specific set of containers. A subcontractor now takes a
- * subset of an instruction's containers, so the instruction's overall 6m/12m
- * counts are the wrong basis — a subbie taking only the 6m containers off a
- * 12m-heavy instruction must be paid the 6m rate. Counts the selection itself.
- */
-const containerTypeForSelection = (rows) => {
-  let six = 0;
-  let twelve = 0;
-  let abnormal = 0;
+const mixFromInstruction = ({ num_six_meters, num_twelve_meters, num_abnormal }) => ({
+  six: Number(num_six_meters) || 0,
+  twelve: Number(num_twelve_meters) || 0,
+  abnormal: Number(num_abnormal) || 0,
+});
+
+// A subcontractor takes a subset of an instruction's containers, so the
+// instruction's overall counts are the wrong basis — a subbie taking only the
+// 6m containers off a 12m-heavy instruction is paid the 6m rate. Counts the
+// selection itself. A container with no size recorded counts as 6m.
+const mixFromSelection = (rows) => {
+  const mix = { six: 0, twelve: 0, abnormal: 0 };
   for (const { container_type } of rows) {
     const t = String(container_type || "").trim().toLowerCase();
-    if (t === "12m") twelve += 1;
-    else if (t === "abnormal") abnormal += 1;
-    else six += 1;
+    if (t === "12m") mix.twelve += 1;
+    else if (t === "abnormal") mix.abnormal += 1;
+    else mix.six += 1;
   }
-  if (twelve >= six && twelve >= abnormal && twelve > 0) return "12m";
-  if (abnormal > six && abnormal > twelve) return "abnormal";
-  return "6m";
+  return mix;
 };
 
 /**
@@ -1618,9 +1610,9 @@ export const resolveAssignmentRate = async ({
   }
 
   // Rate off what is actually being taken.
-  let containerType;
+  let containerMix;
   if (keys.length === 0) {
-    containerType = dominantContainerType(instruction);
+    containerMix = mixFromInstruction(instruction);
   } else {
     const selected = await pool.query(
       `SELECT containerkey, container_type, legkey
@@ -1641,8 +1633,9 @@ export const resolveAssignmentRate = async ({
       err.code = "CONTAINERS_TAKEN";
       throw err;
     }
-    containerType = containerTypeForSelection(selected.rows);
+    containerMix = mixFromSelection(selected.rows);
   }
+  const containerType = containerTypeFromMix(containerMix);
 
   const effectiveDate = legDate || new Date().toISOString().split("T")[0];
 
@@ -1678,6 +1671,7 @@ export const resolveAssignmentRate = async ({
   return {
     driverrate,
     containerType,
+    containerMix,
     m5ratekey: rate.data.m5ratekey,
     effectiveDate,
     containerCount: keys.length,

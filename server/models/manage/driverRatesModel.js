@@ -850,10 +850,10 @@ export const getRouteLegDates = async (startingpoint, destination) => {
 // containernumber finds nothing and the old COALESCE(..., '6m') repriced every
 // 12m group load at the 6m rate. Resolution order:
 //   1. legacy leg naming one container    -> that container's type (6m if blank)
-//   2. group leg with claimed containers  -> majority of the claimed types,
-//                                            ties to 12m (containerTypeForSelection)
-//   3. instruction with no container rows -> majority of the instruction's
-//                                            6m/12m/abnormal counts (dominantContainerType)
+//   2. group leg with claimed containers  -> sizes of the claimed containers
+//   3. instruction with no container rows -> the instruction's 6m/12m/abnormal counts
+// Steps 2 and 3 use containerTypeFromMix (assignmentModel.js): any 12m on the
+// load pays 12m; otherwise abnormal only if it outnumbers 6m; otherwise 6m.
 //   4. anything else                      -> 6m, as before
 // 'abnormal' has no route rate column; callers must not reprice those legs.
 // Expects aliases l (legs_m2), mc (m1_controller), c (container joined on
@@ -872,18 +872,19 @@ const LEG_CLAIMED_JOIN = `
     SELECT COUNT(*) AS n FROM container ci WHERE ci.m1key = l.m1key
   ) instr_containers ON TRUE`
 
-const majorityType = (six, twelve, abnormal) => `
+// Mirrors containerTypeFromMix in assignmentModel.js: any 12m pays 12m.
+const typeFromMix = (six, twelve, abnormal) => `
   CASE
-    WHEN ${twelve} >= ${six} AND ${twelve} >= ${abnormal} AND ${twelve} > 0 THEN '12m'
-    WHEN ${abnormal} > ${six} AND ${abnormal} > ${twelve}                   THEN 'abnormal'
+    WHEN ${twelve} > 0       THEN '12m'
+    WHEN ${abnormal} > ${six} THEN 'abnormal'
     ELSE '6m'
   END`
 
 const LEG_CONTAINER_TYPE_SQL = `
   CASE
     WHEN c.containerkey IS NOT NULL THEN LOWER(TRIM(COALESCE(NULLIF(TRIM(c.container_type), ''), '6m')))
-    WHEN claimed.n > 0 THEN ${majorityType("claimed.six", "claimed.twelve", "claimed.abnormal")}
-    WHEN instr_containers.n = 0 THEN ${majorityType(
+    WHEN claimed.n > 0 THEN ${typeFromMix("claimed.six", "claimed.twelve", "claimed.abnormal")}
+    WHEN instr_containers.n = 0 THEN ${typeFromMix(
       "COALESCE(mc.num_six_meters, 0)",
       "COALESCE(mc.num_twelve_meters, 0)",
       "COALESCE(mc.num_abnormal, 0)"
