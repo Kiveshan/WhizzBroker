@@ -10,6 +10,8 @@ import { BookingDetailsSection } from "../../../../components/instructions/Booki
 import { WeightDetailsTable } from "../../../../components/instructions/WeightDetailsTable";
 import { ContainersCard } from "../../../../components/instructions/ContainersCard";
 import { AddonInvoicePicker } from "../../../../components/instructions/AddonInvoicePicker";
+import { InstructionValueCard } from "../../../../components/instructions/InstructionValueCard";
+import { instructionValue } from "../../../../utils/instructions/instructionValue";
 
 export function FCcontrollerinstructionsLayout({
   // Loading gate
@@ -254,6 +256,35 @@ export function FCcontrollerinstructionsLayout({
               successMessage={containerSuccessMessage || rateUpdateMessage}
             />
           )}
+          <InstructionValueCard
+            value={instructionValue({
+              shipmentTypeId: formData.shipmentTypeId,
+              rateWeight: formData.rateWeight,
+              // Set rate: the entered rate, falling back to the one saved on
+              // the instruction (same as the save path, resolveBaseCost).
+              setRate:
+                isSetRate && !isAddOn
+                  ? Number.parseFloat(formData.setRateAmount) > 0
+                    ? Number.parseFloat(formData.setRateAmount)
+                    : historicalSetRate || 0
+                  : null,
+              unitRate: formData.unitRate,
+              weight: formData.weight,
+              weightRows,
+              counts: {
+                six: formData.num_six_meters,
+                twelve: formData.num_twelve_meters,
+                abnormal: formData.num_abnormal,
+              },
+              rates: {
+                six: formData.rateper_6,
+                twelve: formData.rateper_12,
+                abnormal: formData.rateper_abnormal,
+              },
+              containers: String(formData.shipmentTypeId) === "4" ? [] : containers,
+              vat: formData.vat,
+            })}
+          />
           <ActionButtons
             isReadOnly={isReadOnly}
             status={formData.status}
@@ -268,7 +299,7 @@ export function FCcontrollerinstructionsLayout({
           isOpen={confirmationModal.isOpen}
           title={
             confirmationModal.action === "delete" ? "Delete Instruction" :
-            confirmationModal.action === "invoice" ? "Create Invoice" :
+            confirmationModal.action === "invoice" ? "Create Group Invoice" :
             confirmationModal.action === "delete-container" ? "Delete Container" :
             confirmationModal.action === "delete-weight" ? "Delete Weight Row" :
             confirmationModal.action === "unlock-route" ? "Change this instruction's rate?" :

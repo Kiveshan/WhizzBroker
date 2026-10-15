@@ -281,8 +281,10 @@ export function useInstructionActions({
       }
       setConfirmationModal({
         isOpen: true,
+        // Invoices are always group invoices now — one invoice for every
+        // instruction in this instruction's group, even a group of one.
         message:
-          "Are you sure you want to create an invoice before dispatching containers?",
+          "This creates the group invoice: one invoice covering every instruction in this group, before the containers are dispatched. Finalising the group later will use this same invoice. Continue?",
         action: "invoice",
       });
     } catch (error) {
@@ -301,8 +303,14 @@ export function useInstructionActions({
       if (!instructionData || !instructionData.m1key) {
         throw new Error("No m1key found for instruction");
       }
-      await generateInvoiceService(instructionData.m1key);
-      setContainerSuccessMessage("Invoice created successfully!");
+      const result = await generateInvoiceService(instructionData.m1key);
+      setContainerSuccessMessage(
+        result?.alreadyExisted
+          ? `This group is already invoiced (${result.invoiceNum}).`
+          : result?.invoiceNum
+            ? `Group invoice ${result.invoiceNum} created.`
+            : "Invoice created successfully!",
+      );
       setIsInvoiced(true);
     } catch (error) {
       console.error("Error creating invoice:", error);

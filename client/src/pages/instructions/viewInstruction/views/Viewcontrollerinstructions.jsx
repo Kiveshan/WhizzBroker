@@ -9,6 +9,8 @@ import { ClientInfoSection } from "../../../../components/instructions/ClientInf
 import { BookingDetailsSection } from "../../../../components/instructions/BookingDetailsSection"
 import { ContainersCard } from "../../../../components/instructions/ContainersCard"
 import { mapContainersFromDb } from "../../../../utils/instructions/payloadBuilders.js"
+import { InstructionValueCard } from "../../../../components/instructions/InstructionValueCard"
+import { instructionValue, savedInstructionValue } from "../../../../utils/instructions/instructionValue"
 import "../../../../css/components.css"
 
 // ErrorTooltip component for displaying validation errors
@@ -897,6 +899,37 @@ const Viewcontrollerinstructions = ({
                 isCrossHaul={formData.shipmentTypeId === '3'}
                 allowVgmUI={formData.shipmentTypeId !== '4'}
                 isReadOnly={true}
+              />
+            )}
+
+            {/* Value as saved — the stored total is what was invoiced */}
+            {formData.shipmentTypeId && (
+              <InstructionValueCard
+                value={savedInstructionValue(
+                  instructionValue({
+                    shipmentTypeId: formData.shipmentTypeId,
+                    rateWeight: formData.rateWeight,
+                    setRate: formData.is_set_rate ? Number(formData.historical_set_rate) || 0 : null,
+                    unitRate: formData.unitrate,
+                    weight: formData.weight,
+                    weightRows,
+                    counts: {
+                      six: formData.num_six_meters,
+                      twelve: formData.num_twelve_meters,
+                      abnormal: formData.num_abnormal,
+                      breakbulk: formData.num_breakbulk,
+                    },
+                    rates: {
+                      six: formData.rateper_6,
+                      twelve: formData.rateper_12,
+                      abnormal: formData.rateper_abnormal,
+                      breakbulk: formData.rateper_breakbulk,
+                    },
+                    containers: formData.shipmentTypeId === '4' ? [] : containers,
+                    vat: formData.vat,
+                  }),
+                  formData.total_cost,
+                )}
               />
             )}
           </div>

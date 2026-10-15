@@ -6,6 +6,8 @@ import { ClientInfoSection } from "../../../../components/instructions/ClientInf
 import { BookingDetailsSection } from "../../../../components/instructions/BookingDetailsSection"
 import { UnitPerSection } from "../../../../components/instructions/UnitPerSection"
 import { WeightDetailsTable } from "../../../../components/instructions/WeightDetailsTable"
+import { InstructionValueCard } from "../../../../components/instructions/InstructionValueCard"
+import { instructionValue } from "../../../../utils/instructions/instructionValue"
 
 export function ControllerInstructionsLayout({
   spinnerKeyframes,
@@ -275,6 +277,33 @@ export function ControllerInstructionsLayout({
             availableExtraCharges={availableExtraCharges}
           />
         ) : null}
+
+        {formData.shipmentTypeId && (
+          <InstructionValueCard
+            value={instructionValue({
+              shipmentTypeId: formData.shipmentTypeId,
+              rateWeight: formData.rateWeight,
+              setRate: (isSetRateMode || isSetRate) && !isAddOn ? setRateValue : null,
+              unitRate: formData.unitrate,
+              weight: formData.weight,
+              weightRows,
+              counts: {
+                six: formData.num_six_meters,
+                twelve: formData.num_twelve_meters,
+                abnormal: formData.num_abnormal,
+                breakbulk: isCrossHaul && formData.rateWeight === "Container" ? formData.num_breakbulk : 0,
+              },
+              rates: {
+                six: formData.sixMeterRate,
+                twelve: formData.twelveMeterRate,
+                abnormal: formData.abnormalRate,
+                breakbulk: formData.rateper_breakbulk,
+              },
+              containers,
+              vat: formData.vat,
+            })}
+          />
+        )}
         <div className="controller-instructions-button-container" style={{ margin: "20px 0" }}>
           {!groupMode && (
           <button

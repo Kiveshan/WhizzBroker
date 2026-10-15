@@ -1099,6 +1099,123 @@ export const getDocuments = async (instructionId) => {
   }
 };
 
+const INVOICE_MONTHS = [
+  "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
+  "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
+];
+
+/**
+ * Inserts the one combined invoice row for an instruction group (m1key NULL,
+ * instruction_group_id set). Shared by the instruction screen's Invoice button
+ * (invoiceGroupEarly) and group finalise, so both number and date it the same
+ * way. Runs on the caller's client inside the caller's transaction.
+ */
+const insertGroupInvoice = async (client, groupId, clientId) => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const monthlyGroupId = `${clientId}-${INVOICE_MONTHS[now.getMonth()]}${year}`;
+
+  const seqResult = await client.query(
+    "SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_num FROM 'INV-\\d+-0*(\\d+)') AS INTEGER)), 0) + 1 AS next FROM public.invoice WHERE invoice_num LIKE $1",
+    [`INV-${year}-%`]
+  );
+  const invoiceNum = `INV-${year}-${seqResult.rows[0].next}`;
+
+  // Invoice date = earliest assignment-leg date across the group's children;
+  // today when invoiced before any assignment exists.
+  const dateResult = await client.query(
+    `SELECT MIN(l.date) AS first_date
+     FROM public.legs_m2 l
+     JOIN public.m1_controller m ON m.m1key = l.m1key
+     WHERE m.instruction_group_id = $1 AND l.date IS NOT NULL`,
+    [groupId]
+  );
+  const invoiceDate = dateResult.rows[0].first_date || now;
+
+  const insertInvoice = await client.query(
+    `INSERT INTO public.invoice (clientid, instruction_group_id, invoice_num, groupid, date)
+     VALUES ($1, $2, $3, $4, $5) RETURNING ikey, invoice_num, date`,
+    [clientId, groupId, invoiceNum, monthlyGroupId, invoiceDate]
+  );
+  return insertInvoice.rows[0];
+};
+
+/**
+ * The instruction screen's Invoice button: creates the group's invoice now,
+ * before dispatch, without finalising or completing anything. Finalising the
+ * group later reuses this invoice instead of creating another.
+ *
+ * Refuses when any instruction in the group was already invoiced on its own
+ * (older single invoices), since a group invoice would bill it a second time.
+ */
+const invoiceGroupEarly = async (client, groupId, clientId) => {
+  try {
+    await client.query("BEGIN");
+    // Lock the group so two clicks can't both create an invoice.
+    await client.query(
+      "SELECT group_key FROM public.instruction_group WHERE group_key = $1 FOR UPDATE",
+      [groupId]
+    );
+
+    const existing = await client.query(
+      `SELECT ikey, invoice_num, date FROM public.invoice
+       WHERE instruction_group_id = $1 AND m1key IS NULL`,
+      [groupId]
+    );
+    if (existing.rows.length > 0) {
+      await client.query("COMMIT");
+      const inv = existing.rows[0];
+      return {
+        success: true,
+        isGroupInvoice: true,
+        alreadyExisted: true,
+        message: `This group is already on invoice ${inv.invoice_num}`,
+        invoiceId: inv.ikey,
+        invoiceNum: inv.invoice_num,
+        groupKey: groupId,
+        date: inv.date,
+      };
+    }
+
+    const singles = await client.query(
+      `SELECT m.m1key, i.invoice_num
+       FROM public.m1_controller m
+       JOIN public.invoice i ON i.m1key = m.m1key
+       WHERE m.instruction_group_id = $1
+       ORDER BY m.m1key`,
+      [groupId]
+    );
+    if (singles.rows.length > 0) {
+      await client.query("ROLLBACK");
+      return {
+        success: false,
+        message: `Some instructions in this group were already invoiced on their own (${singles.rows
+          .map((r) => `#${r.m1key} on ${r.invoice_num}`)
+          .join(", ")}). A group invoice would bill them twice, so it was not created.`,
+      };
+    }
+
+    const children = await client.query(
+      "SELECT COUNT(*)::int AS n FROM public.m1_controller WHERE instruction_group_id = $1",
+      [groupId]
+    );
+    const invoice = await insertGroupInvoice(client, groupId, clientId);
+    await client.query("COMMIT");
+    return {
+      success: true,
+      isGroupInvoice: true,
+      invoiceId: invoice.ikey,
+      invoiceNum: invoice.invoice_num,
+      groupKey: groupId,
+      instructionCount: children.rows[0].n,
+      date: invoice.date,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  }
+};
+
 export const generateInvoice = async (instructionId) => {
   const client = await pool.connect();
   try {
@@ -1137,14 +1254,21 @@ export const generateInvoice = async (instructionId) => {
     const monthName = monthNames[currentMonth - 1];
 
     const instructionResult = await client.query(
-      "SELECT client, m1key FROM m1_controller WHERE m1key = $1",
+      "SELECT client, m1key, instruction_group_id FROM m1_controller WHERE m1key = $1",
       [instructionId]
     );
 
     if (instructionResult.rows.length === 0)
       throw new Error(`Instruction with ID ${instructionId} not found`);
 
-    const { client: clientId, m1key } = instructionResult.rows[0];
+    const { client: clientId, m1key, instruction_group_id: groupKey } = instructionResult.rows[0];
+
+    // Every instruction belongs to a group, and a group is billed on ONE group
+    // invoice — even a group of one. Single-instruction invoices are no longer
+    // created; the code below remains only for an instruction with no group.
+    if (groupKey) {
+      return await invoiceGroupEarly(client, groupKey, clientId);
+    }
 
     const sequenceResult = await client.query(
       "SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_num FROM 'INV-\\d+-0*(\\d+)') AS INTEGER)), 0) + 1 AS next_invoice_num FROM invoice WHERE invoice_num LIKE $1",
@@ -1762,37 +1886,7 @@ export const finaliseInstructionGroup = async (groupId) => {
     let invoice = existing.rows[0] || null;
 
     if (!invoice) {
-      const now = new Date();
-      const year = now.getFullYear();
-      const monthNames = [
-        "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
-        "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER",
-      ];
-      const monthName = monthNames[now.getMonth()];
-
-      const seqResult = await client.query(
-        "SELECT COALESCE(MAX(CAST(SUBSTRING(invoice_num FROM 'INV-\\d+-0*(\\d+)') AS INTEGER)), 0) + 1 AS next FROM public.invoice WHERE invoice_num LIKE $1",
-        [`INV-${year}-%`]
-      );
-      const invoiceNum = `INV-${year}-${seqResult.rows[0].next}`;
-      const monthlyGroupId = `${clientId}-${monthName}${year}`;
-
-      // Invoice date = earliest assignment-leg date across the group's children.
-      const dateResult = await client.query(
-        `SELECT MIN(l.date) AS first_date
-         FROM public.legs_m2 l
-         JOIN public.m1_controller m ON m.m1key = l.m1key
-         WHERE m.instruction_group_id = $1 AND l.date IS NOT NULL`,
-        [groupId]
-      );
-      const invoiceDate = dateResult.rows[0].first_date || now;
-
-      const insertInvoice = await client.query(
-        `INSERT INTO public.invoice (clientid, instruction_group_id, invoice_num, groupid, date)
-         VALUES ($1, $2, $3, $4, $5) RETURNING ikey, invoice_num`,
-        [clientId, groupId, invoiceNum, monthlyGroupId, invoiceDate]
-      );
-      invoice = insertInvoice.rows[0];
+      invoice = await insertGroupInvoice(client, groupId, clientId);
     }
 
     // Mark children and the group Completed.

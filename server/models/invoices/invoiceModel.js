@@ -599,10 +599,14 @@ const checkInvoiceExists = async (m1key) => {
       );
     }
 
+    // Invoiced on its own (older single invoices) or through its group's
+    // combined invoice (m1key NULL, instruction_group_id set).
     const queryText = `
       SELECT COUNT(*) as count
-      FROM public.invoice
-      WHERE m1key = $1
+      FROM public.invoice i
+      WHERE i.m1key = $1
+         OR (i.m1key IS NULL AND i.instruction_group_id = (
+               SELECT m.instruction_group_id FROM public.m1_controller m WHERE m.m1key = $1))
     `;
 
     const result = await query(queryText, [m1key]);
