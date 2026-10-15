@@ -1187,6 +1187,26 @@ const getWagesVsExpenses = async (client, month, year) => {
   return wagesVsExpensesData
 }
 
+// Client commission (broker margin) for one client and month.
+//
+// Job-matched and ex-VAT, so revenue and cost for the same work land together:
+//   - "The month" = instructions whose invoice is dated in it (both invoice
+//     paths: legacy m1key invoices and group invoices via instruction_group_id).
+//   - Subcontractor cost = driverrate on those instructions' subcontractor
+//     legs, whenever the leg ran.
+//   - Credit notes = those raised against those instructions, whenever raised.
+//     credit_notes.amount holds ex-VAT line amounts (VAT is added at the
+//     instruction's rate when the note is applied to the balance).
+//   - Add-ons dated in the month, ex-VAT (amount includes 15% when vat_applied).
+//   - Commission = revenue - credit notes - subcontractor cost. Not clamped: a
+//     loss-making month shows as negative.
+// VAT is left out on both sides: it passes through the broker, and subbies are
+// not necessarily VAT-registered, so adding the client's VAT rate to their
+// rate (as this report used to) overstated cost.
+//
+// Reported separately, not in the commission: subcontractor legs that ran in
+// the month on this client's instructions that are not invoiced yet. Subbie
+// statements bucket by leg date, so this is the gap between the two.
 const getClientSubbieCommissionReport = async (client, month, year, clientId) => {
   if (!clientId) {
     throw new Error("clientId is required")
@@ -1199,200 +1219,193 @@ const getClientSubbieCommissionReport = async (client, month, year, clientId) =>
     throw new Error("Both month and year are required")
   }
 
-  const clientInfoQuery = `
-    SELECT m5clientkey, client
-    FROM m5_client
-    WHERE m5clientkey = $1
-  `
-
-  const clientInfoResult = await client.query(clientInfoQuery, [clientId])
+  const clientInfoResult = await client.query(
+    `SELECT m5clientkey, client FROM m5_client WHERE m5clientkey = $1`,
+    [clientId]
+  )
   const clientInfo = clientInfoResult.rows[0] || null
 
-  // Group-aware: unions the legacy m1key invoice path with the combined
-  // group-invoice path (invoice.m1key IS NULL, matched via instruction_group_id).
-  // m.m1key (the child instruction's own key) is used instead of i.m1key, since
-  // the latter is NULL on group invoices.
-  const invoicesQuery = `
-    WITH filtered_invoices AS (
-      SELECT
-        i.ikey,
-        i.invoice_num,
-        i.doc_num,
-        i.date,
-        m.m1key,
-        m.total_cost,
-        m.vat,
-        m.description
-      FROM invoice i
-      JOIN m1_controller m ON i.m1key = m.m1key
-      WHERE i.clientid = $1
-        AND TRIM(TO_CHAR(i.date, 'Month')) = $2
-        AND EXTRACT(YEAR FROM i.date)::text = $3
-      UNION ALL
-      SELECT
-        i.ikey,
-        i.invoice_num,
-        i.doc_num,
-        i.date,
-        m.m1key,
-        m.total_cost,
-        m.vat,
-        m.description
-      FROM invoice i
-      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
-      WHERE i.m1key IS NULL
-        AND i.clientid = $1
-        AND TRIM(TO_CHAR(i.date, 'Month')) = $2
-        AND EXTRACT(YEAR FROM i.date)::text = $3
-    )
-    SELECT 
-      fi.ikey,
-      fi.invoice_num,
-      fi.doc_num,
-      fi.date,
-      fi.m1key,
-      fi.total_cost,
-      fi.vat,
-      fi.description
-    FROM filtered_invoices fi
-    ORDER BY fi.date ASC
+  const params = [clientId, trimmedMonth, yearText]
+
+  // The client's invoiced child instructions, one row each. DISTINCT ON keeps
+  // the latest invoice when an instruction is reachable by both paths (an old
+  // single invoice and a later group invoice), so it is never counted twice.
+  const INVOICED_CTE = `
+    invoiced AS (
+      SELECT DISTINCT ON (x.m1key) x.*
+      FROM (
+        SELECT i.ikey, i.invoice_num, i.doc_num, i.date, m.m1key,
+               COALESCE(m.total_cost, 0) AS total_cost, m.description
+        FROM invoice i
+        JOIN m1_controller m ON i.m1key = m.m1key
+        WHERE i.clientid = $1
+        UNION ALL
+        SELECT i.ikey, i.invoice_num, i.doc_num, i.date, m.m1key,
+               COALESCE(m.total_cost, 0) AS total_cost, m.description
+        FROM invoice i
+        JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+        WHERE i.m1key IS NULL AND i.clientid = $1
+      ) x
+      ORDER BY x.m1key, x.date DESC, x.ikey DESC
+    ),
+    in_month AS (
+      SELECT * FROM invoiced
+      WHERE TRIM(TO_CHAR(date, 'Month')) = $2
+        AND EXTRACT(YEAR FROM date)::text = $3
+    )`
+
+  const instructionsQuery = `
+    WITH ${INVOICED_CTE}
+    SELECT
+      inv.*,
+      COALESCE(subbie.cost, 0)   AS subbie_cost,
+      COALESCE(subbie.legs, 0)   AS subbie_legs,
+      COALESCE(credit.amount, 0) AS credit_amount
+    FROM in_month inv
+    LEFT JOIN LATERAL (
+      SELECT SUM(COALESCE(l.driverrate, 0)) AS cost, COUNT(*) AS legs
+      FROM legs_m2 l
+      JOIN m5_employee e ON e.userid = l.driverid
+      WHERE l.m1key = inv.m1key AND e.roleid = 6
+    ) subbie ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT SUM(a) AS amount
+      FROM credit_notes cn, unnest(cn.amount) AS a
+      WHERE cn.m1key = inv.m1key
+    ) credit ON TRUE
+    ORDER BY inv.date, inv.invoice_num, inv.m1key
+  `
+
+  const subcontractorQuery = `
+    WITH ${INVOICED_CTE}
+    SELECT
+      MIN(e.userid) AS subcontractor_id,
+      COALESCE(e.companyname, 'Unknown') AS companyname,
+      e.subei_reg_num,
+      COUNT(DISTINCT l.legkey) AS leg_count,
+      COALESCE(SUM(l.driverrate), 0) AS total_earned
+    FROM legs_m2 l
+    JOIN in_month k ON k.m1key = l.m1key
+    JOIN m5_employee e ON l.driverid = e.userid
+    WHERE e.roleid = 6
+    GROUP BY e.companyname, e.subei_reg_num
+    ORDER BY total_earned DESC
   `
 
   const addOnsQuery = `
-    SELECT 
-      ao.addon_id,
-      ao.invoice_number,
-      ao.date,
-      ao.amount,
-      ao.booking_ref,
-      ao.client_ref
+    SELECT ao.addon_id, ao.invoice_number, ao.date, ao.amount, ao.vat_applied,
+           ao.booking_ref, ao.client_ref
     FROM add_ons ao
     WHERE ao.client_id = $1
       AND TRIM(TO_CHAR(ao.date, 'Month')) = $2
       AND EXTRACT(YEAR FROM ao.date)::text = $3
   `
 
-  // Subbie earnings are bucketed by LEG date (when the trip was driven), the same
-  // basis the subcontractor statements use, and scoped to the client via the
-  // instruction (m1_controller.client). Amounts are VAT-inclusive (driverrate +
-  // instruction VAT) so this total reconciles to the subbie statements rather than
-  // the invoice-date / ex-VAT figure that previously under-reported earnings.
-  const subcontractorQuery = `
-    SELECT
-      MIN(e.userid) AS subcontractor_id,
-      COALESCE(e.companyname, 'Unknown') AS companyname,
-      e.subei_reg_num,
-      COUNT(DISTINCT l.legkey) AS leg_count,
-      COALESCE(SUM(l.driverrate * (1 + COALESCE(m.vat, 0)::numeric / 100)), 0) AS total_earned
+  const uninvoicedQuery = `
+    SELECT COUNT(*) AS legs, COALESCE(SUM(l.driverrate), 0) AS cost
     FROM legs_m2 l
-    JOIN m1_controller m ON l.m1key = m.m1key
-    JOIN m5_employee e ON l.driverid = e.userid
+    JOIN m1_controller m ON m.m1key = l.m1key
+    JOIN m5_employee e ON e.userid = l.driverid
     WHERE m.client = $1
+      AND e.roleid = 6
       AND TRIM(TO_CHAR(l.date, 'Month')) = $2
       AND EXTRACT(YEAR FROM l.date)::text = $3
-      AND e.roleid = 6
-    GROUP BY e.companyname, e.subei_reg_num
-    ORDER BY total_earned DESC
+      AND NOT EXISTS (
+        SELECT 1 FROM invoice i
+        WHERE i.m1key = m.m1key
+           OR (i.m1key IS NULL AND i.instruction_group_id = m.instruction_group_id)
+      )
   `
 
-  const params = [clientId, trimmedMonth, yearText]
-  const [invoiceResults, subcontractorResults, addOnResults] = await Promise.all([
-    client.query(invoicesQuery, params),
+  const [instructionResults, subcontractorResults, addOnResults, uninvoicedResult] = await Promise.all([
+    client.query(instructionsQuery, params),
     client.query(subcontractorQuery, params),
     client.query(addOnsQuery, params),
+    client.query(uninvoicedQuery, params),
   ])
 
-  const instructionInvoiceDetails = invoiceResults.rows.map((row) => {
-    const baseAmount = Number.parseFloat(row.total_cost || 0)
-    const vatRate = Number.parseFloat(row.vat ?? 0) || 0
-    const vatAmount = Number.isFinite(vatRate) ? (baseAmount * vatRate) / 100 : 0
-    const grossAmount = baseAmount + vatAmount
+  const round = (n) => Number((Number(n) || 0).toFixed(2))
+  const toIso = (d) => (d instanceof Date ? d.toISOString() : d)
 
+  const instructionDetails = instructionResults.rows.map((row) => {
+    const revenue = Number(row.total_cost) || 0
+    const credit = Number(row.credit_amount) || 0
+    const subbieCost = Number(row.subbie_cost) || 0
     return {
-      invoiceId: row.ikey,
+      invoiceId: `${row.ikey}-${row.m1key}`,
       invoiceNumber: row.invoice_num,
       documentNumber: row.doc_num,
-      invoiceDate: row.date instanceof Date ? row.date.toISOString() : row.date,
+      invoiceDate: toIso(row.date),
       instructionId: row.m1key,
       description: row.description,
-      amount: Number(grossAmount.toFixed(2)),
-      amountExVat: Number(baseAmount.toFixed(2)),
-      vatRate: Number(vatRate.toFixed(2)),
-      vatAmount: Number(vatAmount.toFixed(2)),
+      amount: round(revenue),
+      creditNotes: round(credit),
+      subbieCost: round(subbieCost),
+      subbieLegs: Number(row.subbie_legs) || 0,
+      margin: round(revenue - credit - subbieCost),
       source: "instruction",
     }
   })
 
   const addOnDetails = addOnResults.rows.map((row) => {
-    const amount = Number.parseFloat(row.amount || 0)
-
+    const gross = Number(row.amount) || 0
+    const exVat = row.vat_applied ? gross / 1.15 : gross
     return {
       invoiceId: `addon-${row.addon_id}`,
       invoiceNumber: row.invoice_number || "Add-On Invoice",
       documentNumber: row.booking_ref || null,
-      invoiceDate: row.date instanceof Date ? row.date.toISOString() : row.date,
+      invoiceDate: toIso(row.date),
       instructionId: row.client_ref || null,
       description: "Add-On invoice",
-      amount: Number(amount.toFixed(2)),
-      amountExVat: Number(amount.toFixed(2)),
-      vatRate: null,
-      vatAmount: null,
+      amount: round(exVat),
+      creditNotes: 0,
+      subbieCost: 0,
+      subbieLegs: 0,
+      margin: round(exVat),
       source: "addOn",
     }
   })
 
-  const invoiceDetails = [...instructionInvoiceDetails, ...addOnDetails].sort((a, b) => {
-    const numA = a.invoiceNumber || ""
-    const numB = b.invoiceNumber || ""
-    return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: "base" })
-  })
-
-  const totalInvoiceAmount = invoiceDetails.reduce(
-    (sum, detail) => sum + (Number.isFinite(detail.amount) ? detail.amount : 0),
-    0
+  const invoiceDetails = [...instructionDetails, ...addOnDetails].sort((a, b) =>
+    (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "", undefined, { numeric: true, sensitivity: "base" })
   )
 
-  const totalAddOnAmount = addOnDetails.reduce(
-    (sum, detail) => sum + (Number.isFinite(detail.amount) ? detail.amount : 0),
-    0
-  )
-
-  const totalSubbieAmount = subcontractorResults.rows.reduce(
-    (sum, row) => sum + Number.parseFloat(row.total_earned || 0),
-    0
-  )
+  const sum = (rows, key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0)
+  const instructionRevenue = sum(instructionDetails, "amount")
+  const addOnRevenue = sum(addOnDetails, "amount")
+  const creditNotes = sum(instructionDetails, "creditNotes")
+  const subcontractorAmount = sum(subcontractorResults.rows, "total_earned")
+  const revenue = instructionRevenue + addOnRevenue
+  const netRevenue = revenue - creditNotes
+  const commission = netRevenue - subcontractorAmount
 
   const subcontractorBreakdown = subcontractorResults.rows.map((row) => {
     const totalEarned = Number.parseFloat(row.total_earned || 0)
-    const percentage = totalSubbieAmount > 0 ? totalEarned / totalSubbieAmount : 0
     return {
       subcontractorId: row.subcontractor_id,
       companyName: row.companyname,
       registrationNumber: row.subei_reg_num,
       legCount: Number.parseInt(row.leg_count, 10) || 0,
-      totalEarned,
-      percentage,
+      totalEarned: round(totalEarned),
+      percentage: subcontractorAmount > 0 ? totalEarned / subcontractorAmount : 0,
     }
   })
 
-  const commission = Math.max(totalInvoiceAmount - totalSubbieAmount, 0)
+  const uninvoiced = uninvoicedResult.rows[0] || {}
 
   return {
-    client: clientInfo
-      ? {
-        id: clientInfo.m5clientkey,
-        name: clientInfo.client,
-      }
-      : null,
-    period: {
-      month: trimmedMonth,
-      year: yearText,
-    },
+    client: clientInfo ? { id: clientInfo.m5clientkey, name: clientInfo.client } : null,
+    period: { month: trimmedMonth, year: yearText },
     totals: {
-      invoiceAmount: Number(totalInvoiceAmount.toFixed(2)),
-      subcontractorAmount: Number(totalSubbieAmount.toFixed(2)),
-      commission: Number(commission.toFixed(2)),
-      addOnAmount: Number(totalAddOnAmount.toFixed(2)),
+      instructionAmount: round(instructionRevenue),
+      addOnAmount: round(addOnRevenue),
+      invoiceAmount: round(revenue),
+      creditNoteAmount: round(creditNotes),
+      subcontractorAmount: round(subcontractorAmount),
+      commission: round(commission),
+      marginPercent: netRevenue > 0 ? Number(((commission / netRevenue) * 100).toFixed(1)) : null,
+      uninvoicedSubbieLegs: Number(uninvoiced.legs) || 0,
+      uninvoicedSubbieCost: round(uninvoiced.cost),
     },
     invoices: invoiceDetails,
     subcontractors: subcontractorBreakdown,
