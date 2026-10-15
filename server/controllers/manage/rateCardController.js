@@ -6,6 +6,7 @@ import {
   findAssignmentConflicts,
 } from "../../models/manage/rateCardModel.js"
 import { validateRouteRates } from "../../utils/routeRateFields.js"
+import { findOpenInstructionUsage } from "../../models/manage/rateUsageModel.js"
 import { auditFromReq } from "../../utils/auditLogger.js"
 
 // Returns a de-duplicated int array, or null when the input is not valid.
@@ -70,10 +71,18 @@ const saveRateCardHandler = async (req, res) => {
       targetName: name.trim(),
       details: `${rates.length} route(s): ${rates.map((r) => r.title).join(", ")}${
         clients ? `; clients: [${clients.join(", ")}]` : ""
+      }${
+        result.renames?.length
+          ? `; renamed: ${result.renames.map((r) => `${r.oldTitle} -> ${r.newTitle}`).join(", ")} (${result.renamedInstructions} open instruction(s) moved)`
+          : ""
       }`,
     })
 
-    res.json({ message: "Rate card saved successfully", rateCardId: result.rateCardId })
+    res.json({
+      message: "Rate card saved successfully",
+      rateCardId: result.rateCardId,
+      renamedInstructions: result.renamedInstructions,
+    })
   } catch (err) {
     console.error(`Error saving rate card ${rateCardId ?? "(new)"}:`, err)
     res.status(500).json({ error: "Failed to save rate card" })
@@ -120,7 +129,24 @@ const assignmentConflictsHandler = async (req, res) => {
   }
 }
 
+// Before saving rate changes, how many open instructions use the rates being
+// removed or renamed, or the cards being taken off clients. Shared by the Rate
+// Cards and Client Rates screens.
+const rateUsageHandler = async (req, res) => {
+  try {
+    const { clientRateIds = [], cardRateIds = [], cardClients = [] } = req.body || {}
+    if (!Array.isArray(clientRateIds) || !Array.isArray(cardRateIds) || !Array.isArray(cardClients)) {
+      return res.status(400).json({ error: "clientRateIds, cardRateIds and cardClients must be arrays" })
+    }
+    res.json(await findOpenInstructionUsage({ clientRateIds, cardRateIds, cardClients }))
+  } catch (err) {
+    console.error("Error checking rate usage:", err)
+    res.status(500).json({ error: "Failed to check which instructions use these rates" })
+  }
+}
+
 export {
+  rateUsageHandler,
   listRateCardsHandler,
   getRateCardHandler,
   saveRateCardHandler,

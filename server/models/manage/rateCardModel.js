@@ -1,5 +1,6 @@
 import { pool } from "../../config/database.js"
 import { routeRateValues, cleanExtraCharges } from "../../utils/routeRateFields.js"
+import { findRenames, carryRenamesToOpenInstructions } from "./rateUsageModel.js"
 
 // Rate cards: named, reusable route price lists assigned to many clients.
 // Resolution against a client's own rates happens in the
@@ -179,6 +180,19 @@ const saveRateCard = async (rateCardId, { name, description, status = true, rate
   try {
     await client.query("BEGIN")
 
+    // Renamed rates take their open instructions with them. Done first, while
+    // the card is still active and its titles still resolve.
+    let renames = []
+    let renamedInstructions = 0
+    if (rateCardId) {
+      renames = await findRenames(
+        client,
+        { table: "rate_card_rate", idColumn: "rate_card_rate_id", ownerColumn: "rate_card_id", ownerId: rateCardId },
+        rates,
+      )
+      renamedInstructions = await carryRenamesToOpenInstructions(client, "card", renames)
+    }
+
     let id = rateCardId
     if (id) {
       const result = await client.query(
@@ -202,7 +216,7 @@ const saveRateCard = async (rateCardId, { name, description, status = true, rate
     if (Array.isArray(clientIds)) await syncCardClients(client, id, clientIds)
 
     await client.query("COMMIT")
-    return { success: true, rateCardId: id }
+    return { success: true, rateCardId: id, renames, renamedInstructions }
   } catch (err) {
     await client.query("ROLLBACK")
     if (err.code === "23505") {

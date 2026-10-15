@@ -12,6 +12,7 @@ import RouteRatesEditor, {
   duplicateTitleKeys,
 } from "../clientRates/RouteRatesEditor"
 import { useFooterOffset } from "./useFooterOffset"
+import { confirmOpenInstructionImpact, findTitleChanges } from "./openInstructionImpact"
 import "../../css/RateCards.css"
 
 // Shared rate cards: named price lists (rates identified by title) that can be assigned to any
@@ -188,6 +189,26 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
     return showConfirmDialog("Some rates won't apply to these clients", html, "Save anyway", { html: true })
   }
 
+  // Warn when removed / renamed rates, removed clients or making the card
+  // inactive touch open instructions; returns false when the user backs out.
+  const confirmOpenInstructions = () => {
+    if (isNew) return true
+    const originalRates = card.rates || []
+    const keptIds = new Set(filledRates.map((r) => r.rate_card_rate_id).filter(Boolean))
+    const removedIds = originalRates.map((r) => r.rate_card_rate_id).filter((id) => !keptIds.has(id))
+    const renames = findTitleChanges(originalRates, filledRates, "rate_card_rate_id", "card")
+    const goingInactive = card.status !== false && status === false
+    const droppedClientIds = goingInactive
+      ? originalClientIds
+      : originalClientIds.filter((id) => !clientIds.includes(id))
+    return confirmOpenInstructionImpact({
+      cardRateIds: [...removedIds, ...renames.map((r) => r.id)],
+      cardClients: droppedClientIds.map((clientId) => ({ rateCardId: card.rate_card_id, clientId })),
+      renames,
+      isRemoval: (row) => droppedClientIds.includes(row.clientid),
+    })
+  }
+
   const handleCancel = async () => {
     if (isDirty) {
       const leave = await showConfirmDialog("Discard changes?", "You have unsaved changes to this rate card.", "Discard changes")
@@ -219,13 +240,18 @@ const RateCardForm = ({ card, onSaved, onCancel }) => {
     setSaving(true)
     try {
       if (!(await confirmConflicts())) return
+      if (!(await confirmOpenInstructions())) return
       const payload = { name: name.trim(), description, status, rates: filledRates, clientIds }
-      if (isNew) {
-        await api.post("/api/rate-cards", payload)
-      } else {
-        await api.put(`/api/rate-cards/${card.rate_card_id}`, payload)
-      }
-      showAlert("Rate card saved", `"${name.trim()}" has been saved.`)
+      const res = isNew
+        ? await api.post("/api/rate-cards", payload)
+        : await api.put(`/api/rate-cards/${card.rate_card_id}`, payload)
+      const moved = res.data?.renamedInstructions || 0
+      showAlert(
+        "Rate card saved",
+        `"${name.trim()}" has been saved.${
+          moved ? ` ${plural(moved, "open instruction")} moved to the renamed rate titles.` : ""
+        }`,
+      )
       onSaved()
     } catch (err) {
       console.error("Error saving rate card:", err)

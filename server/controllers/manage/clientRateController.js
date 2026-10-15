@@ -111,12 +111,17 @@ const saveClientRatesHandler = async (req, res) => {
       targetName: `client ${clientId}`,
       details: `${rates.length} rate(s) saved for client ${clientId}: ${rates
         .map((r) => r.title)
-        .join(", ")}${cardAssignments ? `; rate cards: [${cardAssignments.map((c) => c.rate_card_id).join(", ")}]` : ""}`,
+        .join(", ")}${cardAssignments ? `; rate cards: [${cardAssignments.map((c) => c.rate_card_id).join(", ")}]` : ""}${
+        result.renames?.length
+          ? `; renamed: ${result.renames.map((r) => `${r.oldTitle} -> ${r.newTitle}`).join(", ")} (${result.renamedInstructions} open instruction(s) moved)`
+          : ""
+      }`,
     })
 
     res.json({
       message: "Client rates saved successfully",
       data: result.data,
+      renamedInstructions: result.renamedInstructions,
     })
   } catch (err) {
     console.error(`Error saving client rates for client ${req.params.clientId}:`, err)

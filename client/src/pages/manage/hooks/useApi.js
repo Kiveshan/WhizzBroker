@@ -1089,7 +1089,12 @@ export function useApi(state, actions) {
         actions.resetFormData("ClientRate")
         actions.setEditing("ClientRate", null)
         actions.hideForm("showClientRateForm")
-        actions.showAlert("Client rates saved successfully!")
+        const moved = response.data?.renamedInstructions || 0
+        actions.showAlert(
+          moved
+            ? `Client rates saved successfully! ${moved} open instruction${moved === 1 ? "" : "s"} moved to the renamed rate titles.`
+            : "Client rates saved successfully!",
+        )
         return true
       } catch (err) {
         console.error("Error saving client rates:", err)

@@ -23,6 +23,7 @@ import RouteRatesEditor, {
   duplicateTitleKeys,
 } from "./RouteRatesEditor"
 import { useFooterOffset } from "../rateCards/useFooterOffset"
+import { confirmOpenInstructionImpact, findTitleChanges } from "../rateCards/openInstructionImpact"
 import "../../css/RateCards.css"
 
 const STATUS = {
@@ -173,10 +174,47 @@ const ClientRatesForm = ({ clientData, loading, onSave, onCancel }) => {
       )
       return
     }
+    if (!(await confirmOpenInstructions())) return
     await onSave(
       filledRates,
       assignedCards.map((c) => ({ rate_card_id: c.rate_card_id, fuel_surcharge: c.fuel_surcharge })),
     )
+  }
+
+  // Warn when removed / renamed prices or removed rate cards touch this
+  // client's open instructions; returns false when the user backs out.
+  const confirmOpenInstructions = () => {
+    const originalRates = clientData.rates || []
+    const keptIds = new Set(filledRates.map((r) => r.client_rate_id).filter(Boolean))
+    const removedIds = originalRates.map((r) => r.client_rate_id).filter((id) => !keptIds.has(id))
+    const renames = findTitleChanges(originalRates, filledRates, "client_rate_id", "client")
+    const removedCards = (clientData.rate_cards || []).filter(
+      (c) => !assignedCards.some((a) => a.rate_card_id === c.rate_card_id),
+    )
+
+    // The price that takes over once a removed rate is gone: a client price
+    // with the same title (e.g. one just added), else the highest card left.
+    const fallbackFor = (row) => {
+      const key = titleKey(row.title)
+      const ownPrice = filledRates.some(
+        (r) => titleKey(r.title) === key && !(row.rate_source === "client" && r.client_rate_id === row.source_rate_id),
+      )
+      if (ownPrice) return "client's own"
+      for (const card of assignedCards) {
+        if (row.rate_source === "card" && card.rate_card_id === row.rate_card_id) continue
+        if ((clientData.card_routes || []).some((r) => r.rate_card_id === card.rate_card_id && titleKey(r.title) === key)) {
+          return `"${card.name}" card`
+        }
+      }
+      return null
+    }
+
+    return confirmOpenInstructionImpact({
+      clientRateIds: [...removedIds, ...renames.map((r) => r.id)],
+      cardClients: removedCards.map((c) => ({ rateCardId: c.rate_card_id, clientId: clientData.m5clientkey })),
+      renames,
+      fallbackFor,
+    })
   }
 
   const unassignedCards = availableCards.filter((c) => !assignedCards.some((a) => a.rate_card_id === c.rate_card_id))

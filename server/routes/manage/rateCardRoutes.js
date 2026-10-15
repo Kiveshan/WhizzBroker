@@ -5,6 +5,7 @@ import {
   saveRateCardHandler,
   deleteRateCardHandler,
   assignmentConflictsHandler,
+  rateUsageHandler,
 } from "../../controllers/manage/rateCardController.js"
 import { verifyToken } from "../../middleware/auth.js"
 
@@ -15,6 +16,10 @@ router.get("/api/rate-cards", verifyToken, listRateCardsHandler)
 
 // Which of a card's routes chosen clients already have a winning price for
 router.post("/api/rate-cards/assignment-conflicts", verifyToken, assignmentConflictsHandler)
+
+// Open instructions using rates about to be removed / renamed, or cards about
+// to be taken off clients (both rate screens warn with this before saving)
+router.post("/api/rate-cards/rate-usage", verifyToken, rateUsageHandler)
 
 // One card with its routes and the clients using it
 router.get("/api/rate-cards/:rateCardId", verifyToken, getRateCardHandler)

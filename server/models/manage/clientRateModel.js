@@ -1,5 +1,6 @@
 import { pool } from "../../config/database.js"
 import { routeRateValues, cleanExtraCharges } from "../../utils/routeRateFields.js"
+import { findRenames, carryRenamesToOpenInstructions } from "./rateUsageModel.js"
 
 const getAllClientsForRates = async (options = {}) => {
   let client
@@ -174,6 +175,15 @@ const saveClientRates = async (clientId, rates, rateCards) => {
     // Start transaction
     await client.query("BEGIN")
 
+    // Renamed rates take their open instructions with them. Done first, while
+    // the instructions' titles still resolve to the rows being renamed.
+    const renames = await findRenames(
+      client,
+      { table: "m5_client_rate", idColumn: "client_rate_id", ownerColumn: "clientid", ownerId: clientId },
+      rates,
+    )
+    const renamedInstructions = await carryRenamesToOpenInstructions(client, "client", renames)
+
     // Remove rates that are no longer present, so their extra charges cascade-delete with them
     const keptRateIds = rates.map((r) => r.client_rate_id).filter((id) => id !== undefined && id !== null)
     if (keptRateIds.length > 0) {
@@ -259,6 +269,8 @@ const saveClientRates = async (clientId, rates, rateCards) => {
     return {
       success: true,
       data: results,
+      renames,
+      renamedInstructions,
     }
   } catch (err) {
     // Rollback on error
