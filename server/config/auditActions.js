@@ -172,6 +172,10 @@ export const AUDIT_ROUTES = [
   { method: "POST", path: "/api/statement-exports/:exportId/document", action: "CLIENT_STATEMENT_DOCUMENT_STORED", entity: "client_statement", target: "exportId" },
   { method: "GET", path: "/api/statement-exports/:exportId", action: "CLIENT_STATEMENT_SNAPSHOT_VIEWED", entity: "client_statement", target: "exportId", sensitive: true },
 
+  { method: "POST", path: "/subcontractor/statements/export", action: "SUBCONTRACTOR_STATEMENT_EXPORTED", entity: "subcontractor_statement" },
+  { method: "POST", path: "/subcontractor/statements/exports/:exportId/document", action: "SUBCONTRACTOR_STATEMENT_DOCUMENT_STORED", entity: "subcontractor_statement", target: "exportId" },
+  { method: "GET", path: "/subcontractor/statements/exports/:exportId", action: "SUBCONTRACTOR_STATEMENT_SNAPSHOT_VIEWED", entity: "subcontractor_statement", target: "exportId", sensitive: true },
+
   // --- Add-ons -------------------------------------------------------------
   { method: "POST", path: "/api/addons", action: "ADDON_CREATED", entity: "addon" },
   { method: "PUT", path: "/api/addons/:addonId", action: "ADDON_UPDATED", entity: "addon", target: "addonId" },

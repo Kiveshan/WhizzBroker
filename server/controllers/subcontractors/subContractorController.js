@@ -48,26 +48,25 @@ const getSubContractorStatementsHandler = async (req, res) => {
 
 const getStatementDetailsHandler = async (req, res) => {
   try {
-    const { statementId, legKeys, subei_reg_num } = req.query;
+    // statementKey is the derived identifier ("2026-08-VAT"); the legKeys query
+    // param the old stored statements needed is gone, since the legs behind a
+    // statement are now whatever the legs table currently says they are.
+    const { statementKey, subei_reg_num } = req.query;
 
-    if (!statementId || !legKeys || !subei_reg_num) {
+    if (!statementKey || !subei_reg_num) {
       return res.status(400).json({
-        error: "Statement ID, leg keys, and registration number are required",
+        error: "Statement key and registration number are required",
       });
     }
 
-    console.log("Query params:", req.query); // Debug log
-    const legKeysArray = legKeys.split(",").map(Number);
-    const details = await getStatementDetails(
-      statementId,
-      legKeysArray,
-      subei_reg_num
-    );
+    const details = await getStatementDetails(statementKey, subei_reg_num);
     console.log(`Found ${details.length} leg details`);
     res.json(details);
   } catch (error) {
     console.error("Error fetching statement details:", error);
-    res.status(500).json({ error: error.message });
+    // A malformed key is the caller's error, not a server fault.
+    const status = /Invalid statement key/.test(error.message) ? 400 : 500;
+    res.status(status).json({ error: error.message });
   }
 };
 
