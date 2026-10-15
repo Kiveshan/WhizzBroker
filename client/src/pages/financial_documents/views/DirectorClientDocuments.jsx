@@ -174,16 +174,17 @@ const DirectorClientDocuments = () => {
     navigate(`/invoice/${ikey}`);
   };
 
-  const handleViewStatement = (statementId) => {
-    if (!statementId) {
+  // statementKey is the derived "<clientId>-YYYY-MM" identifier built by the
+  // client-instructions query from the invoice's own month.
+  const handleViewStatement = (statementKey) => {
+    if (!statementKey) {
       alert("No statement available for this instruction");
       return;
     }
 
-    // Navigate to the ClientStatement component with the statement ID
     navigate("/client-statement", {
       state: {
-        statementId: statementId,
+        statementKey: statementKey,
       },
     });
   };

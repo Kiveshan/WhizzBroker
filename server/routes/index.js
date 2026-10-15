@@ -58,11 +58,6 @@ router.use(authroutes);
 router.use(landingRoutes);
 // testRoutes: /test-connection health check.
 router.use(testroutes);
-// statementRoutes: /api/statements/generate authenticates the scheduled job via
-//   API_SECRET (and falls back to verifyToken for UI users); its GET routes
-//   self-guard with verifyToken. Must sit before the global guard so the
-//   non-JWT API_SECRET token is not rejected by it.
-router.use(statementRoutes);
 
 // ---------------------------------------------------------------------------
 // Global authentication guard — every route mounted below requires a valid JWT.
@@ -72,6 +67,8 @@ router.use(verifyToken);
 // role guards sit on the individual routes in each module.
 router.use(requireRoles(...STAFF_ROLES));
 
+// Client statements are derived on demand — no scheduled job, no bypass.
+router.use(statementRoutes);
 router.use(creditNoteRoutes);
 router.use(adminroutes);
 router.use(manageEmployeeRoutes);

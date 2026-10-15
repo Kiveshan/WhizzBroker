@@ -1,4 +1,9 @@
 import { pool } from "../../config/database.js"
+import {
+  agingForAllClients,
+  outstandingAsAt,
+  dayBefore,
+} from "../statements/statementDerivation.js"
 
 // Define monthNames for numeric-to-name conversion
 const monthNames = {
@@ -355,70 +360,76 @@ const getAllTrucks = async (client) => {
   }))
 }
 
-const getAgingAnalysis = async (client, month, year, clientId = null) => {
-  const params = [month, year]
-  let query = `
-    SELECT 
-      ${clientId ? "c.client" : "'Total Aging' as client"}, 
-      SUM(a.current) as current_amount,
-      SUM(a."30days") as thirty_days,
-      SUM(a."60days") as sixty_days,
-      SUM(a."90days") as ninety_days,
-      to_char(s.generation_date, 'Month') as month_name,
-      EXTRACT(YEAR FROM s.generation_date) as year
-    FROM aging_analysis a
-    JOIN statements s ON a.aging_key = s.agingid
-    JOIN m5_client c ON a.clientid = c.m5clientkey
-    WHERE TRIM(to_char(s.generation_date, 'Month')) = $1
-    AND EXTRACT(YEAR FROM s.generation_date)::text = $2
-  `
-  if (clientId) {
-    query += ` AND a.clientid = $3`
-    params.push(clientId)
+// Aging comes from the same derivation as client statements
+// (models/statements/statementDerivation.js), so these reports and the
+// statement pages cannot disagree.
+//
+// The selected month keeps the meaning the old statement-table query gave it:
+// statements were dated the 1st of the month AFTER the one they covered, so
+// "September" is the position at the close of August. A month that has not
+// started yet returns nothing, as it did when no statement row existed for it.
+const agingAsAtForMonth = (month, year) => {
+  const index = Object.values(monthNames).indexOf(String(month || "").trim())
+  if (index < 0 || !/^\d{4}$/.test(String(year || "").trim())) {
+    throw new Error(`Invalid month/year "${month} ${year}"`)
   }
-  query += `
-    GROUP BY ${clientId ? "c.client," : ""} to_char(s.generation_date, 'Month'), EXTRACT(YEAR FROM s.generation_date)
-  `
-  const result = await client.query(query, params)
-  console.log("Raw query result:", result.rows)
-  console.log(`Query returned ${result.rows.length} rows`)
+  const firstOfMonth = `${String(year).trim()}-${String(index + 1).padStart(2, "0")}-01`
+  if (firstOfMonth > new Date().toISOString().slice(0, 10)) return null
+  return dayBefore(firstOfMonth)
+}
 
-  return result.rows.map((row) => ({
-    client: row.client,
-    current: Number.parseFloat(row.current_amount) || 0,
-    thirtyDays: Number.parseFloat(row.thirty_days) || 0,
-    sixtyDays: Number.parseFloat(row.sixty_days) || 0,
-    ninetyDays: Number.parseFloat(row.ninety_days) || 0,
-    month: row.month_name.trim(),
-    year: row.year.toString(),
-  }))
+const ZERO_AGING = { current: 0, "30days": 0, "60days": 0, "90days": 0 }
+
+const toAgingRow = (buckets) => ({
+  current: buckets.current,
+  thirtyDays: buckets["30days"],
+  sixtyDays: buckets["60days"],
+  ninetyDays: buckets["90days"],
+})
+
+// Summed in cents so the total is exact.
+const sumBuckets = (agingMap) => {
+  const cents = { current: 0, "30days": 0, "60days": 0, "90days": 0 }
+  for (const { buckets } of agingMap.values()) {
+    for (const bucket of Object.keys(cents)) cents[bucket] += Math.round(buckets[bucket] * 100)
+  }
+  return Object.fromEntries(Object.entries(cents).map(([bucket, value]) => [bucket, value / 100]))
+}
+
+// From Whizz-Away 43c9c4bd. (Its later version adds an ex-VAT/VAT split per
+// bucket for a chart toggle the broker does not have.)
+const getAgingAnalysis = async (client, month, year, clientId = null) => {
+  const asAt = agingAsAtForMonth(month, year)
+  if (!asAt) return []
+  const period = { month: String(month).trim(), year: String(year).trim() }
+
+  if (clientId) {
+    const { rows } = await client.query(
+      "SELECT client FROM m5_client WHERE m5clientkey = $1",
+      [clientId]
+    )
+    if (rows.length === 0) return []
+    const { buckets } = await outstandingAsAt(client, Number(clientId), asAt)
+    return [{ client: rows[0].client, ...toAgingRow(buckets), ...period }]
+  }
+
+  const totals = sumBuckets(await agingForAllClients(client, asAt))
+  return [{ client: "Total Aging", ...toAgingRow(totals), ...period }]
 }
 
 const getDebtorAgeAnalysisPerClient = async (client, month, year) => {
-  const query = `
-    SELECT
-      c.m5clientkey  AS client_id,
-      c.client       AS client_name,
-      SUM(a.current)    AS current_amount,
-      SUM(a."30days")   AS thirty_days,
-      SUM(a."60days")   AS sixty_days,
-      SUM(a."90days")   AS ninety_days
-    FROM aging_analysis a
-    JOIN statements s ON a.aging_key = s.agingid
-    JOIN m5_client  c ON a.clientid  = c.m5clientkey
-    WHERE TRIM(to_char(s.generation_date, 'Month')) = $1
-      AND EXTRACT(YEAR FROM s.generation_date)::text = $2
-    GROUP BY c.m5clientkey, c.client
-    ORDER BY c.client
-  `
-  const result = await client.query(query, [month, year])
-  return result.rows.map((row) => ({
-    clientId: row.client_id,
-    client: row.client_name,
-    current: parseFloat(row.current_amount) || 0,
-    thirtyDays: parseFloat(row.thirty_days) || 0,
-    sixtyDays: parseFloat(row.sixty_days) || 0,
-    ninetyDays: parseFloat(row.ninety_days) || 0,
+  const asAt = agingAsAtForMonth(month, year)
+  if (!asAt) return []
+
+  const [clients, aging] = await Promise.all([
+    client.query("SELECT m5clientkey, client FROM m5_client ORDER BY client"),
+    agingForAllClients(client, asAt),
+  ])
+
+  return clients.rows.map((row) => ({
+    clientId: row.m5clientkey,
+    client: row.client,
+    ...toAgingRow(aging.get(row.m5clientkey)?.buckets || ZERO_AGING),
   }))
 }
 

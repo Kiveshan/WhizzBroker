@@ -43,7 +43,9 @@ const getClientInstructions = async (clientId, { year, month, type }) => {
         i.invoice_num,
         i.date as invoice_date,
         i.groupid as invoice_group_id,
-        st.statement_key as statement_id
+        -- Statements are derived, so the key is the client and the month the
+        -- invoice falls in: "<clientId>-YYYY-MM" (statementDerivation.js).
+        (m1.client || '-' || to_char(i.date, 'YYYY-MM')) AS statement_id
       FROM
         public.m1_controller m1
       LEFT JOIN
@@ -55,15 +57,6 @@ const getClientInstructions = async (clientId, { year, month, type }) => {
           AND m1.instruction_group_id IS NOT NULL
           AND i.instruction_group_id = m1.instruction_group_id
         )
-      LEFT JOIN LATERAL (
-        SELECT statement_key
-        FROM public.statements st
-        WHERE st.clientid = m1.client
-          AND i.date >= DATE_TRUNC('month', st.generation_date - INTERVAL '1 month')
-          AND i.date < st.generation_date
-        ORDER BY st.generation_date DESC
-        LIMIT 1
-      ) st ON TRUE
       WHERE 
         m1.client = $1
         AND m1.status = 'Completed'

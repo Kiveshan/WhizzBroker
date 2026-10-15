@@ -122,6 +122,32 @@ const uploadFuelExpense = multer({
   },
 });
 
+// Rendered subcontractor statement documents (PDF/XLSX) attached to an export
+// snapshot. Unlike the uploaders above this one accepts spreadsheets too, and
+// rejects images — a statement document is never a photo.
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+const uploadStatementDocument = multer({
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB — a statement PDF is orders of magnitude smaller
+  },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed =
+      (ext === ".pdf" && file.mimetype === "application/pdf") ||
+      (ext === ".xlsx" &&
+        (file.mimetype === XLSX_MIME ||
+          file.mimetype === "application/octet-stream"));
+
+    if (allowed) {
+      return cb(null, true);
+    }
+    cb(new Error("Only PDF and XLSX statement documents are allowed!"));
+  },
+});
+
 const getSignedUrl = (key, expiresInSeconds = 3600) => {
   return s3.getSignedUrl("getObject", {
     Bucket: bucketName,
@@ -135,6 +161,7 @@ export {
   uploadInstruction,
   uploadFuelExpense,
   uploadPaymentProof,
+  uploadStatementDocument,
   getSignedUrl,
   bucketName,
   uploadPurchaseOrder,

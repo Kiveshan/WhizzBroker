@@ -6,17 +6,37 @@ import "../css/StatementList.css";
 import api from "../../../api"; // Import the axios instance
 import Pagination from "..//../../components/Pagination"; // Import the Pagination component
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+// Statements are identified by the month they cover, not by a number — the
+// derived key ("<clientId>-YYYY-MM") is an internal handle, never shown.
+const formatPeriodLabel = (period) => {
+  if (!period) return "";
+  const [year, month] = String(period).split("-").map(Number);
+  return `${MONTH_NAMES[month - 1] || ""} ${year}`.trim();
+};
+
 const StatementList = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { clientId, clientName } = location.state || {};
+  const { clientId } = location.state || {};
 
   const [statements, setStatements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [generating, setGenerating] = useState(false);
-  const [generationMessage, setGenerationMessage] = useState("");
-  const [hasDefaultMonthStatement, setHasDefaultMonthStatement] = useState(false);
 
   // Set default filters so the month is one month before the current one.
   // If today is in January, default to December of the previous year.
@@ -61,17 +81,6 @@ const StatementList = () => {
         const fetchedStatements = response.data.data;
         setStatements(fetchedStatements);
 
-        // Determine if there is a statement for the default month/year for this client
-        const hasForDefaultMonth = fetchedStatements.some((statement) => {
-          if (!statement.generation_date) return false;
-          const d = new Date(statement.generation_date);
-          d.setDate(d.getDate() - 1);
-          const year = d.getFullYear();
-          const month = d.getMonth() + 1; // 1-12
-          return year === defaultYear && month === defaultMonth;
-        });
-
-        setHasDefaultMonthStatement(hasForDefaultMonth);
       } else {
         throw new Error(response.data.message || "Failed to fetch statements");
       }
@@ -115,81 +124,8 @@ const StatementList = () => {
     setCurrentPage(1); // Reset to first page when filter changes
   };
 
-  const isDefaultFilter =
-    filters.year === defaultYear.toString() &&
-    filters.month === defaultMonth.toString();
 
-  const handleManualGeneration = async () => {
-    if (!clientId) {
-      setGenerationMessage("No client selected");
-      return;
-    }
-
-    setGenerating(true);
-    setGenerationMessage("");
-
-    try {
-      const response = await api.post("/api/statements/generate", {
-        clientId: clientId,
-        specificClient: true,
-      });
-
-      if (response.data.success) {
-        const created = Number(response.data?.stats?.created || 0);
-        const updated = Number(response.data?.stats?.updated || 0);
-        let msg = "";
-        const nameForDisplay = clientName || "this client";
-
-        if (created > 0) {
-          msg = `Statement processed for ${nameForDisplay}. Created new statement.`;
-        } else if (updated > 0) {
-          msg = `Statement processed for ${nameForDisplay}. Updated existing statement.`;
-        } else {
-          msg = `Statement processed for ${nameForDisplay}. No statement created or updated.`;
-        }
-        setGenerationMessage(msg);
-        // Refresh the statements list
-        await fetchStatements();
-      } else {
-        throw new Error(
-          response.data.message || "Failed to generate statement"
-        );
-      }
-    } catch (err) {
-      console.error("Error generating statement:", err);
-
-      let errorMessage = "Failed to generate statement";
-
-      if (err.response) {
-        const { status, data } = err.response;
-        errorMessage = data?.message || `HTTP error! Status: ${status}`;
-      } else if (err.request) {
-        errorMessage =
-          "No response received from server. Please check your connection.";
-      } else {
-        errorMessage = err.message;
-      }
-
-      setGenerationMessage(errorMessage);
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  const monthNames = MONTH_NAMES;
 
   const minYear = 2025;
   const maxYear = currentYear + 2;
@@ -204,12 +140,6 @@ const StatementList = () => {
   const endIndex = startIndex + recordsPerPage;
   const currentStatements = statements.slice(startIndex, endIndex);
 
-  const getDisplayDate = (dateString) => {
-    if (!dateString) return "";
-    const d = new Date(dateString);
-    d.setDate(d.getDate() - 1);
-    return d.toLocaleDateString();
-  };
 
   if (loading)
     return (
@@ -269,82 +199,31 @@ const StatementList = () => {
               ))}
             </select>
           </div>
-          {isDefaultFilter && (
-            <button
-              onClick={handleManualGeneration}
-              disabled={generating}
-              className="generate-statement-btn"
-            >
-              {generating
-                ? "Generating..."
-                : hasDefaultMonthStatement
-                ? "Update Statement"
-                : "Generate Statement"}
-            </button>
-          )}
         </div>
       </div>
-
-      {generationMessage && (
-        <div
-          className={`generation-message ${
-            generationMessage.includes("Error") ||
-            generationMessage.includes("Failed")
-              ? "error"
-              : "success"
-          }`}
-          style={{
-            padding: "10px",
-            margin: "10px 0",
-            borderRadius: "4px",
-            backgroundColor:
-              generationMessage.includes("Error") ||
-              generationMessage.includes("Failed")
-                ? "#f8d7da"
-                : "#d4edda",
-            color:
-              generationMessage.includes("Error") ||
-              generationMessage.includes("Failed")
-                ? "#721c24"
-                : "#155724",
-            border: `1px solid ${
-              generationMessage.includes("Error") ||
-              generationMessage.includes("Failed")
-                ? "#f5c6cb"
-                : "#c3e6cb"
-            }`,
-          }}
-        >
-          {generationMessage}
-        </div>
-      )}
 
       <table className="instruction-table1">
         <thead>
           <tr>
-            <th>Statement No</th>
-            <th>Date</th>
+            <th>Month/Year</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {currentStatements.length === 0 ? (
             <tr>
-              <td colSpan="3">No statements found for this client.</td>
+              <td colSpan="2">No statements found for this client.</td>
             </tr>
           ) : (
             currentStatements.map((statement) => (
               <tr key={statement.statement_key}>
-                <td>{statement.statement_key}</td>
-                <td>
-                  {getDisplayDate(statement.generation_date)}
-                </td>
+                <td>{formatPeriodLabel(statement.period)}</td>
                 <td>
                   <button
                     className="view-btn"
                     onClick={() =>
                       navigate("/client-statement", {
-                        state: { statementId: statement.statement_key },
+                        state: { statementKey: statement.statement_key },
                       })
                     }
                   >

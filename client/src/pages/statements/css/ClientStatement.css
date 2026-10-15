@@ -755,3 +755,793 @@
     display: none;
   }
 }
+
+/* --- Export snapshots ---------------------------------------------------- */
+/* Feedback from a download, and the history of documents actually produced
+   from this statement. Amounts in the history are frozen at export time, so
+   they can legitimately differ from the live figures above. */
+
+.client-statement-wrapper .stmt-export-message {
+  margin: 16px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 14px;
+}
+
+.client-statement-wrapper .stmt-export-message.success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.client-statement-wrapper .stmt-export-message.error {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}
+
+.client-statement-wrapper .stmt-export-history {
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.client-statement-wrapper .stmt-export-history h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #1a365d;
+}
+
+.client-statement-wrapper .stmt-export-empty {
+  margin: 0;
+  color: #4a5568;
+  font-size: 14px;
+}
+
+.client-statement-wrapper .stmt-export-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.client-statement-wrapper .stmt-export-table th,
+.client-statement-wrapper .stmt-export-table td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.client-statement-wrapper .stmt-export-table th {
+  background-color: #f8fafc;
+  color: #1a365d;
+  font-weight: 600;
+}
+
+.client-statement-wrapper .stmt-export-drift {
+  color: #975a16;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.client-statement-wrapper .stmt-export-open {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #2c5aa0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.client-statement-wrapper .stmt-export-missing {
+  color: #a0aec0;
+  font-size: 13px;
+}
+
+/* --- Balance callout and ledger toolbar ---------------------------------- */
+
+.client-statement-wrapper .stmt-callout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 24px 0 14px;
+  padding: 16px 20px;
+  background: #f6f9fd;
+  border: 1px solid #cfdcec;
+  border-top: 3px solid #2c5aa0;
+  border-radius: 4px;
+}
+
+.client-statement-wrapper .stmt-callout-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #2c5aa0;
+  letter-spacing: 1.3px;
+  text-transform: uppercase;
+}
+
+.client-statement-wrapper .stmt-callout-value {
+  font-size: 30px;
+  font-weight: 700;
+  color: #1a365d;
+  margin-top: 4px;
+  letter-spacing: -0.8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.client-statement-wrapper .stmt-callout-breakdown {
+  display: flex;
+  gap: 22px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #4a5a72;
+}
+
+.client-statement-wrapper .stmt-callout-breakdown strong {
+  color: #1a365d;
+  font-variant-numeric: tabular-nums;
+}
+
+.client-statement-wrapper .stmt-tx-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 12px;
+}
+
+.client-statement-wrapper .stmt-tx-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+  padding: 8px 12px;
+  border: 1px solid #cfdcec;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a365d;
+  background: #ffffff;
+}
+
+.client-statement-wrapper .stmt-tx-rows {
+  padding: 8px 10px;
+  border: 1px solid #cfdcec;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1a365d;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.client-statement-wrapper .stmt-tx-range {
+  margin-left: auto;
+  font-size: 13px;
+  color: #718096;
+}
+
+.client-statement-wrapper .stmt-tx-pager {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.client-statement-wrapper .stmt-tx-pager-btn {
+  border: 1px solid #cfdcec;
+  background: #ffffff;
+  color: #2c5aa0;
+  padding: 7px 14px;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.client-statement-wrapper .stmt-tx-pager-btn:hover:not(:disabled) {
+  background: #eef4fb;
+}
+
+.client-statement-wrapper .stmt-tx-pager-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.client-statement-wrapper .stmt-tx-pager-summary {
+  font-size: 13px;
+  color: #718096;
+}
+
+@media (max-width: 768px) {
+  .client-statement-wrapper .stmt-tx-range {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media print {
+  /* The ledger prints in full; the on-screen controls are screen furniture. */
+  .client-statement-wrapper .stmt-tx-toolbar,
+  .client-statement-wrapper .stmt-tx-pager,
+  .client-statement-wrapper .stmt-export-history,
+  .client-statement-wrapper .stmt-export-message {
+    display: none !important;
+  }
+}
+
+/* ==========================================================================
+   Statement screen (cs-*). Matches the subcontractor statement: navy masthead
+   rule, label/value grid, top-accented balance callout, export side panel.
+   Everything is scoped under .cs-page and uses its own class names, so none of
+   the unscoped legacy rules above (which other pages share) apply here, and
+   nothing here leaks out.
+   ========================================================================== */
+.cs-page {
+  --cs-navy: #1f4e88;
+  --cs-navy-deep: #16375f;
+  --cs-text: #4a5a72;
+  --cs-muted: #5a6b81;
+  --cs-border: #dae4f0;
+  --cs-rule: #e6edf6;
+  --cs-row: #eef2f8;
+  --cs-tint: #f6f9fd;
+  --cs-hover: #eef4fb;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--cs-text);
+  padding: 8px 24px 64px;
+}
+
+.cs-page .cs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 24px;
+  align-items: start;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+
+.cs-page .cs-paper {
+  display: block;
+  background: #ffffff;
+  border: 1px solid var(--cs-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(22, 55, 95, 0.06);
+  padding: 36px 40px 32px;
+  min-width: 0;
+}
+
+/* Masthead ---------------------------------------------------------------- */
+.cs-page .cs-masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding-bottom: 16px;
+  border-bottom: 3px solid var(--cs-navy);
+}
+.cs-page .cs-company {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--cs-navy-deep);
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.cs-page .cs-company-meta {
+  font-size: 13px;
+  color: var(--cs-muted);
+}
+.cs-page .cs-masthead-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+.cs-page .cs-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cs-navy);
+}
+.cs-page .cs-period {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--cs-navy-deep);
+  margin-top: 2px;
+}
+.cs-page .cs-masthead-date {
+  font-size: 12.5px;
+  color: var(--cs-muted);
+  margin-top: 2px;
+}
+
+/* Billed-to + balance callout -------------------------------------------- */
+.cs-page .cs-head-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 32px;
+  padding: 24px 0;
+  border-bottom: 1px solid var(--cs-rule);
+}
+.cs-page .cs-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cs-muted);
+  margin-bottom: 4px;
+}
+.cs-page .cs-billed-party {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--cs-navy-deep);
+  margin-bottom: 4px;
+}
+.cs-page .cs-billed-detail {
+  font-size: 14px;
+  color: var(--cs-text);
+}
+.cs-page .cs-billed-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 2px;
+}
+.cs-page .cs-total-callout {
+  border: 1px solid #cfdcec;
+  border-top: 3px solid var(--cs-navy);
+  border-radius: 4px;
+  background: var(--cs-tint);
+  padding: 16px 20px;
+  align-self: start;
+}
+.cs-page .cs-callout-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cs-navy);
+}
+.cs-page .cs-callout-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--cs-navy-deep);
+  line-height: 1.15;
+  margin: 4px 0 2px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.cs-page .cs-callout-meta {
+  font-size: 13px;
+  color: var(--cs-text);
+}
+
+/* Opening + invoiced - paid = balance ------------------------------------- */
+.cs-page .cs-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 8px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--cs-rule);
+}
+.cs-page .cs-flow-item {
+  flex: 1 1 150px;
+  padding: 10px 14px;
+  border: 1px solid var(--cs-row);
+  border-radius: 4px;
+  background: #ffffff;
+}
+.cs-page .cs-flow-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--cs-navy-deep);
+  font-variant-numeric: tabular-nums;
+}
+.cs-page .cs-flow-total {
+  background: var(--cs-tint);
+  border-color: #cfdcec;
+}
+.cs-page .cs-flow-total .cs-field-label {
+  color: var(--cs-navy);
+}
+.cs-page .cs-flow-op {
+  align-self: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #9aabc2;
+}
+
+/* Sections ---------------------------------------------------------------- */
+.cs-page .cs-section {
+  padding-top: 24px;
+}
+.cs-page .cs-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cs-navy-deep);
+  margin: 0 0 12px;
+}
+
+/* Age analysis ------------------------------------------------------------ */
+.cs-page .cs-aging {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--cs-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cs-page .cs-aging-cell {
+  --cs-tone: var(--cs-navy);
+  padding: 12px 16px 14px;
+  border-right: 1px solid var(--cs-rule);
+}
+.cs-page .cs-aging-cell:last-child {
+  border-right: none;
+}
+.cs-page .cs-tone-overdue-3 { --cs-tone: #b42318; }
+.cs-page .cs-tone-overdue-2 { --cs-tone: #c4320a; }
+.cs-page .cs-tone-overdue-1 { --cs-tone: #b54708; }
+.cs-page .cs-aging-value {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--cs-navy-deep);
+  font-variant-numeric: tabular-nums;
+}
+.cs-page .cs-aging-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--cs-row);
+  margin: 8px 0 4px;
+  overflow: hidden;
+}
+.cs-page .cs-aging-bar span {
+  display: block;
+  height: 100%;
+  background: var(--cs-tone);
+}
+.cs-page .cs-aging-share {
+  font-size: 11.5px;
+  color: var(--cs-muted);
+}
+
+/* Transactions ------------------------------------------------------------ */
+.cs-page .cs-ledger-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.cs-page .cs-ledger-head .cs-section-title {
+  margin: 0;
+}
+.cs-page .cs-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cs-page .cs-input {
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--cs-navy-deep);
+  background: #ffffff;
+  border: 1px solid #cfdcec;
+  border-radius: 4px;
+  padding: 7px 10px;
+}
+.cs-page .cs-input:focus {
+  outline: none;
+  border-color: var(--cs-navy);
+  box-shadow: 0 0 0 3px rgba(31, 78, 136, 0.15);
+}
+.cs-page .cs-search {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.cs-page .cs-range {
+  font-size: 12.5px;
+  color: var(--cs-muted);
+}
+.cs-page .cs-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--cs-border);
+  border-radius: 4px;
+}
+.cs-page .cs-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 13.5px;
+}
+.cs-page .cs-table th {
+  background: var(--cs-tint);
+  color: var(--cs-navy-deep);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cs-border);
+  white-space: nowrap;
+}
+.cs-page .cs-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--cs-row);
+  color: var(--cs-navy-deep);
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+.cs-page .cs-table tbody tr:hover td {
+  background: #fafcff;
+}
+.cs-page .cs-table .cs-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.cs-page .cs-table .cs-balance {
+  font-weight: 600;
+}
+.cs-page .cs-table .cs-credit {
+  color: #067647;
+}
+.cs-page .cs-table .cs-ref {
+  font-variant-numeric: tabular-nums;
+}
+.cs-page .cs-muted {
+  color: #8a9ab0;
+}
+.cs-page .cs-row-opening td {
+  background: #fbfcfe;
+}
+.cs-page .cs-table tfoot td {
+  background: var(--cs-tint);
+  border-top: 2px solid var(--cs-navy);
+  border-bottom: none;
+  font-weight: 700;
+  color: var(--cs-navy-deep);
+  padding: 12px;
+}
+.cs-page .cs-detail-input {
+  width: 100%;
+  padding: 5px 8px;
+}
+
+.cs-page .cs-pill {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.cs-page .cs-pill-invoice { background: #eaf1fb; color: var(--cs-navy); }
+.cs-page .cs-pill-payment { background: #e7f6ee; color: #067647; }
+.cs-page .cs-pill-credit { background: #fff4e5; color: #b54708; }
+.cs-page .cs-pill-neutral { background: #eef1f5; color: #475467; }
+
+.cs-page .cs-pager {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+/* Buttons ----------------------------------------------------------------- */
+.cs-page .cs-btn {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.cs-page .cs-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cs-page .cs-btn-primary { background: var(--cs-navy); color: #ffffff; }
+.cs-page .cs-btn-primary:hover:not(:disabled) { background: var(--cs-navy-deep); }
+.cs-page .cs-btn-secondary { background: #ffffff; color: var(--cs-navy); border-color: var(--cs-navy); }
+.cs-page .cs-btn-secondary:hover:not(:disabled) { background: var(--cs-hover); }
+.cs-page .cs-btn-ghost {
+  background: #ffffff;
+  color: var(--cs-navy);
+  border-color: #cfdcec;
+  padding: 7px 14px;
+}
+.cs-page .cs-btn-ghost:hover:not(:disabled),
+.cs-page .cs-btn-ghost.is-active { background: var(--cs-hover); border-color: var(--cs-navy); }
+.cs-page .cs-btn-link {
+  background: none;
+  color: var(--cs-navy);
+  padding: 4px 6px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.cs-page .cs-btn:focus-visible {
+  outline: 2px solid var(--cs-navy);
+  outline-offset: 2px;
+}
+
+/* Side panel -------------------------------------------------------------- */
+.cs-page .cs-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 16px;
+}
+.cs-page .cs-card {
+  background: #ffffff;
+  border: 1px solid var(--cs-border);
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(22, 55, 95, 0.06);
+  padding: 18px 20px;
+}
+.cs-page .cs-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cs-navy-deep);
+  margin: 0 0 6px;
+}
+.cs-page .cs-note {
+  font-size: 12.5px;
+  color: var(--cs-muted);
+  margin: 0 0 14px;
+}
+.cs-page .cs-actions {
+  display: grid;
+  gap: 8px;
+}
+.cs-page .cs-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  font-size: 13px;
+}
+.cs-page .cs-message.is-success { background: #ecfdf3; border-color: #abefc6; color: #067647; }
+.cs-page .cs-message.is-error { background: #fef3f2; border-color: #fecdca; color: #b42318; }
+.cs-page .cs-history {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.cs-page .cs-history-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cs-row);
+}
+.cs-page .cs-history-entry:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.cs-page .cs-history-main {
+  min-width: 0;
+}
+.cs-page .cs-history-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--cs-navy-deep);
+  font-variant-numeric: tabular-nums;
+}
+.cs-page .cs-history-sub {
+  font-size: 12px;
+  color: var(--cs-muted);
+  margin-top: 3px;
+}
+.cs-page .cs-history-drift {
+  font-size: 11.5px;
+  color: #b54708;
+  margin-top: 3px;
+}
+.cs-page .cs-history-missing {
+  font-size: 12px;
+  color: #b42318;
+  white-space: nowrap;
+}
+
+/* How to pay -------------------------------------------------------------- */
+.cs-page .cs-pay {
+  border: 1px solid #cfdcec;
+  border-left: 3px solid var(--cs-navy);
+  border-radius: 4px;
+  background: var(--cs-tint);
+  padding: 16px 20px;
+}
+.cs-page .cs-pay .cs-section-title {
+  margin-bottom: 10px;
+}
+.cs-page .cs-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 12px 24px;
+  margin: 0;
+}
+.cs-page .cs-pay-grid dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cs-navy-deep);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* Responsive -------------------------------------------------------------- */
+@media (max-width: 1180px) {
+  .cs-page .cs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-page .cs-side {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .cs-page {
+    padding: 4px 12px 48px;
+  }
+  .cs-page .cs-paper {
+    padding: 20px 16px;
+  }
+  .cs-page .cs-masthead {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .cs-page .cs-masthead-right {
+    text-align: left;
+  }
+  .cs-page .cs-head-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .cs-page .cs-flow-op {
+    display: none;
+  }
+  .cs-page .cs-aging {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cs-page .cs-aging-cell:nth-child(2) {
+    border-right: none;
+  }
+  .cs-page .cs-aging-cell:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--cs-rule);
+  }
+}
+
+@media print {
+  .cs-page .cs-side,
+  .cs-page .cs-toolbar,
+  .cs-page .cs-pager,
+  .cs-page .cs-ledger-head .cs-btn {
+    display: none !important;
+  }
+  .cs-page .cs-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-page .cs-paper {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+}

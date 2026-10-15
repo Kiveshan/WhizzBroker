@@ -163,7 +163,14 @@ export const AUDIT_ROUTES = [
   { method: "POST", path: "/subcontractor/generate-statement", action: "SUBCONTRACTOR_STATEMENT_GENERATED", entity: "statement" },
   { method: "POST", path: "/subcontractor/backfill-statements", action: "SUBCONTRACTOR_STATEMENTS_BACKFILLED", entity: "statement" },
 
-  { method: "POST", path: "/api/statements/generate", action: "CLIENT_STATEMENTS_GENERATED", entity: "statement" },
+  // Client statement export snapshots. The controller writes richer rows via
+  // auditFromReq (balance, aging, content hash), so the middleware stands down
+  // for the POSTs; registered here so the route table stays a complete map.
+  // Retrieving a stored document is a sensitive read — it is how a historical
+  // financial document leaves the system.
+  { method: "POST", path: "/api/statements/:statementId/export", action: "CLIENT_STATEMENT_EXPORTED", entity: "client_statement", target: "statementId" },
+  { method: "POST", path: "/api/statement-exports/:exportId/document", action: "CLIENT_STATEMENT_DOCUMENT_STORED", entity: "client_statement", target: "exportId" },
+  { method: "GET", path: "/api/statement-exports/:exportId", action: "CLIENT_STATEMENT_SNAPSHOT_VIEWED", entity: "client_statement", target: "exportId", sensitive: true },
 
   // --- Add-ons -------------------------------------------------------------
   { method: "POST", path: "/api/addons", action: "ADDON_CREATED", entity: "addon" },
