@@ -744,7 +744,7 @@ tr:hover {
 
 @media (min-width: 1024px) {
   .rate-row {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 

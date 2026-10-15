@@ -13,6 +13,8 @@
  * @param {string}  [options.clientId]           – current client (for rate fetching)
  * @param {string}  [options.pickup]             – current pickup location
  * @param {string}  [options.dropoff]            – current dropoff location
+ * @param {string}  [options.rateTitle]          – selected rate title (rates are looked up by title;
+ *                                                 pickup/dropoff only for instructions without one)
  * @param {string}  [options.shipmentTypeId]     – current shipment type id string
  * @param {boolean} [options.isAddOn]            – skip uniqueness check for add-on type
  * @param {boolean} [options.isReadOnly]         – guard: block delete if true
@@ -74,6 +76,7 @@ export function useContainerManagement({
   clientId = "",
   pickup = "",
   dropoff = "",
+  rateTitle = "",
   shipmentTypeId = "",
   isAddOn = false,
   isReadOnly = false,
@@ -193,9 +196,9 @@ export function useContainerManagement({
 
   const fetchSurchargeForContainer = useCallback(
     async (containerId) => {
-      if (!clientId || !pickup || !dropoff) return;
+      if (!clientId || (!rateTitle && (!pickup || !dropoff))) return;
       try {
-        const ratesData = await fetchRatesService(clientId, pickup, dropoff);
+        const ratesData = await fetchRatesService(clientId, pickup, dropoff, rateTitle);
         const amount = ratesData?.surcharge || 0;
         const is12mSurcharge = Boolean(ratesData?.surcharge_12m);
         const amount12m = ratesData?.surcharge_12m || 0;
@@ -216,14 +219,14 @@ export function useContainerManagement({
         );
       }
     },
-    [clientId, pickup, dropoff, setContainersAndRef, onRecalculateTotalCost]
+    [clientId, pickup, dropoff, rateTitle, setContainersAndRef, onRecalculateTotalCost]
   );
 
   const fetchHazardousForContainer = useCallback(
     async (containerId) => {
-      if (!clientId || !pickup || !dropoff) return;
+      if (!clientId || (!rateTitle && (!pickup || !dropoff))) return;
       try {
-        const ratesData = await fetchRatesService(clientId, pickup, dropoff);
+        const ratesData = await fetchRatesService(clientId, pickup, dropoff, rateTitle);
         const amount = ratesData?.hazardous || 0;
         setContainersAndRef((prev) =>
           prev.map((c) =>
@@ -242,14 +245,14 @@ export function useContainerManagement({
         );
       }
     },
-    [clientId, pickup, dropoff, setContainersAndRef, onRecalculateTotalCost]
+    [clientId, pickup, dropoff, rateTitle, setContainersAndRef, onRecalculateTotalCost]
   );
 
   const fetchVgmForContainer = useCallback(
     async (containerId) => {
-      if (!clientId || !pickup || !dropoff) return;
+      if (!clientId || (!rateTitle && (!pickup || !dropoff))) return;
       try {
-        const ratesData = await fetchRatesService(clientId, pickup, dropoff);
+        const ratesData = await fetchRatesService(clientId, pickup, dropoff, rateTitle);
         const amount = ratesData?.vgm || 0;
         setContainersAndRef((prev) =>
           prev.map((c) =>
@@ -266,7 +269,7 @@ export function useContainerManagement({
         );
       }
     },
-    [clientId, pickup, dropoff, setContainersAndRef, onRecalculateTotalCost]
+    [clientId, pickup, dropoff, rateTitle, setContainersAndRef, onRecalculateTotalCost]
   );
 
   // ── changeContainersType ────────────────────────────────────────────────────
@@ -386,7 +389,7 @@ export function useContainerManagement({
         } else if (field === "hazardous") {
           if (value) {
             try {
-              const ratesData = await fetchRatesService(clientId, pickup, dropoff);
+              const ratesData = await fetchRatesService(clientId, pickup, dropoff, rateTitle);
               const amount = ratesData?.hazardous || 0;
               setContainersAndRef((prev) =>
                 prev.map((c) =>
@@ -441,7 +444,7 @@ export function useContainerManagement({
       setIsContainerDataModified(true);
     },
     [
-      isImport, shipmentTypeId, clientId, pickup, dropoff,
+      isImport, shipmentTypeId, clientId, pickup, dropoff, rateTitle,
       clearContainerFieldError, setContainersAndRef,
       fetchSurchargeForContainer, fetchVgmForContainer,
       changeContainersType, onRecalculateTotalCost,

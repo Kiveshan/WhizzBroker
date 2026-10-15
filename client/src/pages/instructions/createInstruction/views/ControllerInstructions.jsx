@@ -16,7 +16,16 @@ import { validateForm as validateFormUtil } from "../../../../utils/instructions
 import { checkRateCountMismatch as checkRateCountMismatchUtil } from "../../../../utils/instructions/rateCountMismatch"
 import { ControllerInstructionsLayout } from "./ControllerInstructionsLayout"
 
-const ControllerInstructions = () => {
+// Renders standalone (own submit + navigation) by default. When groupMode is
+// set, the form becomes one panel of the grouped create page: page chrome and
+// the submit button are hidden, the client select follows lockedClient, and
+// the panel's validate/buildPayload functions are handed up via registerPanel.
+const ControllerInstructions = ({
+  groupMode = false,
+  lockedClient = null,
+  onClientSelected = null,
+  registerPanel = null,
+}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isMounted = useRef(true)
@@ -44,6 +53,7 @@ const ControllerInstructions = () => {
     clientId: null,
     shipmentTypeId: null,
     task: null,
+    rate_title: null,
     pickup: null,
     dropoff: null,
     stackDate: null,
@@ -71,12 +81,12 @@ const ControllerInstructions = () => {
   const [showConfirmationPopup, setShowConfirmationPopup] = useState(false)
   const [confirmationMessage, setConfirmationMessage] = useState("")
 
-  const [clientStartingPoints, setClientStartingPoints] = useState([])
-  const [clientDestinations, setClientDestinations] = useState([])
+  // The selected client's rates, one per title, for the Rate dropdown
+  const [clientRateOptions, setClientRateOptions] = useState([])
   const [isLoadingLocations, setIsLoadingLocations] = useState(false)
   const [showNoRatesModal, setShowNoRatesModal] = useState(false)
 
-  const [locationIsLoading, setIsLoading] = useState({ startingPoints: false, destinations: false })
+  const [locationIsLoading] = useState({ startingPoints: false, destinations: false })
 
   const { clients, shipmentTypes, isLoading: hookIsLoading } = useInstructionData({
     onError: (msg) => console.error("[CREATE] data load error:", msg),
@@ -105,11 +115,12 @@ const ControllerInstructions = () => {
 
   const [rateLockStatus, setRateLockStatus] = useState({ sixMeter: false, twelveMeter: false })
   const [rateFieldsEnabled, setRateFieldsEnabled] = useState({ sixMeter: false, twelveMeter: false, abnormal: false })
+  const [availableExtraCharges, setAvailableExtraCharges] = useState([])
 
   const isFieldValid = useCallback(
     (fieldName, value) => {
       switch (fieldName) {
-        case "clientId": case "shipmentTypeId": case "task": case "pickup": case "dropoff":
+        case "clientId": case "shipmentTypeId": case "task": case "rate_title": case "pickup": case "dropoff":
         case "pickupTime": case "pickupDate": case "deadline": case "bookingRef":
         case "fileRef": case "description":
           return value && value.trim() !== ""
@@ -144,7 +155,7 @@ const ControllerInstructions = () => {
       clientId: "", clientName: "", representative: "", contactDetails: "", email: "",
       task: "", shipmentTypeId: "", shipmentTypeName: "", startingPoints: [],
       destinations: [], selectedStartingPoint: "", selectedDestination: "",
-      pickup: "", dropoff: "", surchargesAmount: "", stackDate: "", lastFreeDate: "",
+      rate_title: "", pickup: "", dropoff: "", surchargesAmount: "", stackDate: "", lastFreeDate: "",
       fileRef: "", bookingRef: "", vesselName: "", rateWeight: "Container", weight: "",
       vat: 15, description: "", rateper_6: "", rateper_12: "", abnormalRate: "",
       rateper_breakbulk: "", unitrate: "", setRateAmount: "", num_six_meters: 0,
@@ -167,6 +178,7 @@ const ControllerInstructions = () => {
       ...locationData,
       pickup: preservedFormData?.pickup || location.state?.pickup || location.state?.controllerData?.pickup || locationData.selectedStartingPoint || locationData.pickup || "",
       dropoff: preservedFormData?.dropoff || location.state?.dropoff || location.state?.controllerData?.dropoff || locationData.selectedDestination || locationData.dropoff || "",
+      rate_title: preservedFormData?.rate_title || location.state?.rate_title || "",
       vat: preservedFormData && preservedFormData.vat !== undefined ? Number(preservedFormData.vat) : 15,
       total_cost: Number(preservedFormData?.total_cost) || 0,
     }
@@ -190,6 +202,7 @@ const ControllerInstructions = () => {
     clientId: formData.clientId,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
+    rateTitle: formData.rate_title,
     shipmentTypeId: formData.shipmentTypeId,
     isAddOn,
     isReadOnly: false,
@@ -200,7 +213,7 @@ const ControllerInstructions = () => {
 
   // ─── new hooks ───────────────────────────────────────────────────────────────
 
-  const { submitInstruction, isSubmitting, submitError, setSubmitError } =
+  const { submitInstruction, buildPayload, isSubmitting, submitError, setSubmitError } =
     useCreateInstructionSubmit({
       formData,
       containers,
@@ -218,10 +231,10 @@ const ControllerInstructions = () => {
       navigate,
     })
 
-  const fetchRates = useCallback(async (clientId, start, destination) => {
-    if (!clientId || !start || !destination) return null
+  const fetchRates = useCallback(async (clientId, start, destination, title) => {
+    if (!clientId || (!title && (!start || !destination))) return null
     try {
-      return await fetchRatesService(clientId, start, destination)
+      return await fetchRatesService(clientId, start, destination, title)
     } catch (error) {
       console.error("[fetchRates] Error fetching rates:", error)
       return null
@@ -230,8 +243,7 @@ const ControllerInstructions = () => {
 
   const {
     handleClientChange,
-    handlePickupChange,
-    handleDropoffChange,
+    handleRateChange,
     handleShipmentTypeChange,
     handleContainerCountChange,
     openCalendar,
@@ -245,10 +257,9 @@ const ControllerInstructions = () => {
     setWeightRows,
     setFieldErrors,
     setRateLockStatus,
-    setClientStartingPoints,
-    setClientDestinations,
+    clientRateOptions,
+    setClientRateOptions,
     setIsLoadingLocations,
-    setIsLoading,
     setShowNoRatesModal,
   })
 
@@ -328,6 +339,49 @@ const ControllerInstructions = () => {
 
   const handleCancelSubmit = useCallback(() => setShowConfirmationPopup(false), [])
 
+  // ─── group-panel wiring ──────────────────────────────────────────────────────
+
+  // Let the group page know which client was picked (first panel drives the
+  // group's client; the rest are locked to it).
+  const handleClientChangeForLayout = useCallback(
+    (e) => {
+      handleClientChange(e)
+      if (groupMode && onClientSelected) onClientSelected(e.target.value)
+    },
+    [handleClientChange, groupMode, onClientSelected],
+  )
+
+  // Follow the group's locked client. Re-runs when the client list arrives so
+  // the lookup inside handleClientChange finds the client record.
+  useEffect(() => {
+    if (!groupMode || !lockedClient) return
+    if (String(formData.clientId) === String(lockedClient)) return
+    handleClientChange({ target: { value: String(lockedClient) } })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupMode, lockedClient, clients.length])
+
+  // Hand the group page fresh validate/buildPayload closures every render.
+  useEffect(() => {
+    if (!registerPanel) return
+    registerPanel({
+      validate: () => {
+        const errors = validateForm()
+        if (Object.keys(errors).length > 0) {
+          setFieldErrors(errors)
+          return false
+        }
+        if (!isWeightBased && !isSetRateMode && showContainerDetails) {
+          if (!validateContainers()) return false
+        }
+        return true
+      },
+      getRateMismatch: checkRateCountMismatch,
+      buildPayload,
+      clientId: formData.clientId,
+      clientName: formData.clientName,
+    })
+  })
+
   // ─── effects ────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -352,10 +406,10 @@ const ControllerInstructions = () => {
 
   useEffect(() => {
     const fetchSetRate = async () => {
-      const { clientId, pickup, dropoff } = formData
-      if (!isSetRate || !clientId || !pickup || !dropoff) return
+      const { clientId, pickup, dropoff, rate_title: rateTitle } = formData
+      if (!isSetRate || !clientId || (!rateTitle && (!pickup || !dropoff))) return
       try {
-        const data = await fetchSetRateService(clientId, pickup, dropoff)
+        const data = await fetchSetRateService(clientId, pickup, dropoff, rateTitle)
         if (data && data.set_rate != null) {
           const n = Number(data.set_rate)
           setSetRateValue(Number.isNaN(n) ? 0 : n)
@@ -367,19 +421,20 @@ const ControllerInstructions = () => {
       }
     }
     fetchSetRate()
-  }, [isSetRate, formData.clientId, formData.pickup, formData.dropoff])
+  }, [isSetRate, formData.clientId, formData.pickup, formData.dropoff, formData.rate_title])
 
   useEffect(() => {
     if (isWeightBased || isAddOn) { setRateLockStatus({ sixMeter: false, twelveMeter: false }); return }
-    const { pickup, dropoff, clientId } = formData
-    if (!clientId || !pickup || !dropoff) {
+    const { pickup, dropoff, clientId, rate_title: rateTitle } = formData
+    if (!clientId || (!rateTitle && (!pickup || !dropoff))) {
       setFormData((prev) => ({ ...prev, sixMeterRate: "", twelveMeterRate: "", abnormalRate: "", rateper_breakbulk: "", surchargesAmount: "" }))
       setRateLockStatus({ sixMeter: false, twelveMeter: false })
+      setAvailableExtraCharges([])
       return
     }
     const fetchAndUpdateRates = async () => {
       try {
-        const rates = await fetchRates(clientId, pickup, dropoff)
+        const rates = await fetchRates(clientId, pickup, dropoff, rateTitle)
         setFormData((prev) => {
           const updates = { ...prev }
           const newLock = { sixMeter: false, twelveMeter: false }
@@ -394,13 +449,15 @@ const ControllerInstructions = () => {
           setRateLockStatus(newLock)
           return updates
         })
+        setAvailableExtraCharges(Array.isArray(rates?.extraCharges) ? rates.extraCharges : [])
       } catch {
         setFormData((prev) => ({ ...prev, sixMeterRate: "", twelveMeterRate: "", abnormalRate: "", rateper_breakbulk: "", surchargesAmount: "" }))
         setRateLockStatus({ sixMeter: false, twelveMeter: false })
+        setAvailableExtraCharges([])
       }
     }
     fetchAndUpdateRates()
-  }, [formData.clientId, formData.pickup, formData.dropoff, fetchRates, isWeightBased, isAddOn])
+  }, [formData.clientId, formData.pickup, formData.dropoff, formData.rate_title, fetchRates, isWeightBased, isAddOn])
 
   useEffect(() => {
     const newState = {
@@ -450,11 +507,9 @@ const ControllerInstructions = () => {
       fieldErrors={fieldErrors}
       setFieldErrors={setFieldErrors}
       fieldRefs={fieldRefs}
-      handleClientChange={handleClientChange}
-      handlePickupChange={handlePickupChange}
-      clientStartingPoints={clientStartingPoints}
-      handleDropoffChange={handleDropoffChange}
-      clientDestinations={clientDestinations}
+      handleClientChange={handleClientChangeForLayout}
+      handleRateChange={handleRateChange}
+      clientRateOptions={clientRateOptions}
       isLoading={isLoading}
       isWeightBased={isWeightBased}
       isSetRateMode={isSetRateMode}
@@ -463,6 +518,7 @@ const ControllerInstructions = () => {
       setRateValue={setRateValue}
       rateFieldsEnabled={rateFieldsEnabled}
       rateLockStatus={rateLockStatus}
+      availableExtraCharges={availableExtraCharges}
       handleInputChange={handleInputChange}
       handleShipmentTypeChange={handleShipmentTypeChange}
       handleContainerCountChange={handleContainerCountChange}
@@ -490,6 +546,8 @@ const ControllerInstructions = () => {
       disabledRateStyle={disabledRateStyle}
       navigate={navigate}
       openCalendar={openCalendar}
+      groupMode={groupMode}
+      clientLocked={groupMode && !!lockedClient}
     />
   )
 }

@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-A full-stack operations and financial management platform built for a logistics client, covering the complete job lifecycle from instruction creation through invoicing, payment allocation, and monthly financial reporting. The system manages multiple actor roles (controllers, finance clerks, directors, subcontractors) across a shared PostgreSQL database, with document storage in S3 and automated monthly statement generation driven by AWS EventBridge.
+A full-stack operations and financial management platform built for a logistics client, covering the complete job lifecycle from instruction creation through invoicing, payment allocation, and monthly financial reporting. The system manages multiple actor roles (controllers, finance clerks, directors, subcontractors) across a shared PostgreSQL database, with document storage in S3 and client/subcontractor statements derived on demand from the live ledgers.
 
 ---
 
@@ -16,17 +16,12 @@ flowchart TD
     PG[("PostgreSQL\nConnection pool — max 20")]
     S3_DOCS["AWS S3\nEmployee & Truck Docs"]
     S3_OPS["AWS S3\nAssignment & Fuel-slip Docs"]
-    EventBridge["AWS EventBridge\nScheduler"]
-    Lambda["AWS Lambda\nStatement Trigger"]
 
     Browser -->|HTTPS| Nginx
     Nginx -->|proxy_pass| Express
     Express -->|pg pool — parameterised SQL| PG
     Express -->|multer-s3 upload\npresigned URL read| S3_DOCS
     Express -->|multer upload\ns3.upload| S3_OPS
-    EventBridge -->|monthly schedule| Lambda
-    Lambda -->|POST with API_SECRET header| Express
-    Express -->|generate + upsert| PG
 ```
 
 **Request lifecycle (authenticated API call):**
@@ -36,8 +31,8 @@ flowchart TD
 4. Controller calls the model layer, which executes a parameterised `pg` query.
 5. Response JSON is returned; for document access, a time-limited S3 presigned URL is generated server-side and returned to the client.
 
-**Scheduled statement generation:**
-EventBridge fires a Lambda on the 1st of each month. Lambda calls `POST /api/statements/generate` with an `API_SECRET` bearer token. Express authenticates the token separately from the user JWT path and runs `generateMonthlyStatements()` inside a single PostgreSQL transaction.
+**Statements are derived, not generated:**
+Client and subcontractor statements are computed from live data when they are opened (`server/models/statements/statementDerivation.js`, `server/models/subcontractors/statementDerivation.js`). There is no scheduled job. What was actually sent to a client or subcontractor is frozen in `client_statement_exports` / `subcontractor_statement_exports` when it is exported.
 
 ---
 
@@ -60,7 +55,6 @@ EventBridge fires a Lambda on the 1st of each month. Lambda calls `POST /api/sta
 | Database client | node-postgres (`pg`) — raw SQL | Complex CTEs and lateral joins in the analytics layer are easier to write and reason about in raw SQL than in a query builder |
 | File storage | AWS S3 (af-south-1) | Durable object storage for compliance documents; presigned URLs keep credentials server-side |
 | File upload middleware | multer-s3 / multer | Streams multipart uploads directly to S3 without buffering to disk |
-| Scheduled jobs | AWS Lambda + EventBridge Scheduler | Decouples the monthly statement generation schedule from the application process, so a restart or deploy does not cause a missed run |
 | Reverse proxy | Nginx (AWS Elastic Beanstalk `.platform`) | Handles TLS termination and the 50 MB body limit needed for document uploads |
 | Runtime module system | ESM (`"type": "module"`) | Consistent module syntax across client and server; avoids CommonJS/ESM interop friction |
 
@@ -90,23 +84,13 @@ EventBridge fires a Lambda on the 1st of each month. Lambda calls `POST /api/sta
 
 ---
 
-**Decision:** Monthly statement aging is recomputed from live outstanding items at generation time, not derived from stored invoice totals.
+**Decision:** Statements are derived on demand from dated ledgers instead of being generated monthly into tables (ported from Whizz-Away, October 2026).
 
-**Alternatives considered:** Carry-forward: take the previous statement's closing balance and add/subtract the month's activity.
+**Alternatives considered:** The previous design: an EventBridge + Lambda job on the 1st of the month called `POST /api/statements/generate` with a shared `API_SECRET`, recomputed aging from `payment_status` / `paid_amount`, and stored the result in `statements` / `aging_analysis` (and `subcontractor_statements`).
 
-**Why this approach:** Carry-forward compounds any data errors month-over-month and makes backdated corrections difficult to reconcile. The current approach queries `m1_controller` (outstanding instructions) and `add_ons` (outstanding ad-hoc charges) with a `payment_status IN ('unpaid', 'partial')` filter and ages each item against the generation date, so the statement is always a true point-in-time snapshot of what is actually owed, not an accumulated ledger.
+**Why this approach:** The stored figures were snapshots of the balance on the day the job ran, so they drifted as soon as a late payment or correction landed, and past months could not be reproduced. Payments carry dated line items keyed to the invoice, and credit notes are dated, so "what was owed at the end of month X" is a sum with a date filter. Deriving it removes the scheduled job, the shared secret and the backfill tooling. Group invoices are mapped to the instructions they bill (`INVOICE_CHILDREN`), so a group is valued and credited as one invoice.
 
-**Trade-offs:** More expensive to generate (two queries per client per month plus a previous-statement lookup for opening balance). If an instruction's payment status is incorrectly set, it propagates into every subsequent statement until corrected.
-
----
-
-**Decision:** AWS Lambda + EventBridge Scheduler triggers statement generation via an authenticated HTTP endpoint rather than an in-process cron job.
-
-**Alternatives considered:** `node-cron` scheduled task inside the Express process (the dependency remains in `package.json` as a leftover).
-
-**Why this approach:** An in-process cron would miss its schedule if the server was restarted or redeployed on the 1st of the month. Moving the trigger outside the process means the Lambda fires reliably regardless of application restarts. The endpoint authenticates the Lambda call with a shared `API_SECRET` header, checked before the normal JWT path, so no user session is needed.
-
-**Trade-offs:** Adds an external AWS resource to maintain. The `API_SECRET` is a symmetric shared secret — if leaked, an attacker can trigger arbitrary statement regeneration. The `node-cron` package is still listed as a dependency despite not being used.
+**Trade-offs:** A past month can change if an invoice or payment is back-dated into it. That is genuinely part of that month's trading; what was actually sent is preserved by the content-hashed export snapshots, which is the record that matters for disputes. The old `statements`, `aging_analysis` and `subcontractor_statements` tables are kept, unread, until someone drops them.
 
 ---
 
@@ -188,9 +172,6 @@ AWS_ACCESS_KEY_ID=AKIA...
 AWS_SECRET_ACCESS_KEY=...
 S3_BUCKET_NAME=your-ops-bucket
 
-# Statement generation — used by the Lambda trigger
-API_SECRET=a-long-random-secret-shared-with-the-lambda
-
 # Application
 NODE_ENV=development
 PORT=5000
@@ -269,8 +250,6 @@ npm start --prefix client
 │   │   ├── invoices/            # Invoice creation, container rate resolution
 │   │   └── wages/               # Point-in-time payroll calculation
 │   ├── utils/
-│   │   ├── statementGenerator.js           # Monthly client statement generation
-│   │   ├── subcontractorStatementGeneration.js  # Monthly subcontractor statements
 │   │   ├── wagesUtils.js                   # Tax bracket lookup, deduction history
 │   │   ├── s3Config.js                     # multer-s3 config for employee/truck docs
 │   │   ├── dbUtils.js                      # S3 path helpers for ops docs
@@ -279,7 +258,7 @@ npm start --prefix client
 │   │   ├── 001_add_effective_dates_to_driver_rates.sql
 │   │   └── 002_add_unique_orderno_to_expenses_m2.sql
 │   └── scripts/
-│       └── backfillSubcontractorStatements.js  # CLI backfill — single month or --range
+│       └── pruneAuditLog.js     # Trim old audit_log rows (run manually)
 │
 └── .platform/
     └── nginx/conf.d/

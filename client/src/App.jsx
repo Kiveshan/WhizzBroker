@@ -33,13 +33,14 @@ import {
 } from "./pages/user_menus";
 import { Login, Register } from "./pages/auth";
 import {
-  ControllerInstructions,
+  ControllerInstructionGroup,
   ControllerInstructionDetails,
   FCcontrollerinstructions,
+  FCcontrollerInstructionGroup,
   ViewClientInstruction,
   Viewcontrollerinstructions,
-  FCcontrollerInstructionDetails,
   ViewcontrollerInstructionDetails,
+  DirectorInstructionGroupView,
   CompanyInstructions,
   CompanyInstructionView,
   InstructionsList,
@@ -57,6 +58,7 @@ import {
   ViewClientInvoice,
   InvoicesList,
   ClientInvoice,
+  GroupInvoiceView,
 } from "./pages/invoices";
 import {
   ViewClientStatement,
@@ -84,7 +86,9 @@ import {
 } from "./pages/payments";
 import {
   UpdateInstruction,
+  GroupAssignment,
   DirectorManagerViewAssignment,
+  DirectorGroupAssignment,
   UploadInstructionDocuments,
   DirectorDocs,
 } from "./pages/assignments";
@@ -115,6 +119,8 @@ import {
   ProfitLossDetailPage,
   ClientSubbieCommissionReport,
   VatReconReportPage,
+  IncomePerClientReport,
+  AuditLogReport,
 } from "./pages/Reports";
 
 // CSS Imports
@@ -133,7 +139,6 @@ function DynamicHeader() {
     "/driver-wage": "Payroll",
     "/ControllerInstructions": "Instruction",
     "/ControllerInstructionDetails": "Container Details",
-    "/FCcontrollerInstructionDetails": "Container Details",
     "/expenses": "Truck Expenses",
     "/debtors": "Debtors",
     "/debtors-age-analysis": "Age Analysis",
@@ -168,6 +173,9 @@ function DynamicHeader() {
     "/CompanyInstructions": "Instruction ",
     "/Creditors/CreditorsOther": "Creditors",
     "/DirectorManagerViewAssignment": "View Assignment",
+    "/DirectorGroupAssignment": "View Assignment",
+    "/GroupAssignment": "Assignment",
+    "/DirectorInstructionGroupView": "Instruction ",
     "/DirectorDocs": "Documents",
     "/DirectorAnalytics": "Analytics",
     "/DirectorDebtors": "Debtors",
@@ -180,6 +188,7 @@ function DynamicHeader() {
     "/DirectorExpenses": "Truck Expenses",
     "/ControllerDashboard": "Controller",
     "/FCcontrollerinstructions": "Instruction",
+    "/FCInstructionGroup": "Instruction",
     "/Viewcontrollerinstructions": "Instruction",
     "/ViewcontrollerInstructionDetails": "Container Details",
     "/AdminDashboard": "Admin",
@@ -204,13 +213,16 @@ function DynamicHeader() {
     "/profit-loss-reports": "Income & Expenditure Reports",
     "/income-expenditure-reports/:month/:year": "Income & Expenditure Report",
     "/client-subbie-commission": "Client Subbie Commission Report",
+    "/income-per-client": "Income Per Client Report",
     "/vat-recon-reports": "VAT Reconciliation Report",
+    "/audit-log": "Audit Log",
   };
 
   const getTitle = () => {
     if (location.pathname.startsWith("/upload"))
       return "Upload Proof of Payment";
     if (location.pathname.startsWith("/invoice/")) return "Tax Invoice";
+    if (location.pathname.startsWith("/group-invoice/")) return "Tax Invoice";
     if (location.pathname.startsWith("/ExpenseDetails/"))
       return "Fuel Expenses";
     if (location.pathname.startsWith("/finance-clerk-wage-details/"))
@@ -264,7 +276,7 @@ function ContentWrapper() {
   const backTarget = getBackTarget();
 
   return (
-    <div className="content-area">
+    <div className={`content-area${shouldShowFooter ? " has-fixed-footer" : ""}`}>
       {shouldShowLogout && (
         showBackInTopBar ? (
           <div className="top-actions-bar">
@@ -329,7 +341,7 @@ function ContentWrapper() {
         <Route path="/DirectorDashboard" element={<DirectorDashboard />} />
         <Route
           path="/ControllerInstructions"
-          element={<ControllerInstructions />}
+          element={<ControllerInstructionGroup />}
         />
         <Route
           path="/ControllerInstructionDetails"
@@ -351,6 +363,14 @@ function ContentWrapper() {
         <Route
           path="/DirectorManagerViewAssignment"
           element={<DirectorManagerViewAssignment />}
+        />
+        <Route
+          path="/DirectorGroupAssignment"
+          element={<DirectorGroupAssignment />}
+        />
+        <Route
+          path="/DirectorInstructionGroupView"
+          element={<DirectorInstructionGroupView />}
         />
         <Route path="/DirectorDocs" element={<DirectorDocs />} />
         <Route path="/DirectorAnalytics" element={<DirectorAnalytics />} />
@@ -392,6 +412,7 @@ function ContentWrapper() {
         {/* Finance Clerk Routes */}
         <Route path="/instructions" element={<InstructionsList />} />
         <Route path="/update-instructions" element={<UpdateInstruction />} />
+        <Route path="/GroupAssignment" element={<GroupAssignment />} />
         <Route
           path="/Upload-Instruction-Documents"
           element={<UploadInstructionDocuments />}
@@ -445,6 +466,7 @@ function ContentWrapper() {
         <Route path="/invoice" element={<Navigate to="/invoices" replace />} />
         <Route path="/invoice/:id" element={<ClientInvoice />} />
         <Route path="/invoice/:id/download" element={<ClientInvoice />} />
+        <Route path="/group-invoice/:groupId" element={<GroupInvoiceView />} />
         <Route path="/DebtorsDashboard" element={<DebtorsDashboard />} />
         <Route path="/CreditorsDashboard" element={<CreditorsDashboard />} />
         <Route path="/FuelPage" element={<ViewExpense />} />
@@ -454,8 +476,8 @@ function ContentWrapper() {
           element={<FCcontrollerinstructions />}
         />
         <Route
-          path="/FCcontrollerInstructionDetails"
-          element={<FCcontrollerInstructionDetails />}
+          path="/FCInstructionGroup"
+          element={<FCcontrollerInstructionGroup />}
         />
         <Route path="/analytics-reports" element={<AnalyticsReportsPage />} />
         <Route path="/reports" element={<ReportsPage />} />
@@ -464,6 +486,11 @@ function ContentWrapper() {
           path="/client-subbie-commission"
           element={<ClientSubbieCommissionReport />}
         />
+        <Route
+          path="/income-per-client"
+          element={<IncomePerClientReport />}
+        />
+        <Route path="/audit-log" element={<AuditLogReport />} />
         <Route path="/view-client-list" element={<ClientList />} />
         <Route path="/view-add-on-list" element={<AddOnList />} />
         <Route path="/add-on-form" element={<AddOnForm />} />
@@ -496,7 +523,7 @@ function App() {
     "/FDashboard": "Finance Clerk Dashboard",
     "/ViewClientInstruction": "View Client Instructions",
     "/FCcontrollerinstructions": "Finance Clerk Instructions",
-    "/FCcontrollerInstructionDetails": "Finance Clerk Container Details",
+    "/FCInstructionGroup": "Finance Clerk Instructions",
     "/InstructionsList": "Instructions List",
     "/Viewcontrollerinstructions": "Viewcontrollerinstructions",
     "/ViewcontrollerInstructionDetails": "ViewcontrollerInstructionDetails",
@@ -505,6 +532,7 @@ function App() {
     "/profit-loss-reports": "Income & Expenditure Reports",
     "/income-expenditure-reports/:month/:year": "Income & Expenditure Report",
     "/vat-recon-reports": "VAT Reconciliation Report",
+    "/audit-log": "Audit Log",
   };
 
   // Set page title based on current route

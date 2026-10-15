@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import Card from "../../../components/Card";
 const otherCardData = [
+  { title: "Fuel", image: "/images/expenses.jpeg", path: "/FuelPage" },
   {
     title: "Create Purchase Orders",
     image: "/images/createpo.jpg",

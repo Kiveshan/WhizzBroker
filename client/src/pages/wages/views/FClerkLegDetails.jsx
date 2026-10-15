@@ -81,7 +81,7 @@ const FClerkLegDetails = () => {
 
   const exportToExcel = async () => {
     const workbook = new ExcelJS.Workbook();
-    workbook.creator = "Whizz-Away";
+    workbook.creator = "WhizzBroker";
     workbook.created = new Date();
 
     const worksheet = workbook.addWorksheet("Leg Details", {

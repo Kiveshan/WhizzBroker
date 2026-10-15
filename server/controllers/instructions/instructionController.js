@@ -4,6 +4,7 @@ import {
   saveInstruction,
   getClientInstructionStats,
   getClientRates,
+  getClientRateTitles,
   getInstructions,
   getInstructionById,
   updateContainersByInstructionId,
@@ -13,13 +14,48 @@ import {
   checkClientHasRates,
   saveInstructionAndContainers,
   updateFCInstructionAndContainers,
+  freezeExistingContainerAmounts,
   deleteInstruction,
   checkContainerHasLegs,
   deleteContainerAndLegs,
   getClientSetRate,
   searchInstructions,
+  saveInstructionGroup,
+  getInstructionGroupById,
+  addInstructionToGroup,
 } from "../../models/instructions/instructionModel.js"
-import { auditFromReq } from "../../utils/auditLogger.js"
+import { auditFromReq, getClientName } from "../../utils/auditLogger.js"
+import { diffInstruction } from "../../utils/auditChanges.js"
+
+// Before/after list for an FC instruction save (ported from Whizz-Away). Client
+// and shipment type are stored as ids, so their names are looked up — only
+// when they changed.
+const buildInstructionChanges = async (previous, current) => {
+  const before = previous?.instruction
+  const after = current?.instruction
+  if (!before || !after) return null
+
+  const lookups = { clients: {}, shipmentTypes: {} }
+  if (String(before.client ?? "") !== String(after.client ?? "")) {
+    const [fromName, toName] = await Promise.all([
+      getClientName(before.client),
+      getClientName(after.client),
+    ])
+    lookups.clients = { [before.client]: fromName, [after.client]: toName }
+  }
+  if (String(before.shipment_type ?? "") !== String(after.shipment_type ?? "")) {
+    const types = await getShipmentTypes()
+    lookups.shipmentTypes = Object.fromEntries(types.map((t) => [t.shipkey, t.shipmenttype]))
+  }
+
+  return diffInstruction({
+    before,
+    after,
+    beforeContainers: previous.containers,
+    afterContainers: current.containers,
+    lookups,
+  })
+}
 
 // Helper function to calculate total cost based on rate weight type
 // Supports FC shipment type 4 using weight rows + unit rate
@@ -100,18 +136,33 @@ const calculateTotalCost = (instructionData, containers = [], weightData = []) =
     return total
   }, 0)
 
-  const totalCost = baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount
+  // Calculate total selected extra-charges amount from containers
+  const totalExtraChargesAmount = containers.reduce((total, container) => {
+    const charges = container.selectedExtraCharges || container.extra_charges || []
+    if (!Array.isArray(charges)) return total
+    return total + charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0)
+  }, 0)
+
+  const totalCost =
+    baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount + totalExtraChargesAmount
   return Number(totalCost.toFixed(2))
 }
 
 // Handler functions
+// Set (break bulk) rate by title (?title=) or, for older instructions, by
+// route (/:starting_point/:destination or ?start=&destination=).
 export const getClientSetRateHandler = async (req, res) => {
   try {
-    const { clientId, starting_point, destination } = req.params
+    const { clientId } = req.params
+    const starting_point = req.params.starting_point ?? req.query.start
+    const destination = req.params.destination ?? req.query.destination
+    const { title } = req.query
 
-    console.log(`[${new Date().toISOString()}] getClientSetRateHandler: Request for client ${clientId}, starting_point ${starting_point}, destination ${destination}`)
+    if (!title && (!starting_point || !destination)) {
+      return res.status(400).json({ error: "A rate title, or a starting point and destination, is required" })
+    }
 
-    const result = await getClientSetRate(clientId, starting_point, destination)
+    const result = await getClientSetRate(clientId, starting_point, destination, title)
 
     res.status(200).json(result)
   } catch (error) {
@@ -288,6 +339,122 @@ export const saveInstructionHandler = async (req, res) => {
     res.json({ success: true, m1key: result.m1key })
   } catch (error) {
     console.error("Error in save-instruction endpoint:", error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+export const saveInstructionGroupHandler = async (req, res) => {
+  try {
+    const { clientId, groupRef, instructions } = req.body
+
+    if (!Array.isArray(instructions) || instructions.length === 0) {
+      return res.status(400).json({ error: "An instruction group needs at least one instruction" })
+    }
+
+    // Same server-authoritative pricing as the standalone save: recompute
+    // each child's total from its submitted rate/container/weight inputs.
+    const preparedInstructions = instructions.map((instruction) => {
+      const controllerData = instruction.controllerData || {}
+      const containerData = Array.isArray(instruction.containerData) ? instruction.containerData : []
+      const weightData = Array.isArray(instruction.weightData) ? instruction.weightData : []
+
+      const shipmentTypeStr = String(controllerData.shipmentTypeId || controllerData.shipment_type || "")
+      const finalTotalCost = calculateTotalCost(controllerData, containerData, weightData)
+      const clientTotalCost = Number(controllerData.total_cost)
+      if (!Number.isNaN(clientTotalCost) && Math.abs(clientTotalCost - finalTotalCost) > 0.01) {
+        console.warn(
+          `save-instruction-group: client total_cost ${clientTotalCost} differs from server-calculated ${finalTotalCost}; using server value`
+        )
+      }
+
+      return {
+        controllerData: {
+          ...controllerData,
+          total_cost: shipmentTypeStr === "5" ? 0 : finalTotalCost,
+        },
+        containerData,
+        weightData,
+      }
+    })
+
+    const result = await saveInstructionGroup({
+      clientId,
+      groupRef: groupRef || null,
+      instructions: preparedInstructions,
+    })
+
+    auditFromReq(req, {
+      actionType: "INSTRUCTION_GROUP_CREATED",
+      entityType: "instruction_group",
+      targetId: result.groupKey,
+      targetName: `client ${clientId ?? "?"}`,
+      details: `Instruction group ${result.groupKey} created with ${result.instructions.length} instruction(s): ${result.instructions
+        .map((i) => i.m1key)
+        .join(", ")}`,
+    })
+
+    res.json({
+      success: true,
+      groupKey: result.groupKey,
+      m1keys: result.instructions.map((i) => i.m1key),
+    })
+  } catch (error) {
+    console.error("Error in save-instruction-group endpoint:", error)
+    res.status(500).json({ error: error.message })
+  }
+}
+
+export const addInstructionToGroupHandler = async (req, res) => {
+  try {
+    const groupKey = req.params.id
+    const controllerData = req.body.controllerData || {}
+    const containerData = Array.isArray(req.body.containerData) ? req.body.containerData : []
+    const weightData = Array.isArray(req.body.weightData) ? req.body.weightData : []
+
+    // Same server-authoritative pricing as the standalone/group saves.
+    const shipmentTypeStr = String(controllerData.shipmentTypeId || controllerData.shipment_type || "")
+    const finalTotalCost = calculateTotalCost(controllerData, containerData, weightData)
+    const clientTotalCost = Number(controllerData.total_cost)
+    if (!Number.isNaN(clientTotalCost) && Math.abs(clientTotalCost - finalTotalCost) > 0.01) {
+      console.warn(
+        `add-instruction-to-group: client total_cost ${clientTotalCost} differs from server-calculated ${finalTotalCost}; using server value`
+      )
+    }
+
+    const result = await addInstructionToGroup(groupKey, {
+      controllerData: {
+        ...controllerData,
+        total_cost: shipmentTypeStr === "5" ? 0 : finalTotalCost,
+      },
+      containerData,
+      weightData,
+    })
+
+    auditFromReq(req, {
+      actionType: "INSTRUCTION_GROUP_UPDATED",
+      entityType: "instruction_group",
+      targetId: groupKey,
+      targetName: `group ${groupKey}`,
+      details: `Instruction ${result.m1key} added to instruction group ${groupKey}`,
+    })
+
+    res.json({ success: true, groupKey, m1key: result.m1key })
+  } catch (error) {
+    console.error("Error in add-instruction-to-group endpoint:", error)
+    const status = error.message === "Instruction group not found" ? 404 : 500
+    res.status(status).json({ error: error.message })
+  }
+}
+
+export const getInstructionGroupHandler = async (req, res) => {
+  try {
+    const group = await getInstructionGroupById(req.params.id)
+    if (!group) {
+      return res.status(404).json({ error: "Instruction group not found" })
+    }
+    res.json(group)
+  } catch (error) {
+    console.error("Error fetching instruction group:", error)
     res.status(500).json({ error: error.message })
   }
 }
@@ -503,6 +670,17 @@ export const getClientDestinationsHandler = async (req, res) => {
   }
 }
 
+// The client's rates for the instruction form's Rate dropdown, one per title.
+export const getClientRateTitlesHandler = async (req, res) => {
+  try {
+    const titles = await getClientRateTitles(req.params.clientId)
+    res.json(titles)
+  } catch (error) {
+    console.error("Error fetching client rate titles:", error)
+    res.status(500).json({ error: "Failed to fetch client rates" })
+  }
+}
+
 export const checkClientRatesHandler = async (req, res) => {
   try {
     const { clientId } = req.params
@@ -524,16 +702,15 @@ export const checkClientRatesHandler = async (req, res) => {
 export const getClientRatesHandler = async (req, res) => {
   try {
     const { clientId } = req.params
-    const { start, destination } = req.query
+    const { start, destination, title } = req.query
 
     console.log("[getClientRatesHandler] Request received:", {
       params: req.params,
       query: req.query,
-      body: req.body,
     })
 
-    if (!start || !destination) {
-      const errorMsg = "Starting point and destination are required"
+    if (!title && (!start || !destination)) {
+      const errorMsg = "A rate title, or a starting point and destination, is required"
       console.error(`[getClientRatesHandler] ${errorMsg}`)
       return res.status(400).json({
         error: errorMsg,
@@ -544,12 +721,14 @@ export const getClientRatesHandler = async (req, res) => {
       `[getClientRatesHandler] Fetching rates for client ${clientId}, start: ${start}, destination: ${destination}`,
     )
 
-    const rates = await getClientRates(clientId, start, destination)
+    const rates = await getClientRates(clientId, start, destination, title)
 
     console.log("[getClientRatesHandler] getClientRates returned:", rates)
 
     if (!rates || Object.keys(rates).length === 0) {
-      const errorMsg = `No rates found for client ${clientId}, start: ${start}, destination: ${destination}`
+      const errorMsg = title
+        ? `No rate titled "${title}" found for this client`
+        : `No rates found for client ${clientId}, start: ${start}, destination: ${destination}`
       console.error(`[getClientRatesHandler] ${errorMsg}`)
       return res.status(404).json({
         error: errorMsg,
@@ -764,7 +943,11 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
     // reflected. For shipment type 5 (add-on), we keep total_cost at 0 even if
     // a non-zero value could be computed.
     const shipmentTypeStr = String(instructionData.shipmentTypeId || instructionData.shipment_type || "")
-    const backendCalculatedCost = calculateTotalCost(instructionData, containers, weightData)
+    // Rate changes apply to new instructions only: existing containers keep
+    // the amounts they were saved with for flags that were already on, and
+    // the total is calculated from those same amounts.
+    const pricedContainers = await freezeExistingContainerAmounts(id, containers)
+    const backendCalculatedCost = calculateTotalCost(instructionData, pricedContainers, weightData)
     const finalTotalCost = shipmentTypeStr === "5" ? 0 : backendCalculatedCost
     console.log(
       `[${new Date().toISOString()}] [CONTROLLER] updateFCInstructionAndContainersHandler: Backend-calculated total_cost (includes VGM/surcharges/hazardous):`,
@@ -785,7 +968,7 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
 
     // For shipment type 5 (add-on), we now allow containers to be saved while
     // keeping total_cost and rate fields at 0 from the frontend/backend.
-    const containersToSave = Array.isArray(containers) ? containers : []
+    const containersToSave = Array.isArray(pricedContainers) ? pricedContainers : []
 
     const result = await updateFCInstructionAndContainers(
       id,
@@ -793,7 +976,18 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
       containersToSave,
       Array.isArray(weightData) ? weightData : [],
     )
-    res.status(200).json({ success: true, message: "Instruction and containers updated successfully", data: result })
+    const { previous, ...data } = result
+
+    // Hand the audit trail a plain before/after list of what this save
+    // actually changed (auditTrail.js stores it on the row). Best-effort: a
+    // failure here must never fail a save that has already committed.
+    try {
+      req.auditChanges = await buildInstructionChanges(previous, data)
+    } catch (auditErr) {
+      console.error("Failed to build instruction audit changes:", auditErr.message)
+    }
+
+    res.status(200).json({ success: true, message: "Instruction and containers updated successfully", data })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] [CONTROLLER] Error in updateFCInstructionAndContainersHandler:`, error)
     res.status(500).json({

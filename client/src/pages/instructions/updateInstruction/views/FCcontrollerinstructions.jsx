@@ -14,13 +14,21 @@ import { validateForm as validateFormUtil } from "../../../../utils/instructions
 import { checkRateCountMismatch as checkRateCountMismatchUtil } from "../../../../utils/instructions/rateCountMismatch";
 import { FCcontrollerinstructionsLayout } from "./FCcontrollerinstructionsLayout";
 
-const FCcontrollerinstructions = () => {
+// Renders standalone (route + location.state) by default. When embedded in the
+// FC instruction-group page, the group passes instructionId/groupMode as props
+// and handles post-save/post-delete navigation itself via the callbacks.
+const FCcontrollerinstructions = ({
+  instructionId: instructionIdProp = null,
+  groupMode = false,
+  onAfterSave = null,
+  onAfterDelete = null,
+} = {}) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const preservedFormData = location.state?.preservedFormData;
+  const preservedFormData = groupMode ? null : location.state?.preservedFormData;
   const containerCounts = location.state?.containerCounts;
-  const instructionId = location.state?.instructionId;
+  const instructionId = instructionIdProp ?? location.state?.instructionId;
   const clientId = location.state?.clientId;
   const clientName = location.state?.clientName;
   const selectedMonth = location.state?.selectedMonth;
@@ -34,6 +42,7 @@ const FCcontrollerinstructions = () => {
     clientId: useRef(null),
     shipmentTypeId: useRef(null),
     ksmFileRef: useRef(null),
+    rate_title: useRef(null),
     pickup: useRef(null),
     dropoff: useRef(null),
     stackDate: useRef(null),
@@ -187,8 +196,7 @@ const FCcontrollerinstructions = () => {
   const {
     clients,
     shipmentTypes,
-    startingPoints,
-    destinations,
+    rateOptions,
     instructionRecord,
     isLoading,
     isLoadingComplete,
@@ -201,6 +209,7 @@ const FCcontrollerinstructions = () => {
     fetchExisting: !!instructionId && !preservedFormData,
     instructionId,
     clientId: formData.clientId,
+    rateTitle: formData.rate_title,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
     onFormUpdate: (partial) => setFormData((prev) => ({ ...prev, ...partial })),
@@ -253,6 +262,7 @@ const FCcontrollerinstructions = () => {
     clientId: formData.clientId,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
+    rateTitle: formData.rate_title,
     shipmentTypeId: formData.shipmentTypeId,
     isAddOn,
     isReadOnly,
@@ -276,11 +286,13 @@ const FCcontrollerinstructions = () => {
     fetchRates,
     fetchFreshAmounts,
     recalculateTotalCost,
+    availableExtraCharges,
   } = useRateManagement({
     isAddOn,
     clientId: formData.clientId,
     pickup: formData.pickup,
     dropoff: formData.dropoff,
+    rateTitle: formData.rate_title,
     status: formData.status,
     onFormUpdate: (partial) => setFormData((prev) => ({ ...prev, ...partial })),
     onError: (msg) => setErrorModal({ isOpen: true, message: msg }),
@@ -361,13 +373,14 @@ const FCcontrollerinstructions = () => {
     selectedMonth,
     selectedYear,
     activeFilter,
+    onAfterSave,
+    onAfterDelete,
   });
 
   const {
     handleClientChange,
     handleShipmentTypeChange: _handleShipmentTypeChange,
-    handlePickupChange,
-    handleDropoffChange,
+    handleRateTitleChange,
     handleInputChange,
     handleNumericInputChange,
     handleRateChange,
@@ -387,6 +400,7 @@ const FCcontrollerinstructions = () => {
     initializeContainers,
     containersRef,
     fetchRates,
+    rateOptions,
     setIsSetRate,
     setWeightRows,
     setFieldErrors,
@@ -430,7 +444,7 @@ const FCcontrollerinstructions = () => {
     if (confirmationModal.action === "unlock-route") {
       setRouteEditMode("editable");
       setHasRouteMismatch(false);
-      setFormData((prev) => ({ ...prev, pickup: "", dropoff: "" }));
+      setFormData((prev) => ({ ...prev, rate_title: "", pickup: "", dropoff: "" }));
     } else if (confirmationModal.action === "delete-container") {
       confirmDeleteContainer();
     } else if (confirmationModal.action === "delete-weight") {
@@ -538,7 +552,7 @@ const FCcontrollerinstructions = () => {
   const hasDataFailure =
     clients.length === 0 ||
     shipmentTypes.length === 0 ||
-    startingPoints.length === 0;
+    rateOptions.length === 0;
 
   // ─── render ──────────────────────────────────────────────────────────────────
 
@@ -558,6 +572,7 @@ const FCcontrollerinstructions = () => {
       setWarningModal={setWarningModal}
       // Navigation
       handleBackClick={handleBackClick}
+      groupMode={groupMode}
       // Form state
       formData={formData}
       setFormData={setFormData}
@@ -567,11 +582,11 @@ const FCcontrollerinstructions = () => {
       fieldRefs={fieldRefs}
       clients={clients}
       shipmentTypes={shipmentTypes}
-      startingPoints={startingPoints}
-      destinations={destinations}
+      rateOptions={rateOptions}
       weightRows={weightRows}
       containers={containers}
       containerFieldErrors={containerFieldErrors}
+      availableExtraCharges={availableExtraCharges}
       // Computed flags
       isReadOnly={isReadOnly}
       isSetRateMode={isSetRateMode}
@@ -604,8 +619,7 @@ const FCcontrollerinstructions = () => {
       handleNumericInputChange={handleNumericInputChange}
       handleRateChange={handleRateChange}
       handleShipmentTypeChange={handleShipmentTypeChange}
-      handlePickupChange={handlePickupChange}
-      handleDropoffChange={handleDropoffChange}
+      handleRateTitleChange={handleRateTitleChange}
       // Handlers — weight rows
       updateWeightRow={updateWeightRow}
       handleRequestDeleteWeightRow={handleRequestDeleteWeightRow}

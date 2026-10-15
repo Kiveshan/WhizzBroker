@@ -68,7 +68,7 @@ const deleteDocument = async (documentId, s3) => {
   const s3Key = keyResult.rows[0].s3key;
   await s3
     .deleteObject({
-      Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+      Bucket: process.env.S3_BUCKET_NAME,
       Key: s3Key,
     })
     .promise();

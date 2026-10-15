@@ -1,4 +1,5 @@
 import express from "express";
+import { MANAGEMENT_ROLES } from "../../config/roles.js";
 import {
   checkClientEmailExistsHandler,
   getAllClientsHandler,
@@ -8,7 +9,7 @@ import {
   toggleClientStatusHandler,
   deleteClientHandler,
 } from "../../controllers/manage/clientController.js";
-import { verifyToken } from "../../middleware/auth.js";
+import { verifyToken, requireRoles } from "../../middleware/auth.js";
 
 const router = express.Router();
 
@@ -19,13 +20,14 @@ router.get(
 );
 router.get("/api/m5Clients", verifyToken, getAllClientsHandler);
 router.get("/api/m5Clients/:id", verifyToken, getClientByIdHandler);
-router.post("/api/m5Clients", verifyToken, createClientHandler);
-router.put("/api/m5Clients/:id", verifyToken, updateClientHandler);
+router.post("/api/m5Clients", verifyToken, requireRoles(...MANAGEMENT_ROLES), createClientHandler);
+router.put("/api/m5Clients/:id", verifyToken, requireRoles(...MANAGEMENT_ROLES), updateClientHandler);
 router.put(
   "/api/clients/:id/toggle-status",
   verifyToken,
+  requireRoles(...MANAGEMENT_ROLES),
   toggleClientStatusHandler
 );
-router.delete("/api/m5Clients/:id", verifyToken, deleteClientHandler);
+router.delete("/api/m5Clients/:id", verifyToken, requireRoles(...MANAGEMENT_ROLES), deleteClientHandler);
 
 export default router;

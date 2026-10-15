@@ -137,11 +137,23 @@ const ClientSubbieCommissionReport = () => {
       summarySheet.addRow({ metric: "Client", amount: reportData.client?.name || selectedClientName || "Unknown" })
       summarySheet.addRow({ metric: "Period", amount: `${selectedMonth} ${selectedYear}` })
       summarySheet.addRow({})
-      summarySheet.addRow({ metric: "Instruction Invoices", amount: (reportData.totals?.invoiceAmount || 0) - (reportData.totals?.addOnAmount || 0) })
+      summarySheet.addRow({ metric: "Basis", amount: "Instructions invoiced in the period, excl. VAT" })
+      summarySheet.addRow({})
+      summarySheet.addRow({ metric: "Instruction Invoices", amount: reportData.totals?.instructionAmount || 0 })
       summarySheet.addRow({ metric: "Add-On Invoices", amount: reportData.totals?.addOnAmount || 0 })
-      summarySheet.addRow({ metric: "Total Invoiced", amount: reportData.totals?.invoiceAmount || 0 })
-      summarySheet.addRow({ metric: "Total Subbie Earnings", amount: reportData.totals?.subcontractorAmount || 0 })
-      summarySheet.addRow({ metric: "KSM Commission", amount: reportData.totals?.commission || 0 })
+      summarySheet.addRow({ metric: "Credit Notes", amount: -(reportData.totals?.creditNoteAmount || 0) })
+      summarySheet.addRow({ metric: "Subcontractor Cost", amount: -(reportData.totals?.subcontractorAmount || 0) })
+      summarySheet.addRow({ metric: "Commission", amount: reportData.totals?.commission || 0 })
+      if (reportData.totals?.marginPercent != null) {
+        summarySheet.addRow({ metric: "Margin %", amount: `${reportData.totals.marginPercent}%` })
+      }
+      if (reportData.totals?.uninvoicedSubbieLegs) {
+        summarySheet.addRow({})
+        summarySheet.addRow({
+          metric: `Not yet invoiced: ${reportData.totals.uninvoicedSubbieLegs} subbie legs`,
+          amount: reportData.totals.uninvoicedSubbieCost || 0,
+        })
+      }
       summarySheet.getColumn("amount").numFmt = "R #,##0.00"
 
       const subbiesSheet = workbook.addWorksheet("Subcontractors")
@@ -149,7 +161,7 @@ const ClientSubbieCommissionReport = () => {
         { header: "Subcontractor", key: "companyName", width: 32 },
         { header: "Reg Number", key: "registrationNumber", width: 22 },
         { header: "Legs", key: "legCount", width: 12 },
-        { header: "Total Earned", key: "totalEarned", width: 20 },
+        { header: "Cost (excl. VAT)", key: "totalEarned", width: 20 },
         { header: "Share %", key: "percentage", width: 12 },
       ]
       ;(reportData.subcontractors || []).forEach((subbie) => {
@@ -171,7 +183,10 @@ const ClientSubbieCommissionReport = () => {
         { header: "Instruction", key: "instructionId", width: 16 },
         { header: "Date", key: "invoiceDate", width: 16 },
         { header: "Description", key: "description", width: 30 },
-        { header: "Amount", key: "amount", width: 18 },
+        { header: "Revenue (excl. VAT)", key: "amount", width: 18 },
+        { header: "Credit Notes", key: "creditNotes", width: 16 },
+        { header: "Subbie Cost", key: "subbieCost", width: 16 },
+        { header: "Margin", key: "margin", width: 16 },
       ]
       ;(reportData.invoices || []).forEach((invoice) => {
         invoicesSheet.addRow({
@@ -181,9 +196,14 @@ const ClientSubbieCommissionReport = () => {
           invoiceDate: formatDate(invoice.invoiceDate),
           description: invoice.description || "—",
           amount: invoice.amount || 0,
+          creditNotes: invoice.creditNotes || 0,
+          subbieCost: invoice.subbieCost || 0,
+          margin: invoice.margin || 0,
         })
       })
-      invoicesSheet.getColumn("amount").numFmt = "R #,##0.00"
+      ;["amount", "creditNotes", "subbieCost", "margin"].forEach((key) => {
+        invoicesSheet.getColumn(key).numFmt = "R #,##0.00"
+      })
 
       const buffer = await workbook.xlsx.writeBuffer()
       const blob = new Blob([buffer], {
@@ -208,15 +228,22 @@ const ClientSubbieCommissionReport = () => {
     }
   }
 
-  const totals = reportData?.totals || { invoiceAmount: 0, subcontractorAmount: 0, commission: 0, addOnAmount: 0 }
-  const instructionInvoiceAmount = Math.max((totals.invoiceAmount || 0) - (totals.addOnAmount || 0), 0)
+  const totals = reportData?.totals || {
+    instructionAmount: 0,
+    addOnAmount: 0,
+    invoiceAmount: 0,
+    creditNoteAmount: 0,
+    subcontractorAmount: 0,
+    commission: 0,
+    marginPercent: null,
+  }
   const hasReportContent = Boolean(reportData && (reportData.invoices?.length || reportData.subcontractors?.length))
 
   return (
     <div className="client-subbie-report-page">
       <section className="client-subbie-intro">
         <p className="client-subbie-report-subtitle">
-          Select a client and month to see subcontractor earnings alongside KSM commission for that period.
+          Select a client and month to see what was invoiced, what subcontractors were paid for that work, and the commission earned.
         </p>
       </section>
 
@@ -325,46 +352,61 @@ const ClientSubbieCommissionReport = () => {
               <header>
                 <h2>Revenue Summary</h2>
                 <p>
-                  Totals include VAT from invoice instructions and reflect the earnings split for the selected period.
+                  All amounts exclude VAT. Covers instructions invoiced in {selectedMonth} {selectedYear}; their
+                  subcontractor legs and credit notes count here whenever they happened.
                 </p>
               </header>
               <div className="client-subbie-summary">
                 <div className="client-subbie-summary-card">
                   <span className="client-subbie-summary-label">Instruction Invoices</span>
-                  <span className="client-subbie-summary-value">{formatCurrency(instructionInvoiceAmount)}</span>
+                  <span className="client-subbie-summary-value">{formatCurrency(totals.instructionAmount || 0)}</span>
                   <span className="client-subbie-summary-footnote">
-                    Value of transport instructions billed directly for {selectedClientName || "the client"}.
+                    Transport instructions invoiced to {selectedClientName || "the client"} this month.
                   </span>
                 </div>
                 <div className="client-subbie-summary-card">
                   <span className="client-subbie-summary-label">Add-On Invoices</span>
                   <span className="client-subbie-summary-value">{formatCurrency(totals.addOnAmount || 0)}</span>
                   <span className="client-subbie-summary-footnote">
-                    Ancillary services raised outside the instruction invoices (VAT already applied).
+                    Ancillary services raised outside the instruction invoices.
                   </span>
                 </div>
                 <div className="client-subbie-summary-card">
-                  <span className="client-subbie-summary-label">Total Invoiced Amount</span>
-                  <span className="client-subbie-summary-value">{formatCurrency(totals.invoiceAmount)}</span>
+                  <span className="client-subbie-summary-label">Credit Notes</span>
+                  <span className="client-subbie-summary-value">{formatCurrency(-(totals.creditNoteAmount || 0))}</span>
                   <span className="client-subbie-summary-footnote">
-                    Combined instruction and add-on invoices for the selected month.
+                    Credited against these instructions, including credit notes raised in later months.
                   </span>
                 </div>
                 <div className="client-subbie-summary-card">
-                  <span className="client-subbie-summary-label">Total Subbie Earnings</span>
-                  <span className="client-subbie-summary-value">{formatCurrency(totals.subcontractorAmount)}</span>
+                  <span className="client-subbie-summary-label">Subcontractor Cost</span>
+                  <span className="client-subbie-summary-value">{formatCurrency(-(totals.subcontractorAmount || 0))}</span>
                   <span className="client-subbie-summary-footnote">
-                    Combined driver rates for subcontractors engaged on those instructions.
+                    What subcontractors are paid for the legs on these instructions.
                   </span>
                 </div>
                 <div className="client-subbie-summary-card">
-                  <span className="client-subbie-summary-label">KSM Commission</span>
-                  <span className="client-subbie-summary-value">{formatCurrency(totals.commission)}</span>
+                  <span className="client-subbie-summary-label">Commission</span>
+                  <span
+                    className={`client-subbie-summary-value ${(totals.commission || 0) < 0 ? "is-negative" : ""}`}
+                  >
+                    {formatCurrency(totals.commission)}
+                  </span>
                   <span className="client-subbie-summary-footnote">
-                    Displayed as an absolute value (Total invoiced minus subbie earnings).
+                    {totals.marginPercent != null
+                      ? `${totals.marginPercent}% of revenue after credit notes.`
+                      : "Revenue after credit notes is zero or less."}
                   </span>
                 </div>
               </div>
+              {totals.uninvoicedSubbieLegs > 0 && (
+                <div className="client-subbie-download-note">
+                  {totals.uninvoicedSubbieLegs} subcontractor leg{totals.uninvoicedSubbieLegs === 1 ? "" : "s"} ran in{" "}
+                  {selectedMonth} on instructions that are not invoiced yet ({formatCurrency(totals.uninvoicedSubbieCost)}).
+                  They are not in this commission; they will count in the month they are invoiced. Subcontractor
+                  statements include them now, so this is the difference between the two.
+                </div>
+              )}
             </section>
           )}
 
@@ -372,7 +414,7 @@ const ClientSubbieCommissionReport = () => {
             <section className="client-subbie-section" aria-label="Subcontractor breakdown">
               <header>
                 <h2>Subcontractor Breakdown</h2>
-                <p>Understand how subcontractor earnings contribute to the selected client period.</p>
+                <p>Subcontractors paid for legs on the instructions invoiced this month (excl. VAT).</p>
               </header>
               <div className="client-subbie-card">
                 {reportData.subcontractors?.length ? (
@@ -383,7 +425,7 @@ const ClientSubbieCommissionReport = () => {
                           <th>Subcontractor</th>
                           <th>Reg Number</th>
                           <th>Legs</th>
-                          <th>Total Earned</th>
+                          <th>Cost (excl. VAT)</th>
                           <th>Share of Subbie Total</th>
                         </tr>
                       </thead>
@@ -406,7 +448,7 @@ const ClientSubbieCommissionReport = () => {
                   </div>
                 ) : (
                   <div className="client-subbie-empty-state">
-                    No subcontractor legs were billed for this client during {selectedMonth} {selectedYear}.
+                    No subcontractor legs on the instructions invoiced in {selectedMonth} {selectedYear}.
                   </div>
                 )}
               </div>
@@ -417,7 +459,7 @@ const ClientSubbieCommissionReport = () => {
             <section className="client-subbie-section" aria-label="Invoices and instructions">
               <header>
                 <h2>Invoices & Instructions</h2>
-                <p>Trace gross invoice totals with their linked documentation for auditing.</p>
+                <p>One row per invoiced instruction, with its credit notes, subcontractor cost and margin (excl. VAT).</p>
               </header>
               <div className="client-subbie-card">
                 {reportData.invoices?.length ? (
@@ -429,7 +471,10 @@ const ClientSubbieCommissionReport = () => {
                           <th>Invoice</th>
                           <th>Instruction</th>
                           <th>Date</th>
-                          <th>Amount</th>
+                          <th>Revenue</th>
+                          <th>Credit Notes</th>
+                          <th>Subbie Cost</th>
+                          <th>Margin</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -440,6 +485,9 @@ const ClientSubbieCommissionReport = () => {
                             <td>{invoice.instructionId || "—"}</td>
                             <td>{formatDate(invoice.invoiceDate)}</td>
                             <td>{formatCurrency(invoice.amount)}</td>
+                            <td>{invoice.creditNotes ? formatCurrency(-invoice.creditNotes) : "—"}</td>
+                            <td>{invoice.subbieCost ? formatCurrency(-invoice.subbieCost) : "—"}</td>
+                            <td className={invoice.margin < 0 ? "is-negative" : ""}>{formatCurrency(invoice.margin)}</td>
                           </tr>
                         ))}
                       </tbody>

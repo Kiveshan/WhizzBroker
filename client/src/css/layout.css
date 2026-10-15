@@ -26,6 +26,13 @@ html {
   padding: 20px;
 }
 
+/* The app footer (components/Footer.jsx) is position: fixed (~48px tall), so
+   reserve room for it; otherwise the last row of a page (e.g. the instruction
+   Save / Invoice buttons) ends up underneath it when scrolled to the bottom. */
+.content-area.has-fixed-footer {
+  padding-bottom: 80px;
+}
+
 /* Shared top bar for Back + Logout on selected detail pages */
 .top-actions-bar {
   display: flex;

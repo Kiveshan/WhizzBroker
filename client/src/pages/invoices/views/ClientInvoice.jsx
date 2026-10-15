@@ -5,6 +5,7 @@ import "../css/InvoiceTemplate.css";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import api from "../../../api";
+import { loadBrandLogo, brandLogoHeight } from "../../../utils/brandLogo.js";
 
 // Utility function for formatting dates
 const formatDate = (dateString) => {
@@ -310,10 +311,14 @@ const ClientInvoice = forwardRef(({
     return 0;
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     setPdfLoading(true);
 
     try {
+      // Fetched before anything is drawn; null just means we fall back to the
+      // plain text header rather than failing the download.
+      const logo = await loadBrandLogo();
+
       const pdfContainers = finalInvoiceData.containers || [];
       const weightItems = finalInvoiceData.weightItems || [];
       const isWeightBased = Number(finalInvoiceData.shipment_type_key) === 4;
@@ -362,18 +367,27 @@ const ClientInvoice = forwardRef(({
       const pageHeight = doc.internal.pageSize.getHeight();
       let currentY = margins.top;
 
+      // Letterhead: the logo needs a white field behind it, so it sits above the
+      // dark band rather than inside it.
+      let bandTop = 0;
+      if (logo) {
+        const logoWidth = 42;
+        doc.addImage(logo.dataUrl, 'JPEG', margins.left, 5, logoWidth, brandLogoHeight(logoWidth));
+        bandTop = Math.round(5 + brandLogoHeight(logoWidth) + 4);
+      }
+
       // Header band
       doc.setFillColor(...brand.primary);
-      doc.rect(0, 0, pageWidth, 18, 'F');
+      doc.rect(0, bandTop, pageWidth, 18, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(fonts.title);
-      doc.text(finalInvoiceData.companyname || "", margins.left, 12);
+      doc.text(finalInvoiceData.companyname || "", margins.left, bandTop + 12);
       doc.setFontSize(fonts.header);
       doc.setFont('helvetica', 'normal');
-      doc.text('TAX INVOICE', pageWidth - margins.right, 12, { align: 'right' });
+      doc.text('TAX INVOICE', pageWidth - margins.right, bandTop + 12, { align: 'right' });
       doc.setTextColor(0, 0, 0);
-      currentY = 18 + 6;
+      currentY = bandTop + 18 + 6;
       // Two-column Company (From) and Client (Bill To)
       const colGap = 8;
       const colWidth = (pageWidth - margins.left - margins.right - colGap) / 2;
@@ -429,10 +443,16 @@ const ClientInvoice = forwardRef(({
       doc.setFontSize(fonts.small);
 
       // Destination Table - Updated to include additional destination info
+      // The rate title is what the client agreed to pay for; the route is
+      // optional on titled rates. Instructions captured before rate titles
+      // show their route as before.
+      const hasRoute = Boolean(finalInvoiceData.pickup && finalInvoiceData.dropoff);
       const destinationRoute = `${finalInvoiceData.pickup || ""} to ${
         finalInvoiceData.dropoff || ""
       }`;
-      const destinationData = [["Destination", destinationRoute]];
+      const destinationData = finalInvoiceData.rate_title
+        ? [["Rate", finalInvoiceData.rate_title], ...(hasRoute ? [["Route", destinationRoute]] : [])]
+        : [["Destination", destinationRoute]];
       
       // Add additional destination info if it exists
       if (finalInvoiceData.additional_destination_info) {
@@ -498,7 +518,7 @@ const ClientInvoice = forwardRef(({
       if (isSetRate) {
         // Use weight table structure with Unit Rate column only (no Price for set rate)
         tableHeaders = [
-          "KSM/DM No",
+          "DN No",
           "Ticket No",
           "Receipt Book No",
           "Weight",
@@ -515,7 +535,7 @@ const ClientInvoice = forwardRef(({
           : [["No weight items", "", "", "", ""]];
       } else if (isWeightBased) {
         tableHeaders = [
-          "KSM/DM No",
+          "DN No",
           "Ticket No",
           "Receipt Book No",
           "Weight",
@@ -685,6 +705,10 @@ const ClientInvoice = forwardRef(({
       // FIXED Summary Table - Proper two-column layout
       const summaryHeaders = ["Description", "Amount"];
       const summaryData = [
+        ...(finalInvoiceData.extraCharges || []).map((charge) => [
+          charge.charge_name,
+          formatCurrency(charge.amount),
+        ]),
         ["Amount (excl. VAT)", formatCurrency(amount)],
         ...(vat > 0 ? [["VAT (" + finalInvoiceData.vat + "%)", formatCurrency(vat)]] : []),
         ["Total Amount", formatCurrency(total)],
@@ -860,7 +884,7 @@ const ClientInvoice = forwardRef(({
         <div className="invoice-page">
           <div className="loading-error">{error}</div>
           <div className="invoicedownloadbtn1">
-            <button className="back-btn" onClick={() => navigate("/invoices")}>
+            <button className="back-btn" onClick={() => navigate(-1)}>
               Back
             </button>
           </div>
@@ -875,7 +899,7 @@ const ClientInvoice = forwardRef(({
         <div className="invoice-page">
           <div className="loading-error">No invoice data found.</div>
           <div className="invoicedownloadbtn1">
-            <button className="back-btn" onClick={() => navigate("/invoices")}>
+            <button className="back-btn" onClick={() => navigate(-1)}>
               Back
             </button>
           </div>
@@ -970,11 +994,19 @@ const ClientInvoice = forwardRef(({
 
           {/* Vessel/Ref and Destination - Updated */}
           <div className="vessel-destination">
-            <div className="vessel">Starting: {finalInvoiceData.pickup}</div>
+            <div className="vessel">
+              {finalInvoiceData.rate_title
+                ? <>Rate: {finalInvoiceData.rate_title}</>
+                : <>Starting: {finalInvoiceData.pickup}</>}
+            </div>
             <div className="destination" id="destination">
               <div className="dropoff-row">
                 <div className="dropoff" id="dropoff">
-                  Destination: {finalInvoiceData.dropoff}
+                  {finalInvoiceData.rate_title
+                    ? finalInvoiceData.pickup && finalInvoiceData.dropoff
+                      ? <>Route: {finalInvoiceData.pickup} → {finalInvoiceData.dropoff}</>
+                      : null
+                    : <>Destination: {finalInvoiceData.dropoff}</>}
                 </div>
                 {!isPreviewMode && !isPreview && isEditMode && (
                   <div className="additional-destination-edit">
@@ -1026,7 +1058,7 @@ const ClientInvoice = forwardRef(({
                 <table className="container-table5">
                   <thead>
                     <tr>
-                      <th>KSM/DM No</th>
+                      <th>DN No</th>
                       <th>Ticket No</th>
                       <th>Receipt Book No</th>
                       <th>Weight</th>
@@ -1055,7 +1087,7 @@ const ClientInvoice = forwardRef(({
                 <table className="container-table5">
                   <thead>
                     <tr>
-                      <th>KSM/DM No</th>
+                      <th>DN No</th>
                       <th>Ticket No</th>
                       <th>Receipt Book No</th>
                       <th>Weight</th>
@@ -1209,6 +1241,14 @@ const ClientInvoice = forwardRef(({
                     </tr>
                   </thead>
                   <tbody>
+                    {(finalInvoiceData.extraCharges || []).map((charge, index) => (
+                      <tr key={`extra-charge-${index}`}>
+                        <td className="summary-label">{charge.charge_name}</td>
+                        <td className="summary-value">
+                          {formatCurrency(charge.amount)}
+                        </td>
+                      </tr>
+                    ))}
                     <tr>
                       <td className="summary-label">Amount (excl. VAT)</td>
                       <td className="summary-value">

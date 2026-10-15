@@ -5,6 +5,7 @@ import {
   deleteClientRate,
 } from "../../models/manage/clientRateModel.js"
 import { auditFromReq } from "../../utils/auditLogger.js"
+import { validateRouteRates } from "../../utils/routeRateFields.js"
 
 const getAllClientsForRatesHandler = async (req, res) => {
   try {
@@ -59,55 +60,45 @@ const getClientRatesByClientIdHandler = async (req, res) => {
 const saveClientRatesHandler = async (req, res) => {
   try {
     const { clientId } = req.params
-    const { rates } = req.body
+    const { rates = [], rateCards } = req.body
 
-    console.log(`Saving rates for client ID ${clientId}:`, rates)
+    console.log(`Saving rates for client ID ${clientId}:`, { rates, rateCards })
 
-    // Validate that we have rates to save
-    if (!rates || !Array.isArray(rates) || rates.length === 0) {
-      return res.status(400).json({ error: "At least one rate is required" })
+    if (!Array.isArray(rates)) {
+      return res.status(400).json({ error: "Rates must be an array" })
+    }
+    if (rateCards !== undefined && !Array.isArray(rateCards)) {
+      return res.status(400).json({ error: "Rate cards must be an array" })
     }
 
-    // Validate each rate
-    for (const rate of rates) {
-      if (!rate.starting_point || !rate.destination) {
-        return res.status(400).json({ error: "Starting point and destination are required for each rate" })
-      }
+    // A client needs something to price from: its own rates or at least one card
+    if (rates.length === 0 && (!rateCards || rateCards.length === 0)) {
+      return res.status(400).json({ error: "Add at least one rate or assign a rate card" })
+    }
 
-      if ((rate["6m_rate"] === "" || rate["6m_rate"] === undefined) && (rate["12m_rate"] === "" || rate["12m_rate"] === undefined)) {
-        return res.status(400).json({ error: "At least one rate (6m or 12m) is required for each entry" })
-      }
+    const validationError = validateRouteRates(rates)
+    if (validationError) {
+      return res.status(400).json({ error: validationError })
+    }
 
-      // Validate hazardous if provided
-      if (rate.hazardous !== undefined && rate.hazardous !== "" && (isNaN(rate.hazardous) || Number.parseFloat(rate.hazardous) < 0)) {
-        return res.status(400).json({ error: "Hazardous must be a non-negative number" })
-      }
-
-      const surcharge6M = rate.surcharge6M ?? rate.surcharges
-      if (surcharge6M !== undefined && surcharge6M !== "" && (isNaN(surcharge6M) || Number.parseFloat(surcharge6M) < 0)) {
-        return res.status(400).json({ error: "Surcharge 6M must be a non-negative number" })
-      }
-
-      if (rate.surcharge12m !== undefined && rate.surcharge12m !== "" && (isNaN(rate.surcharge12m) || Number.parseFloat(rate.surcharge12m) < 0)) {
-        return res.status(400).json({ error: "Surcharge 12M must be a non-negative number" })
-      }
-
-      // Validate vgm if provided
-      if (rate.vgm !== undefined && rate.vgm !== "" && (isNaN(rate.vgm) || Number.parseFloat(rate.vgm) < 0)) {
-        return res.status(400).json({ error: "VGM must be a non-negative number" })
-      }
-
-      // Validate fuel surcharge if provided (percentage, non-negative)
-      if (
-        rate.fuel_surcharge !== undefined &&
-        rate.fuel_surcharge !== "" &&
-        (isNaN(rate.fuel_surcharge) || Number.parseFloat(rate.fuel_surcharge) < 0)
-      ) {
-        return res.status(400).json({ error: "Fuel surcharge must be a non-negative percentage" })
+    let cardAssignments
+    if (rateCards) {
+      const seen = new Set()
+      cardAssignments = []
+      for (const card of rateCards) {
+        const id = Number(card.rate_card_id)
+        if (!Number.isInteger(id)) return res.status(400).json({ error: "Invalid rate card" })
+        if (seen.has(id)) continue
+        seen.add(id)
+        const fuel = card.fuel_surcharge
+        if (fuel !== undefined && fuel !== null && fuel !== "" && (isNaN(fuel) || Number.parseFloat(fuel) < 0)) {
+          return res.status(400).json({ error: "Rate card fuel surcharge must be a non-negative percentage" })
+        }
+        cardAssignments.push({ rate_card_id: id, fuel_surcharge: fuel })
       }
     }
 
-    const result = await saveClientRates(clientId, rates)
+    const result = await saveClientRates(clientId, rates, cardAssignments)
 
     if (!result.success) {
       return res.status(400).json({ error: result.message })
@@ -119,13 +110,18 @@ const saveClientRatesHandler = async (req, res) => {
       targetId: clientId,
       targetName: `client ${clientId}`,
       details: `${rates.length} rate(s) saved for client ${clientId}: ${rates
-        .map((r) => `${r.starting_point}->${r.destination}`)
-        .join(", ")}`,
+        .map((r) => r.title)
+        .join(", ")}${cardAssignments ? `; rate cards: [${cardAssignments.map((c) => c.rate_card_id).join(", ")}]` : ""}${
+        result.renames?.length
+          ? `; renamed: ${result.renames.map((r) => `${r.oldTitle} -> ${r.newTitle}`).join(", ")} (${result.renamedInstructions} open instruction(s) moved)`
+          : ""
+      }`,
     })
 
     res.json({
       message: "Client rates saved successfully",
       data: result.data,
+      renamedInstructions: result.renamedInstructions,
     })
   } catch (err) {
     console.error(`Error saving client rates for client ${req.params.clientId}:`, err)

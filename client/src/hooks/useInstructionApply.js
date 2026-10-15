@@ -44,6 +44,7 @@ export function useInstructionApply({
           ksmFileRef: data.ksmFileRef || "",
           pickup: data.pickup || "",
           dropoff: data.dropoff || "",
+          rate_title: data.rate_title || "",
           stackDate: formatDateForInput(data.stackdate) || "",
           lastFreeDate: data.lastFreeDate
             ? formatDateForInput(data.lastFreeDate)

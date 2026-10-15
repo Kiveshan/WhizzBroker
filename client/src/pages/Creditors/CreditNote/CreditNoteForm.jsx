@@ -63,7 +63,7 @@ const CreditNoteForm = () => {
     const fetchCompanyDetails = async () => {
       try {
         setLoading(true);
-        const response = await api.get("/api/company/ksm");
+        const response = await api.get("/api/company/details");
         const data = response.data.data || {};
         setCompanyDetails({
           companyname: data.companyname || "",

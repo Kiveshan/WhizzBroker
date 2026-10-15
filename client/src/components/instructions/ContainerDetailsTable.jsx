@@ -75,7 +75,10 @@ export function ContainerDetailsTable({
       style={sectionStyle}
     >
       <div className="controller-instructions-container-details-section">
-        <h3>Container Details</h3>
+        <div className="wb-card-header">
+          <h4>Containers</h4>
+          <p>Capture each container in detail.</p>
+        </div>
         {successMessage && (
           <div className="controller-instructions-success-message">
             {successMessage}

@@ -1,0 +1,726 @@
+/* Group assignment carousel — white cards on pale-cyan, matching the
+   WhizzBroker instruction redesign. */
+
+.wb-assign-wrapper {
+  min-height: 100vh;
+  background-color: #eef8fa;
+  font-family: "Segoe UI", Arial, sans-serif;
+  padding: 16px 20px 40px;
+  box-sizing: border-box;
+}
+
+.wb-assign-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.wb-assign-back {
+  background-color: #4a90e2;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+
+.wb-assign-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.08);
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+
+.wb-assign-card > h3 {
+  margin: 0 0 18px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #101828;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Accordion (Instruction Information / Containers) */
+.wb-accordion {
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.wb-accordion-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: none;
+  padding: 16px 18px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wb-accordion-head:hover {
+  background: #fcfdfe;
+}
+
+.wb-accordion-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #101828;
+}
+
+.wb-accordion-sub {
+  font-size: 12.5px;
+  color: #667085;
+  margin-top: 2px;
+}
+
+.wb-accordion-chevron {
+  color: #98a2b3;
+  transition: transform 0.2s ease;
+  font-size: 14px;
+}
+
+.wb-accordion-chevron.open {
+  transform: rotate(180deg);
+}
+
+.wb-accordion-body {
+  padding: 4px 18px 18px;
+  border-top: 1px solid #f2f4f7;
+}
+
+/* read-only info grid */
+.wb-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px 20px;
+  padding-top: 14px;
+}
+
+.wb-info-item .wb-info-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #667085;
+  margin-bottom: 3px;
+}
+
+.wb-info-item .wb-info-value {
+  font-size: 13.5px;
+  color: #101828;
+}
+
+.wb-assign-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 14px;
+}
+
+.wb-assign-table th {
+  background: #f0f7fb;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  padding: 8px 12px;
+}
+
+.wb-assign-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f3f7;
+  font-size: 13px;
+  color: #101828;
+}
+
+/* Numbered step badge in each card heading, so the order of the flow is
+   readable at a glance instead of inferred from the card order. */
+.wb-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: #1570ef;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  flex: none;
+}
+
+.wb-step-hint {
+  margin-left: 10px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #667085;
+}
+
+/* Group-wide container assignment progress */
+.wb-progress-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.wb-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #f1f3f7;
+  overflow: hidden;
+  margin-top: 12px;
+}
+
+.wb-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: #12b76a;
+  transition: width 0.25s ease;
+}
+
+/* Container picker — which containers this subcontractor is taking */
+.wb-container-picker {
+  margin-top: 16px;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #fcfcfd;
+}
+
+.wb-container-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475467;
+  margin-bottom: 10px;
+}
+
+.wb-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1570ef;
+  cursor: pointer;
+}
+
+.wb-link-btn:hover {
+  text-decoration: underline;
+}
+
+.wb-container-filter {
+  width: 100%;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 8px 11px;
+  font-size: 13px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.wb-container-filter:focus {
+  outline: none;
+  border-color: #84caff;
+  box-shadow: 0 0 0 3px rgba(21, 112, 239, 0.12);
+}
+
+.wb-picker-summary {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #475467;
+  font-weight: 600;
+}
+
+.wb-container-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.wb-container-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.wb-container-option:hover {
+  border-color: #b2ddff;
+  background: #f5faff;
+}
+
+.wb-container-option.picked {
+  border-color: #84caff;
+  background: #eff8ff;
+}
+
+.wb-container-num {
+  font-weight: 600;
+  color: #101828;
+}
+
+/* Live rate readout on the draft assignment */
+.wb-rate-field.ok {
+  color: #027a48;
+  font-weight: 600;
+}
+
+.wb-rate-field.error {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.wb-rate-field.loading {
+  color: #667085;
+  font-style: italic;
+}
+
+.wb-rate-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.wb-rate-note.ok {
+  color: #027a48;
+}
+
+.wb-rate-note.warn {
+  color: #b54708;
+  font-weight: 600;
+}
+
+.wb-rate-note.err {
+  color: #b42318;
+  font-weight: 600;
+}
+
+.wb-container-meta {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: #667085;
+}
+
+/* One block per subcontractor load on the selected instruction */
+.wb-assignment-block {
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  padding: 14px 16px 18px;
+  margin-top: 14px;
+  background: #fff;
+}
+
+.wb-assignment-block.draft {
+  border-color: #b2ddff;
+  background: #f9fcff;
+}
+
+.wb-assignment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.wb-assignment-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.wb-assignment-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: #667085;
+}
+
+.wb-assignment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-sm {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+/* Containers carried by a saved assignment */
+.wb-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.wb-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f7fb;
+  border: 1px solid #e4e7ec;
+  font-size: 12px;
+  font-weight: 600;
+  color: #101828;
+}
+
+.wb-chip-meta {
+  font-weight: 400;
+  color: #667085;
+}
+
+.wb-add-assignment {
+  margin-top: 14px;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px dashed #b2ddff;
+  border-radius: 10px;
+  background: #f9fcff;
+  color: #1570ef;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wb-add-assignment:hover {
+  background: #eff8ff;
+  border-color: #84caff;
+}
+
+/* Subbie / route / add-assignment row */
+.wb-assign-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.wb-assign-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+}
+
+.wb-assign-field label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #667085;
+  margin-bottom: 6px;
+}
+
+.wb-assign-field select,
+.wb-assign-field input {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  background: #fff;
+  color: #101828;
+}
+
+/* Resolved subcontractor rate: read-only, and greyed out until a route resolves
+   one so an unrated instruction is visibly not ready to finalise. */
+.wb-assign-field input[readonly] {
+  background: #f9fafb;
+  color: #475467;
+  font-weight: 600;
+}
+
+.wb-assign-spacer {
+  flex: 1;
+}
+
+.wb-next-btn {
+  background: #4aa8e0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-next-btn:disabled {
+  background: #bcd9ec;
+  cursor: not-allowed;
+}
+
+/* Carousel dots */
+.wb-dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.wb-dot {
+  height: 5px;
+  width: 60px;
+  border-radius: 3px;
+  background: #dfe4ea;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.wb-dot.active {
+  background: #4aa8e0;
+}
+
+.wb-dot.complete {
+  background: #34c759;
+}
+
+/* Documents */
+.wb-docs-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.wb-docs-head .wb-docs-sub {
+  font-size: 12.5px;
+  color: #667085;
+  margin-top: 2px;
+}
+
+.wb-upload-btn {
+  background: #4aa8e0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-dropzone {
+  border: 2px dashed #d0d5dd;
+  border-radius: 12px;
+  padding: 34px;
+  text-align: center;
+  color: #667085;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.wb-dropzone.drag {
+  border-color: #4aa8e0;
+  background: #f5fbfe;
+}
+
+.wb-dropzone .wb-drop-main {
+  font-size: 13.5px;
+  color: #344054;
+  margin-top: 8px;
+}
+
+.wb-dropzone .wb-drop-sub {
+  font-size: 12px;
+  color: #98a2b3;
+  margin-top: 2px;
+}
+
+.wb-doc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+
+.wb-doc-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #eaf5fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4aa8e0;
+  flex-shrink: 0;
+}
+
+.wb-doc-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.wb-doc-name {
+  font-size: 13.5px;
+  color: #101828;
+  font-weight: 500;
+}
+
+.wb-doc-link {
+  color: #2779b8;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wb-doc-link:hover {
+  text-decoration: underline;
+}
+
+.wb-doc-view {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #2779b8;
+  text-decoration: none;
+  border: 1px solid #bcdcf0;
+  border-radius: 6px;
+  padding: 5px 12px;
+  background: #f5fbfe;
+}
+
+.wb-doc-view:hover {
+  background: #eaf5fb;
+}
+
+.wb-doc-sub {
+  font-size: 12px;
+  color: #98a2b3;
+}
+
+.wb-doc-check {
+  color: #34c759;
+}
+
+.wb-doc-remove {
+  background: none;
+  border: none;
+  color: #98a2b3;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+/* Footer action buttons */
+/* Why "Finalise" is still disabled, named per instruction */
+.wb-finalise-blockers {
+  margin-top: 18px;
+  padding: 12px 16px;
+  border: 1px solid #fedf89;
+  background: #fffcf5;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: #93370d;
+}
+
+.wb-finalise-blockers.ready {
+  border-color: #a6f4c5;
+  background: #f6fef9;
+  color: #027a48;
+}
+
+.wb-finalise-blockers strong {
+  display: flex;
+  align-items: center;
+}
+
+.wb-finalise-blockers ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.wb-finalise-blockers li {
+  margin-top: 2px;
+}
+
+.wb-assign-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.wb-btn-outline {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #344054;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-outline:disabled {
+  color: #98a2b3;
+  cursor: not-allowed;
+}
+
+.wb-btn-finalise {
+  background: #12b76a;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wb-btn-finalise:disabled {
+  background: #a6e3c6;
+  cursor: not-allowed;
+}
+
+.wb-assign-alert {
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.wb-assign-alert.err {
+  background: #fef3f2;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.wb-assign-alert.ok {
+  background: #ecfdf3;
+  color: #027a48;
+  border: 1px solid #a6f4c5;
+}

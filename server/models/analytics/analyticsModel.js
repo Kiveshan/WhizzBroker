@@ -1,4 +1,9 @@
 import { pool } from "../../config/database.js"
+import {
+  agingForAllClients,
+  outstandingAsAt,
+  dayBefore,
+} from "../statements/statementDerivation.js"
 
 // Define monthNames for numeric-to-name conversion
 const monthNames = {
@@ -26,6 +31,23 @@ const getDateRange = (month, year) => {
   const dateTo = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
   return { dateFrom, dateTo }
 }
+
+// Shared CTE body — billable units per instruction. Volume is counted in
+// containers, not instructions: a single m1_controller row can carry several
+// containers. Break-bulk (shipment_type 4) has no containers, so its weight
+// rows in m1_controller_weight are the unit instead.
+// Intended for use as: `WITH ${INSTRUCTION_UNITS_CTE} SELECT ...`
+const INSTRUCTION_UNITS_CTE = `
+    instruction_units AS (
+      SELECT
+        m.m1key,
+        CASE
+          WHEN m.shipment_type::text = '4'
+            THEN (SELECT COUNT(*) FROM public.m1_controller_weight w WHERE w.m1_key = m.m1key)
+          ELSE (SELECT COUNT(*) FROM public.container c WHERE c.m1key = m.m1key)
+        END AS units
+      FROM m1_controller m
+    )`
 
 const getFuelExpenses = async (client, month, year) => {
   const query = `
@@ -69,23 +91,35 @@ const getFuelExpenses = async (client, month, year) => {
 
 const calculateMonthlyTurnover = async (client, dateFrom, dateTo, clientId = null) => {
   // --- Invoice portion (VAT-inclusive per instruction) ---
+  // Group-aware: a combined group invoice has invoice.m1key IS NULL and
+  // invoice.instruction_group_id set instead, covering every child instruction
+  // in the group, so both invoicing paths are unioned (see getIncomePerClientReport).
   const invoiceParams = [dateFrom, dateTo]
   let invoiceFilter = ''
   if (clientId) {
-    invoiceFilter = 'AND i.clientid = $3'
+    invoiceFilter = 'AND clientid = $3'
     invoiceParams.push(clientId)
   }
 
   const invoiceQuery = `
+    WITH invoice_lines AS (
+      SELECT i.clientid, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE i.date >= $1 AND i.date < $2
+      UNION ALL
+      SELECT i.clientid, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL AND i.date >= $1 AND i.date < $2
+    )
     SELECT
       COALESCE(
-        SUM(m.total_cost + (m.total_cost * (COALESCE(m.vat, 0)::numeric / 100))),
+        SUM(total_cost + (total_cost * (COALESCE(vat, 0)::numeric / 100))),
         0
       ) AS invoice_turnover
-    FROM invoice i
-    JOIN m1_controller m ON i.m1key = m.m1key
-    WHERE i.date >= $1
-      AND i.date < $2
+    FROM invoice_lines
+    WHERE TRUE
       ${invoiceFilter}
   `
 
@@ -326,70 +360,76 @@ const getAllTrucks = async (client) => {
   }))
 }
 
-const getAgingAnalysis = async (client, month, year, clientId = null) => {
-  const params = [month, year]
-  let query = `
-    SELECT 
-      ${clientId ? "c.client" : "'Total Aging' as client"}, 
-      SUM(a.current) as current_amount,
-      SUM(a."30days") as thirty_days,
-      SUM(a."60days") as sixty_days,
-      SUM(a."90days") as ninety_days,
-      to_char(s.generation_date, 'Month') as month_name,
-      EXTRACT(YEAR FROM s.generation_date) as year
-    FROM aging_analysis a
-    JOIN statements s ON a.aging_key = s.agingid
-    JOIN m5_client c ON a.clientid = c.m5clientkey
-    WHERE TRIM(to_char(s.generation_date, 'Month')) = $1
-    AND EXTRACT(YEAR FROM s.generation_date)::text = $2
-  `
-  if (clientId) {
-    query += ` AND a.clientid = $3`
-    params.push(clientId)
+// Aging comes from the same derivation as client statements
+// (models/statements/statementDerivation.js), so these reports and the
+// statement pages cannot disagree.
+//
+// The selected month keeps the meaning the old statement-table query gave it:
+// statements were dated the 1st of the month AFTER the one they covered, so
+// "September" is the position at the close of August. A month that has not
+// started yet returns nothing, as it did when no statement row existed for it.
+const agingAsAtForMonth = (month, year) => {
+  const index = Object.values(monthNames).indexOf(String(month || "").trim())
+  if (index < 0 || !/^\d{4}$/.test(String(year || "").trim())) {
+    throw new Error(`Invalid month/year "${month} ${year}"`)
   }
-  query += `
-    GROUP BY ${clientId ? "c.client," : ""} to_char(s.generation_date, 'Month'), EXTRACT(YEAR FROM s.generation_date)
-  `
-  const result = await client.query(query, params)
-  console.log("Raw query result:", result.rows)
-  console.log(`Query returned ${result.rows.length} rows`)
+  const firstOfMonth = `${String(year).trim()}-${String(index + 1).padStart(2, "0")}-01`
+  if (firstOfMonth > new Date().toISOString().slice(0, 10)) return null
+  return dayBefore(firstOfMonth)
+}
 
-  return result.rows.map((row) => ({
-    client: row.client,
-    current: Number.parseFloat(row.current_amount) || 0,
-    thirtyDays: Number.parseFloat(row.thirty_days) || 0,
-    sixtyDays: Number.parseFloat(row.sixty_days) || 0,
-    ninetyDays: Number.parseFloat(row.ninety_days) || 0,
-    month: row.month_name.trim(),
-    year: row.year.toString(),
-  }))
+const ZERO_AGING = { current: 0, "30days": 0, "60days": 0, "90days": 0 }
+
+const toAgingRow = (buckets) => ({
+  current: buckets.current,
+  thirtyDays: buckets["30days"],
+  sixtyDays: buckets["60days"],
+  ninetyDays: buckets["90days"],
+})
+
+// Summed in cents so the total is exact.
+const sumBuckets = (agingMap) => {
+  const cents = { current: 0, "30days": 0, "60days": 0, "90days": 0 }
+  for (const { buckets } of agingMap.values()) {
+    for (const bucket of Object.keys(cents)) cents[bucket] += Math.round(buckets[bucket] * 100)
+  }
+  return Object.fromEntries(Object.entries(cents).map(([bucket, value]) => [bucket, value / 100]))
+}
+
+// From Whizz-Away 43c9c4bd. (Its later version adds an ex-VAT/VAT split per
+// bucket for a chart toggle the broker does not have.)
+const getAgingAnalysis = async (client, month, year, clientId = null) => {
+  const asAt = agingAsAtForMonth(month, year)
+  if (!asAt) return []
+  const period = { month: String(month).trim(), year: String(year).trim() }
+
+  if (clientId) {
+    const { rows } = await client.query(
+      "SELECT client FROM m5_client WHERE m5clientkey = $1",
+      [clientId]
+    )
+    if (rows.length === 0) return []
+    const { buckets } = await outstandingAsAt(client, Number(clientId), asAt)
+    return [{ client: rows[0].client, ...toAgingRow(buckets), ...period }]
+  }
+
+  const totals = sumBuckets(await agingForAllClients(client, asAt))
+  return [{ client: "Total Aging", ...toAgingRow(totals), ...period }]
 }
 
 const getDebtorAgeAnalysisPerClient = async (client, month, year) => {
-  const query = `
-    SELECT
-      c.m5clientkey  AS client_id,
-      c.client       AS client_name,
-      SUM(a.current)    AS current_amount,
-      SUM(a."30days")   AS thirty_days,
-      SUM(a."60days")   AS sixty_days,
-      SUM(a."90days")   AS ninety_days
-    FROM aging_analysis a
-    JOIN statements s ON a.aging_key = s.agingid
-    JOIN m5_client  c ON a.clientid  = c.m5clientkey
-    WHERE TRIM(to_char(s.generation_date, 'Month')) = $1
-      AND EXTRACT(YEAR FROM s.generation_date)::text = $2
-    GROUP BY c.m5clientkey, c.client
-    ORDER BY c.client
-  `
-  const result = await client.query(query, [month, year])
-  return result.rows.map((row) => ({
-    clientId: row.client_id,
-    client: row.client_name,
-    current: parseFloat(row.current_amount) || 0,
-    thirtyDays: parseFloat(row.thirty_days) || 0,
-    sixtyDays: parseFloat(row.sixty_days) || 0,
-    ninetyDays: parseFloat(row.ninety_days) || 0,
+  const asAt = agingAsAtForMonth(month, year)
+  if (!asAt) return []
+
+  const [clients, aging] = await Promise.all([
+    client.query("SELECT m5clientkey, client FROM m5_client ORDER BY client"),
+    agingForAllClients(client, asAt),
+  ])
+
+  return clients.rows.map((row) => ({
+    clientId: row.m5clientkey,
+    client: row.client,
+    ...toAgingRow(aging.get(row.m5clientkey)?.buckets || ZERO_AGING),
   }))
 }
 
@@ -961,16 +1001,29 @@ const getAllExpenses = async (client, month, year) => {
     GROUP BY TO_CHAR(l.date, 'Month'), EXTRACT(YEAR FROM l.date)
   `
 
+  // Group-aware: unions the legacy m1key invoice path with the combined
+  // group-invoice path (invoice.m1key IS NULL, matched via instruction_group_id).
   const incomeQuery = `
-    SELECT 
-      COALESCE(SUM(m.total_cost), 0) as total_income,
-      to_char(i.date, 'Month') as month_name,
-      EXTRACT(YEAR FROM i.date) as year
-    FROM invoice i
-    JOIN m1_controller m ON i.m1key = m.m1key
-    WHERE TRIM(to_char(i.date, 'Month')) = $1
-    AND EXTRACT(YEAR FROM i.date)::text = $2
-    GROUP BY to_char(i.date, 'Month'), EXTRACT(YEAR FROM i.date)
+    WITH invoice_lines AS (
+      SELECT i.date, m.total_cost
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE TRIM(to_char(i.date, 'Month')) = $1
+        AND EXTRACT(YEAR FROM i.date)::text = $2
+      UNION ALL
+      SELECT i.date, m.total_cost
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL
+        AND TRIM(to_char(i.date, 'Month')) = $1
+        AND EXTRACT(YEAR FROM i.date)::text = $2
+    )
+    SELECT
+      COALESCE(SUM(total_cost), 0) as total_income,
+      to_char(date, 'Month') as month_name,
+      EXTRACT(YEAR FROM date) as year
+    FROM invoice_lines
+    GROUP BY to_char(date, 'Month'), EXTRACT(YEAR FROM date)
   `
 
   const creditNotesQuery = `
@@ -1145,6 +1198,26 @@ const getWagesVsExpenses = async (client, month, year) => {
   return wagesVsExpensesData
 }
 
+// Client commission (broker margin) for one client and month.
+//
+// Job-matched and ex-VAT, so revenue and cost for the same work land together:
+//   - "The month" = instructions whose invoice is dated in it (both invoice
+//     paths: legacy m1key invoices and group invoices via instruction_group_id).
+//   - Subcontractor cost = driverrate on those instructions' subcontractor
+//     legs, whenever the leg ran.
+//   - Credit notes = those raised against those instructions, whenever raised.
+//     credit_notes.amount holds ex-VAT line amounts (VAT is added at the
+//     instruction's rate when the note is applied to the balance).
+//   - Add-ons dated in the month, ex-VAT (amount includes 15% when vat_applied).
+//   - Commission = revenue - credit notes - subcontractor cost. Not clamped: a
+//     loss-making month shows as negative.
+// VAT is left out on both sides: it passes through the broker, and subbies are
+// not necessarily VAT-registered, so adding the client's VAT rate to their
+// rate (as this report used to) overstated cost.
+//
+// Reported separately, not in the commission: subcontractor legs that ran in
+// the month on this client's instructions that are not invoiced yet. Subbie
+// statements bucket by leg date, so this is the gap between the two.
 const getClientSubbieCommissionReport = async (client, month, year, clientId) => {
   if (!clientId) {
     throw new Error("clientId is required")
@@ -1157,185 +1230,393 @@ const getClientSubbieCommissionReport = async (client, month, year, clientId) =>
     throw new Error("Both month and year are required")
   }
 
-  const clientInfoQuery = `
-    SELECT m5clientkey, client
-    FROM m5_client
-    WHERE m5clientkey = $1
-  `
-
-  const clientInfoResult = await client.query(clientInfoQuery, [clientId])
+  const clientInfoResult = await client.query(
+    `SELECT m5clientkey, client FROM m5_client WHERE m5clientkey = $1`,
+    [clientId]
+  )
   const clientInfo = clientInfoResult.rows[0] || null
 
-  const invoicesQuery = `
-    WITH filtered_invoices AS (
-      SELECT 
-        i.ikey,
-        i.invoice_num,
-        i.doc_num,
-        i.date,
-        i.m1key,
-        m.total_cost,
-        m.vat,
-        m.description
-      FROM invoice i
-      JOIN m1_controller m ON i.m1key = m.m1key
-      WHERE i.clientid = $1
-        AND TRIM(TO_CHAR(i.date, 'Month')) = $2
-        AND EXTRACT(YEAR FROM i.date)::text = $3
-    )
-    SELECT 
-      fi.ikey,
-      fi.invoice_num,
-      fi.doc_num,
-      fi.date,
-      fi.m1key,
-      fi.total_cost,
-      fi.vat,
-      fi.description
-    FROM filtered_invoices fi
-    ORDER BY fi.date ASC
+  const params = [clientId, trimmedMonth, yearText]
+
+  // The client's invoiced child instructions, one row each. DISTINCT ON keeps
+  // the latest invoice when an instruction is reachable by both paths (an old
+  // single invoice and a later group invoice), so it is never counted twice.
+  const INVOICED_CTE = `
+    invoiced AS (
+      SELECT DISTINCT ON (x.m1key) x.*
+      FROM (
+        SELECT i.ikey, i.invoice_num, i.doc_num, i.date, m.m1key,
+               COALESCE(m.total_cost, 0) AS total_cost, m.description
+        FROM invoice i
+        JOIN m1_controller m ON i.m1key = m.m1key
+        WHERE i.clientid = $1
+        UNION ALL
+        SELECT i.ikey, i.invoice_num, i.doc_num, i.date, m.m1key,
+               COALESCE(m.total_cost, 0) AS total_cost, m.description
+        FROM invoice i
+        JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+        WHERE i.m1key IS NULL AND i.clientid = $1
+      ) x
+      ORDER BY x.m1key, x.date DESC, x.ikey DESC
+    ),
+    in_month AS (
+      SELECT * FROM invoiced
+      WHERE TRIM(TO_CHAR(date, 'Month')) = $2
+        AND EXTRACT(YEAR FROM date)::text = $3
+    )`
+
+  const instructionsQuery = `
+    WITH ${INVOICED_CTE}
+    SELECT
+      inv.*,
+      COALESCE(subbie.cost, 0)   AS subbie_cost,
+      COALESCE(subbie.legs, 0)   AS subbie_legs,
+      COALESCE(credit.amount, 0) AS credit_amount
+    FROM in_month inv
+    LEFT JOIN LATERAL (
+      SELECT SUM(COALESCE(l.driverrate, 0)) AS cost, COUNT(*) AS legs
+      FROM legs_m2 l
+      JOIN m5_employee e ON e.userid = l.driverid
+      WHERE l.m1key = inv.m1key AND e.roleid = 6
+    ) subbie ON TRUE
+    LEFT JOIN LATERAL (
+      SELECT SUM(a) AS amount
+      FROM credit_notes cn, unnest(cn.amount) AS a
+      WHERE cn.m1key = inv.m1key
+    ) credit ON TRUE
+    ORDER BY inv.date, inv.invoice_num, inv.m1key
+  `
+
+  const subcontractorQuery = `
+    WITH ${INVOICED_CTE}
+    SELECT
+      MIN(e.userid) AS subcontractor_id,
+      COALESCE(e.companyname, 'Unknown') AS companyname,
+      e.subei_reg_num,
+      COUNT(DISTINCT l.legkey) AS leg_count,
+      COALESCE(SUM(l.driverrate), 0) AS total_earned
+    FROM legs_m2 l
+    JOIN in_month k ON k.m1key = l.m1key
+    JOIN m5_employee e ON l.driverid = e.userid
+    WHERE e.roleid = 6
+    GROUP BY e.companyname, e.subei_reg_num
+    ORDER BY total_earned DESC
   `
 
   const addOnsQuery = `
-    SELECT 
-      ao.addon_id,
-      ao.invoice_number,
-      ao.date,
-      ao.amount,
-      ao.booking_ref,
-      ao.client_ref
+    SELECT ao.addon_id, ao.invoice_number, ao.date, ao.amount, ao.vat_applied,
+           ao.booking_ref, ao.client_ref
     FROM add_ons ao
     WHERE ao.client_id = $1
       AND TRIM(TO_CHAR(ao.date, 'Month')) = $2
       AND EXTRACT(YEAR FROM ao.date)::text = $3
   `
 
-  // Subbie earnings are bucketed by LEG date (when the trip was driven), the same
-  // basis the subcontractor statements use, and scoped to the client via the
-  // instruction (m1_controller.client). Amounts are VAT-inclusive (driverrate +
-  // instruction VAT) so this total reconciles to the subbie statements rather than
-  // the invoice-date / ex-VAT figure that previously under-reported earnings.
-  const subcontractorQuery = `
-    SELECT
-      MIN(e.userid) AS subcontractor_id,
-      COALESCE(e.companyname, 'Unknown') AS companyname,
-      e.subei_reg_num,
-      COUNT(DISTINCT l.legkey) AS leg_count,
-      COALESCE(SUM(l.driverrate * (1 + COALESCE(m.vat, 0)::numeric / 100)), 0) AS total_earned
+  const uninvoicedQuery = `
+    SELECT COUNT(*) AS legs, COALESCE(SUM(l.driverrate), 0) AS cost
     FROM legs_m2 l
-    JOIN m1_controller m ON l.m1key = m.m1key
-    JOIN m5_employee e ON l.driverid = e.userid
+    JOIN m1_controller m ON m.m1key = l.m1key
+    JOIN m5_employee e ON e.userid = l.driverid
     WHERE m.client = $1
+      AND e.roleid = 6
       AND TRIM(TO_CHAR(l.date, 'Month')) = $2
       AND EXTRACT(YEAR FROM l.date)::text = $3
-      AND e.roleid = 6
-    GROUP BY e.companyname, e.subei_reg_num
-    ORDER BY total_earned DESC
+      AND NOT EXISTS (
+        SELECT 1 FROM invoice i
+        WHERE i.m1key = m.m1key
+           OR (i.m1key IS NULL AND i.instruction_group_id = m.instruction_group_id)
+      )
   `
 
-  const params = [clientId, trimmedMonth, yearText]
-  const [invoiceResults, subcontractorResults, addOnResults] = await Promise.all([
-    client.query(invoicesQuery, params),
+  const [instructionResults, subcontractorResults, addOnResults, uninvoicedResult] = await Promise.all([
+    client.query(instructionsQuery, params),
     client.query(subcontractorQuery, params),
     client.query(addOnsQuery, params),
+    client.query(uninvoicedQuery, params),
   ])
 
-  const instructionInvoiceDetails = invoiceResults.rows.map((row) => {
-    const baseAmount = Number.parseFloat(row.total_cost || 0)
-    const vatRate = Number.parseFloat(row.vat ?? 0) || 0
-    const vatAmount = Number.isFinite(vatRate) ? (baseAmount * vatRate) / 100 : 0
-    const grossAmount = baseAmount + vatAmount
+  const round = (n) => Number((Number(n) || 0).toFixed(2))
+  const toIso = (d) => (d instanceof Date ? d.toISOString() : d)
 
+  const instructionDetails = instructionResults.rows.map((row) => {
+    const revenue = Number(row.total_cost) || 0
+    const credit = Number(row.credit_amount) || 0
+    const subbieCost = Number(row.subbie_cost) || 0
     return {
-      invoiceId: row.ikey,
+      invoiceId: `${row.ikey}-${row.m1key}`,
       invoiceNumber: row.invoice_num,
       documentNumber: row.doc_num,
-      invoiceDate: row.date instanceof Date ? row.date.toISOString() : row.date,
+      invoiceDate: toIso(row.date),
       instructionId: row.m1key,
       description: row.description,
-      amount: Number(grossAmount.toFixed(2)),
-      amountExVat: Number(baseAmount.toFixed(2)),
-      vatRate: Number(vatRate.toFixed(2)),
-      vatAmount: Number(vatAmount.toFixed(2)),
+      amount: round(revenue),
+      creditNotes: round(credit),
+      subbieCost: round(subbieCost),
+      subbieLegs: Number(row.subbie_legs) || 0,
+      margin: round(revenue - credit - subbieCost),
       source: "instruction",
     }
   })
 
   const addOnDetails = addOnResults.rows.map((row) => {
-    const amount = Number.parseFloat(row.amount || 0)
-
+    const gross = Number(row.amount) || 0
+    const exVat = row.vat_applied ? gross / 1.15 : gross
     return {
       invoiceId: `addon-${row.addon_id}`,
       invoiceNumber: row.invoice_number || "Add-On Invoice",
       documentNumber: row.booking_ref || null,
-      invoiceDate: row.date instanceof Date ? row.date.toISOString() : row.date,
+      invoiceDate: toIso(row.date),
       instructionId: row.client_ref || null,
       description: "Add-On invoice",
-      amount: Number(amount.toFixed(2)),
-      amountExVat: Number(amount.toFixed(2)),
-      vatRate: null,
-      vatAmount: null,
+      amount: round(exVat),
+      creditNotes: 0,
+      subbieCost: 0,
+      subbieLegs: 0,
+      margin: round(exVat),
       source: "addOn",
     }
   })
 
-  const invoiceDetails = [...instructionInvoiceDetails, ...addOnDetails].sort((a, b) => {
-    const numA = a.invoiceNumber || ""
-    const numB = b.invoiceNumber || ""
-    return numA.localeCompare(numB, undefined, { numeric: true, sensitivity: "base" })
-  })
-
-  const totalInvoiceAmount = invoiceDetails.reduce(
-    (sum, detail) => sum + (Number.isFinite(detail.amount) ? detail.amount : 0),
-    0
+  const invoiceDetails = [...instructionDetails, ...addOnDetails].sort((a, b) =>
+    (a.invoiceNumber || "").localeCompare(b.invoiceNumber || "", undefined, { numeric: true, sensitivity: "base" })
   )
 
-  const totalAddOnAmount = addOnDetails.reduce(
-    (sum, detail) => sum + (Number.isFinite(detail.amount) ? detail.amount : 0),
-    0
-  )
-
-  const totalSubbieAmount = subcontractorResults.rows.reduce(
-    (sum, row) => sum + Number.parseFloat(row.total_earned || 0),
-    0
-  )
+  const sum = (rows, key) => rows.reduce((s, r) => s + (Number(r[key]) || 0), 0)
+  const instructionRevenue = sum(instructionDetails, "amount")
+  const addOnRevenue = sum(addOnDetails, "amount")
+  const creditNotes = sum(instructionDetails, "creditNotes")
+  const subcontractorAmount = sum(subcontractorResults.rows, "total_earned")
+  const revenue = instructionRevenue + addOnRevenue
+  const netRevenue = revenue - creditNotes
+  const commission = netRevenue - subcontractorAmount
 
   const subcontractorBreakdown = subcontractorResults.rows.map((row) => {
     const totalEarned = Number.parseFloat(row.total_earned || 0)
-    const percentage = totalSubbieAmount > 0 ? totalEarned / totalSubbieAmount : 0
     return {
       subcontractorId: row.subcontractor_id,
       companyName: row.companyname,
       registrationNumber: row.subei_reg_num,
       legCount: Number.parseInt(row.leg_count, 10) || 0,
-      totalEarned,
-      percentage,
+      totalEarned: round(totalEarned),
+      percentage: subcontractorAmount > 0 ? totalEarned / subcontractorAmount : 0,
     }
   })
 
-  const commission = Math.max(totalInvoiceAmount - totalSubbieAmount, 0)
+  const uninvoiced = uninvoicedResult.rows[0] || {}
 
   return {
-    client: clientInfo
-      ? {
-        id: clientInfo.m5clientkey,
-        name: clientInfo.client,
-      }
-      : null,
-    period: {
-      month: trimmedMonth,
-      year: yearText,
-    },
+    client: clientInfo ? { id: clientInfo.m5clientkey, name: clientInfo.client } : null,
+    period: { month: trimmedMonth, year: yearText },
     totals: {
-      invoiceAmount: Number(totalInvoiceAmount.toFixed(2)),
-      subcontractorAmount: Number(totalSubbieAmount.toFixed(2)),
-      commission: Number(commission.toFixed(2)),
-      addOnAmount: Number(totalAddOnAmount.toFixed(2)),
+      instructionAmount: round(instructionRevenue),
+      addOnAmount: round(addOnRevenue),
+      invoiceAmount: round(revenue),
+      creditNoteAmount: round(creditNotes),
+      subcontractorAmount: round(subcontractorAmount),
+      commission: round(commission),
+      marginPercent: netRevenue > 0 ? Number(((commission / netRevenue) * 100).toFixed(1)) : null,
+      uninvoicedSubbieLegs: Number(uninvoiced.legs) || 0,
+      uninvoicedSubbieCost: round(uninvoiced.cost),
     },
     invoices: invoiceDetails,
     subcontractors: subcontractorBreakdown,
     addOns: addOnDetails,
   }
+}
+
+// Income Per Client Report — group-aware: a combined group invoice has
+// invoice.m1key IS NULL and invoice.instruction_group_id set instead, covering
+// every child instruction in the group, so both invoicing paths are unioned
+// here (unlike calculateMonthlyTurnover, which only sees the legacy path).
+const getIncomePerClientReport = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const invoiceQuery = `
+    WITH invoice_lines AS (
+      SELECT i.clientid, m.m1key, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON i.m1key = m.m1key
+      WHERE i.date >= $1 AND i.date < $2
+      UNION ALL
+      SELECT i.clientid, m.m1key, m.total_cost, m.vat
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.m1key IS NULL AND i.date >= $1 AND i.date < $2
+    ),
+    ${INSTRUCTION_UNITS_CTE},
+    -- Dedup before summing units: a child instruction reachable via both the
+    -- legacy and the group-invoice path must contribute its containers once.
+    invoiced_jobs AS (
+      SELECT DISTINCT clientid, m1key FROM invoice_lines
+    ),
+    unit_counts AS (
+      SELECT j.clientid, COALESCE(SUM(u.units), 0) AS job_count
+      FROM invoiced_jobs j
+      LEFT JOIN instruction_units u ON u.m1key = j.m1key
+      GROUP BY j.clientid
+    )
+    SELECT
+      il.clientid,
+      c.client AS client_name,
+      COALESCE(uc.job_count, 0) AS job_count,
+      COALESCE(SUM(il.total_cost * (1 + COALESCE(il.vat, 0)::numeric / 100)), 0) AS invoice_income
+    FROM invoice_lines il
+    JOIN m5_client c ON il.clientid = c.m5clientkey
+    LEFT JOIN unit_counts uc ON uc.clientid = il.clientid
+    GROUP BY il.clientid, c.client, uc.job_count
+  `
+
+  const addOnQuery = `
+    SELECT a.client_id, COALESCE(SUM(a.amount), 0) AS addon_income
+    FROM add_ons a
+    WHERE a.date >= $1 AND a.date < $2
+    GROUP BY a.client_id
+  `
+
+  const [invoiceResult, addOnResult] = await Promise.all([
+    client.query(invoiceQuery, [dateFrom, dateTo]),
+    client.query(addOnQuery, [dateFrom, dateTo]),
+  ])
+
+  const rowsByClient = new Map()
+
+  for (const row of invoiceResult.rows) {
+    rowsByClient.set(row.clientid, {
+      clientId: row.clientid,
+      clientName: row.client_name,
+      jobCount: Number.parseInt(row.job_count, 10) || 0,
+      invoiceIncome: Number(row.invoice_income) || 0,
+      addOnIncome: 0,
+    })
+  }
+
+  for (const row of addOnResult.rows) {
+    const existing = rowsByClient.get(row.client_id)
+    const addOnIncome = Number(row.addon_income) || 0
+    if (existing) {
+      existing.addOnIncome = addOnIncome
+    } else {
+      rowsByClient.set(row.client_id, {
+        clientId: row.client_id,
+        clientName: null,
+        jobCount: 0,
+        invoiceIncome: 0,
+        addOnIncome,
+      })
+    }
+  }
+
+  // Add-on-only rows may be missing a client name (client left the invoice
+  // path untouched that month) — backfill it separately.
+  const missingNameIds = [...rowsByClient.values()]
+    .filter((row) => !row.clientName)
+    .map((row) => row.clientId)
+    .filter((id) => id != null)
+
+  if (missingNameIds.length > 0) {
+    const nameResult = await client.query(
+      `SELECT m5clientkey, client FROM m5_client WHERE m5clientkey = ANY($1::int[])`,
+      [missingNameIds]
+    )
+    for (const row of nameResult.rows) {
+      const existing = rowsByClient.get(row.m5clientkey)
+      if (existing) existing.clientName = row.client
+    }
+  }
+
+  const rows = [...rowsByClient.values()]
+    .filter((row) => row.clientName)
+    .map((row) => ({
+      ...row,
+      totalIncome: Number((row.invoiceIncome + row.addOnIncome).toFixed(2)),
+      invoiceIncome: Number(row.invoiceIncome.toFixed(2)),
+      addOnIncome: Number(row.addOnIncome.toFixed(2)),
+    }))
+    .sort((a, b) => b.totalIncome - a.totalIncome)
+
+  const totals = rows.reduce(
+    (acc, row) => ({
+      jobCount: acc.jobCount + row.jobCount,
+      invoiceIncome: acc.invoiceIncome + row.invoiceIncome,
+      addOnIncome: acc.addOnIncome + row.addOnIncome,
+      totalIncome: acc.totalIncome + row.totalIncome,
+    }),
+    { jobCount: 0, invoiceIncome: 0, addOnIncome: 0, totalIncome: 0 }
+  )
+
+  return {
+    period: { month: month.trim(), year: year.toString() },
+    rows,
+    totals: {
+      jobCount: totals.jobCount,
+      invoiceIncome: Number(totals.invoiceIncome.toFixed(2)),
+      addOnIncome: Number(totals.addOnIncome.toFixed(2)),
+      totalIncome: Number(totals.totalIncome.toFixed(2)),
+    },
+  }
+}
+
+// Work Volume per Client — counts containers (see INSTRUCTION_UNITS_CTE) per
+// client for the month. Unlike income, each child instruction in a group still
+// gets its own subbie assignment, so summing units over m1_controller rows
+// directly (no group dedup) is the correct "volume" basis.
+const getWorkVolumePerClient = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const query = `
+    WITH ${INSTRUCTION_UNITS_CTE}
+    SELECT m.client AS client_id, c.client AS client_name, COALESCE(SUM(u.units), 0) AS job_count
+    FROM m1_controller m
+    JOIN m5_client c ON m.client = c.m5clientkey
+    LEFT JOIN instruction_units u ON u.m1key = m.m1key
+    WHERE m.created_at >= $1 AND m.created_at < $2
+    GROUP BY m.client, c.client
+    ORDER BY job_count DESC
+  `
+
+  const result = await client.query(query, [dateFrom, dateTo])
+
+  return result.rows.map((row) => ({
+    name: row.client_name,
+    value: Number.parseInt(row.job_count, 10) || 0,
+    month: month.trim(),
+    year: year.toString(),
+  }))
+}
+
+// Work Volume per Subbie — company-wide leg/job counts per subcontractor,
+// using the same leg-counting basis as getClientSubbieCommissionReport's
+// subcontractorQuery but without client scoping and without earnings.
+const getWorkVolumePerSubbie = async (client, month, year) => {
+  const { dateFrom, dateTo } = getDateRange(month, year)
+
+  const query = `
+    SELECT
+      MIN(e.userid) AS subcontractor_id,
+      COALESCE(e.companyname, 'Unknown') AS companyname,
+      e.subei_reg_num,
+      COUNT(DISTINCT l.legkey) AS leg_count,
+      COUNT(DISTINCT l.m1key) AS job_count
+    FROM legs_m2 l
+    JOIN m1_controller m ON l.m1key = m.m1key
+    JOIN m5_employee e ON l.driverid = e.userid
+    WHERE e.roleid = 6
+      AND l.date >= $1 AND l.date < $2
+    GROUP BY e.companyname, e.subei_reg_num
+    ORDER BY leg_count DESC
+  `
+
+  const result = await client.query(query, [dateFrom, dateTo])
+
+  return result.rows.map((row) => ({
+    name: row.companyname,
+    value: Number.parseInt(row.leg_count, 10) || 0,
+    jobCount: Number.parseInt(row.job_count, 10) || 0,
+    subcontractorId: row.subcontractor_id,
+    registrationNumber: row.subei_reg_num,
+    month: month.trim(),
+    year: year.toString(),
+  }))
 }
 
 async function calculateTotalPayable(client, employeeId, month, year) {
@@ -1501,4 +1782,7 @@ export {
   getPaymentsReceivedPerMonth,
   getPaymentClients,
   getClientSubbieCommissionReport,
+  getIncomePerClientReport,
+  getWorkVolumePerClient,
+  getWorkVolumePerSubbie,
 }

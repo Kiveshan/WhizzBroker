@@ -230,21 +230,6 @@ const CompanyInstructions = () => {
     setCurrentPage(1) // Reset to first page when filter changes - ADDED
   }
 
-  // Helper function to get status priority for sorting
-  const getStatusPriority = (status) => {
-    const normalized = (status || "").toLowerCase()
-    switch (normalized) {
-      case "new":
-        return 1
-      case "in progress":
-        return 3
-      case "completed":
-        return 4
-      default:
-        return 5 // Any other status will come after the specified ones
-    }
-  }
-
   const getFilteredInstructions = () => {
     let filtered = [...instructions]
 
@@ -335,20 +320,30 @@ const CompanyInstructions = () => {
       filtered = filtered.filter((item) => searchMatchedKeys.has(String(item.m1key)))
     }
 
-    // Sort by status priority first, then by instruction number (descending)
+    // Sort by last free date, then stack date, soonest to latest
     filtered.sort((a, b) => {
-      // Primary sort: Status priority
-      const priorityA = getStatusPriority(a.status)
-      const priorityB = getStatusPriority(b.status)
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB
+      const toTime = (value) => {
+        if (!value) return Infinity
+        const time = new Date(value).getTime()
+        return Number.isNaN(time) ? Infinity : time
       }
 
-      // Secondary sort: Instruction number (descending)
+      const lastFreeA = toTime(a.lastFreeDate)
+      const lastFreeB = toTime(b.lastFreeDate)
+      if (lastFreeA !== lastFreeB) {
+        return lastFreeA - lastFreeB
+      }
+
+      const stackA = toTime(a.stackdate || a.stackDate)
+      const stackB = toTime(b.stackdate || b.stackDate)
+      if (stackA !== stackB) {
+        return stackA - stackB
+      }
+
+      // Fallback: instruction number (descending)
       const instructionA = Number.parseInt(a.m1controllerkey || a.m1key || 0)
       const instructionB = Number.parseInt(b.m1controllerkey || b.m1key || 0)
-      return instructionB - instructionA // Descending order
+      return instructionB - instructionA
     })
 
     return filtered
@@ -370,31 +365,47 @@ const CompanyInstructions = () => {
     setCurrentPage(1)
   }, [selectedMonth, selectedYear])
 
-  // Handle view instruction click
-  const handleViewInstruction = (instructionId) => {
-    navigate("/Viewcontrollerinstructions", {
-      state: {
-        instructionId,
-        clientId,
-        clientName,
-        selectedMonth,
-        selectedYear,
-        activeFilter,
-      },
-    })
+  // Handle view instruction click. Grouped instructions open the read-only,
+  // tabbed group view; legacy ungrouped instructions keep the single-instruction view.
+  const handleViewInstruction = (item) => {
+    const stateToPass = {
+      instructionId: item.m1controllerkey || item.m1key,
+      clientId,
+      clientName,
+      selectedMonth,
+      selectedYear,
+      activeFilter,
+    }
+
+    if (item.instruction_group_id) {
+      navigate("/DirectorInstructionGroupView", {
+        state: { ...stateToPass, groupId: item.instruction_group_id },
+      })
+      return
+    }
+
+    navigate("/Viewcontrollerinstructions", { state: stateToPass })
   }
-  const handleViewAssignment = (instructionId) => {
-    console.log(`Navigating to DirectorManagerViewAssignment with instructionId: ${instructionId}`)
-    navigate("/DirectorManagerViewAssignment", {
-      state: {
-        instructionId,
-        clientId,
-        clientName,
-        selectedMonth,
-        selectedYear,
-        activeFilter,
-      },
-    })
+  const handleViewAssignment = (item) => {
+    const stateToPass = {
+      instructionId: item.m1controllerkey || item.m1key,
+      clientId,
+      clientName,
+      selectedMonth,
+      selectedYear,
+      activeFilter,
+    }
+
+    if (item.instruction_group_id) {
+      console.log(`Navigating to DirectorGroupAssignment with groupId: ${item.instruction_group_id}`)
+      navigate("/DirectorGroupAssignment", {
+        state: { ...stateToPass, groupId: item.instruction_group_id },
+      })
+      return
+    }
+
+    console.log(`Navigating to DirectorManagerViewAssignment with instructionId: ${stateToPass.instructionId}`)
+    navigate("/DirectorManagerViewAssignment", { state: stateToPass })
   }
 
   // Function to render status with bell for "New" status
@@ -543,7 +554,7 @@ const CompanyInstructions = () => {
                   <th>Invoice No</th>
                   <th>Booking Ref</th>
                   <th>Client Ref</th>
-                  <th>KSM File Ref</th>
+                  <th>File Ref</th>
                   <th>Type</th>
                   <th>Status</th>
                   <th>Creation Date</th>
@@ -565,7 +576,14 @@ const CompanyInstructions = () => {
                     const disableAssignment = (item.has_valid_containers !== true) && (item.shipment_type !== 4)
                     return (
                       <tr key={item.m1controllerkey || item.m1key}>
-                        <td>Instruction {item.m1controllerkey || item.m1key}</td>
+                        <td>
+                          Instruction {item.m1controllerkey || item.m1key}
+                          {item.instruction_group_id && (
+                            <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>
+                              Group {item.group_ref || item.instruction_group_id}
+                            </div>
+                          )}
+                        </td>
                         <td>
                           {item.shipment_type === 5 || item.shipment_type === "5" || (item.type_text || "").toLowerCase() === "add-on" || (item.type_text || "").toLowerCase() === "add on"
                             ? (item.addon_invoice_number || "N/A")
@@ -593,7 +611,7 @@ const CompanyInstructions = () => {
                         <td>
                           <button
                             className="view-btn"
-                            onClick={() => handleViewInstruction(item.m1controllerkey || item.m1key)}
+                            onClick={() => handleViewInstruction(item)}
                           >
                             View
                           </button>
@@ -611,7 +629,7 @@ const CompanyInstructions = () => {
                           ) : (
                             <button
                               className="view-btn"
-                              onClick={() => handleViewAssignment(item.m1controllerkey || item.m1key)}
+                              onClick={() => handleViewAssignment(item)}
                             >
                               View
                             </button>

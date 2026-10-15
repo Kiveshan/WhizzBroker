@@ -5,12 +5,13 @@ import { InstructionLoadingGate } from "../../../../components/instructions/Inst
 import { InstructionBanners } from "../../../../components/instructions/InstructionBanners";
 import { ActionButtons } from "../../../../components/instructions/ActionButtons";
 import { ClientInfoSection } from "../../../../components/instructions/ClientInfoSection";
-import { ContainerCountsSection } from "../../../../components/instructions/ContainerCountsSection";
 import { UnitPerSection } from "../../../../components/instructions/UnitPerSection";
 import { BookingDetailsSection } from "../../../../components/instructions/BookingDetailsSection";
 import { WeightDetailsTable } from "../../../../components/instructions/WeightDetailsTable";
-import { ContainerDetailsTable } from "../../../../components/instructions/ContainerDetailsTable";
+import { ContainersCard } from "../../../../components/instructions/ContainersCard";
 import { AddonInvoicePicker } from "../../../../components/instructions/AddonInvoicePicker";
+import { InstructionValueCard } from "../../../../components/instructions/InstructionValueCard";
+import { instructionValue } from "../../../../utils/instructions/instructionValue";
 
 export function FCcontrollerinstructionsLayout({
   // Loading gate
@@ -27,6 +28,7 @@ export function FCcontrollerinstructionsLayout({
   setWarningModal,
   // Navigation
   handleBackClick,
+  groupMode = false,
   // Form state
   formData,
   setFormData,
@@ -36,11 +38,11 @@ export function FCcontrollerinstructionsLayout({
   instructionId,
   clients,
   shipmentTypes,
-  startingPoints,
-  destinations,
+  rateOptions,
   weightRows,
   containers,
   containerFieldErrors,
+  availableExtraCharges,
   // Computed flags
   isReadOnly,
   isSetRateMode,
@@ -73,8 +75,7 @@ export function FCcontrollerinstructionsLayout({
   handleNumericInputChange,
   handleRateChange,
   handleShipmentTypeChange,
-  handlePickupChange,
-  handleDropoffChange,
+  handleRateTitleChange,
   // Handlers — weight rows
   updateWeightRow,
   handleRequestDeleteWeightRow,
@@ -105,14 +106,17 @@ export function FCcontrollerinstructionsLayout({
               type="error"
             />
           )}
-        <div className="controller-instructions-header">
-          <button
-            className="controller-instructions-back-button"
-            onClick={() => handleBackClick()}
-          >
-            Back
-          </button>
-        </div>
+        {/* Group page owns navigation; the embedded form hides its own Back */}
+        {!groupMode && (
+          <div className="controller-instructions-header">
+            <button
+              className="controller-instructions-back-button"
+              onClick={() => handleBackClick()}
+            >
+              Back
+            </button>
+          </div>
+        )}
         <div
           className="controller-instructions-form-container"
           style={{ maxWidth: "1200px" }}
@@ -135,395 +139,70 @@ export function FCcontrollerinstructionsLayout({
             nonEditableStyle={nonEditableStyle}
             onClientChange={handleClientChange}
             onChange={handleInputChange}
-            showCreationDate={true}
+            showLocations={true}
+            rateOptions={rateOptions}
+            onRateChange={handleRateTitleChange}
+            pickupLocked={routeEditMode === "locked" && hasRouteMismatch}
+            onLockedRouteClick={() =>
+              setConfirmationModal({
+                isOpen: true,
+                message:
+                  formData.rate_title
+                    ? `The rate "${formData.rate_title}" is no longer on this client's rates. To change it you will need to choose one of the client's current rates. Containers already on this instruction keep their saved amounts. Do you want to continue?`
+                    : "This instruction was priced by route before rate titles were introduced. To change it you will need to choose one of the client's current rates. Containers already on this instruction keep their saved amounts. Do you want to continue?",
+                action: "unlock-route",
+              })
+            }
           />
-          <div className="controller-instructions-form-section">
-            {false && (
-              <div
-                className="controller-instructions-form-row"
-                style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}
-              >
-                <div
-                  className="controller-instructions-form-field"
-                  style={{ flex: "1 1 180px", maxWidth: "220px" }}
-                >
-                  <label>Shipment Type</label>
-                  <div
-                    className="controller-instructions-select-wrapper"
-                    ref={fieldRefs.shipmentTypeId}
-                  >
-                    <select
-                      className={`dropdown ${
-                        fieldErrors.shipmentTypeId
-                          ? "controller-instructions-error-field"
-                          : ""
-                      }`}
-                      name="shipmentTypeId"
-                      value={formData.shipmentTypeId}
-                      onChange={handleShipmentTypeChange}
-                      disabled={isReadOnly}
-                      style={isReadOnly ? readOnlyStyle : {}}
-                    >
-                      <option value="" disabled>
-                        Select Shipment
-                      </option>
-                      {shipmentTypes.map((type) => (
-                        <option key={type.shipkey} value={type.shipkey}>
-                          {type.shipmenttype}
-                        </option>
-                      ))}
-                    </select>
-                    <ErrorTooltip
-                      message={fieldErrors.shipmentTypeId}
-                    />
-                  </div>
-                </div>
+          <BookingDetailsSection
+            formData={formData}
+            fieldErrors={fieldErrors}
+            fieldRefs={fieldRefs}
+            isReadOnly={isReadOnly}
+            isAddOn={isAddOn}
+            today={today}
+            readOnlyStyle={readOnlyStyle}
+            lastFreeDateRef={lastFreeDateRef}
+            etaDateRef={etaDateRef}
+            onInputChange={handleInputChange}
+            onVatChange={(val) =>
+              setFormData((prev) => ({ ...prev, vat: val }))
+            }
+            shipmentTypes={shipmentTypes}
+            onShipmentTypeChange={handleShipmentTypeChange}
+            showCreationDate={true}
+          >
+            <UnitPerSection
+              formData={formData}
+              fieldErrors={fieldErrors}
+              fieldRefs={fieldRefs}
+              isSetRate={isSetRate}
+              isReadOnly={isReadOnly}
+              isAddOn={isAddOn}
+              historicalSetRate={historicalSetRate}
+              setRateValue={setRateValue}
+              readOnlyStyle={readOnlyStyle}
+              onInputChange={handleInputChange}
+              onSetRateChange={setIsSetRate}
+            />
+          </BookingDetailsSection>
 
-                <div
-                  className="controller-instructions-form-field"
-                  style={{ flex: "1 1 220px", maxWidth: "260px" }}
-                >
-                  <label>Pickup Location</label>
-                  {routeEditMode === "locked" && hasRouteMismatch ? (
-                    <input
-                      type="text"
-                      className="controller-instructions-form-input"
-                      ref={fieldRefs.pickup}
-                      value={formData.pickup || ""}
-                      readOnly
-                      style={readOnlyStyle}
-                      onClick={() =>
-                        setConfirmationModal({
-                          isOpen: true,
-                          message:
-                            "The current route no longer matches any client rates. To edit it, you will need to select a new valid starting point and dropoff from the current lists. Do you want to continue?",
-                          action: "unlock-route",
-                        })
-                      }
-                    />
-                  ) : (
-                    <div
-                      className="controller-instructions-select-wrapper"
-                      ref={fieldRefs.pickup}
-                    >
-                      <select
-                        className={`controller-instructions-dropdown ${
-                          fieldErrors.pickup
-                            ? "controller-instructions-error-field"
-                            : ""
-                        }`}
-                        name="pickup"
-                        value={formData.pickup || ""}
-                        onChange={handlePickupChange}
-                        disabled={isReadOnly}
-                        style={isReadOnly ? readOnlyStyle : {}}
-                      >
-                        <option value="" disabled>
-                          Select Pickup
-                        </option>
-                        {startingPoints.map((point) => (
-                          <option key={point.id} value={point.startingpoint}>
-                            {point.startingpoint}
-                          </option>
-                        ))}
-                      </select>
-                      <ErrorTooltip message={fieldErrors.pickup} />
-                    </div>
-                  )}
-                </div>
-
-                <div
-                  className="controller-instructions-form-field"
-                  style={{ flex: "1 1 220px", maxWidth: "260px" }}
-                >
-                  <label>Dropoff Location</label>
-                  {routeEditMode === "locked" && hasRouteMismatch ? (
-                    <input
-                      type="text"
-                      className="controller-instructions-form-input"
-                      ref={fieldRefs.dropoff}
-                      value={formData.dropoff || ""}
-                      readOnly
-                      style={readOnlyStyle}
-                      onClick={() =>
-                        setConfirmationModal({
-                          isOpen: true,
-                          message:
-                            "The current route no longer matches any client rates. To edit it, you will need to select a new valid starting point and dropoff from the current lists. Do you want to continue?",
-                          action: "unlock-route",
-                        })
-                      }
-                    />
-                  ) : (
-                    <div
-                      className="controller-instructions-select-wrapper"
-                      ref={fieldRefs.dropoff}
-                    >
-                      <select
-                        className={`controller-instructions-dropdown ${
-                          fieldErrors.dropoff
-                            ? "controller-instructions-error-field"
-                            : ""
-                        }`}
-                        name="dropoff"
-                        value={formData.dropoff || ""}
-                        onChange={handleDropoffChange}
-                        disabled={isReadOnly}
-                        style={isReadOnly ? readOnlyStyle : {}}
-                      >
-                        <option value="" disabled>
-                          Select Dropoff
-                        </option>
-                        {destinations.map((dest) => (
-                          <option key={dest.id} value={dest.destination}>
-                            {dest.destination}
-                          </option>
-                        ))}
-                      </select>
-                      <ErrorTooltip message={fieldErrors.dropoff} />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="controller-instructions-form-section">
-            <div className="controller-instructions-form-row controller-instructions-trailer-container">
-              <div
-                className="controller-instructions-trailer-title"
-                style={{ display: "none" }}
-              >
-                <h3>Trailer Size</h3>
-              </div>
-              <hr
-                className="controller-instructions-divider"
-                style={{ display: "none" }}
-              />
-              <div
-                className="controller-instructions-container-section"
-              >
-                <ContainerCountsSection
-                  formData={formData}
-                  fieldErrors={fieldErrors}
-                  fieldRefs={fieldRefs}
-                  isSetRateMode={isSetRateMode}
-                  isReadOnly={isReadOnly}
-                  readOnlyStyle={readOnlyStyle}
-                  onCountChange={handleNumericInputChange}
-                  onRateChange={handleRateChange}
-                />
-                {/* Main form section */}
-                <div
-                  className="controller-instructions-booking-vertical-group"
-                  style={{
-                    marginTop: "8px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "8px",
-                    maxWidth: "220px",
-                  }}
-                >
-                  <div className="controller-instructions-form-field">
-                    <label>Shipment Type</label>
-                    <div
-                      className="controller-instructions-select-wrapper"
-                      ref={fieldRefs.shipmentTypeId}
-                    >
-                      <select
-                        className={`controller-instructions-dropdown ${
-                          fieldErrors.shipmentTypeId
-                            ? "controller-instructions-error-field"
-                            : ""
-                        }`}
-                        name="shipmentTypeId"
-                        value={formData.shipmentTypeId}
-                        onChange={handleShipmentTypeChange}
-                        disabled={isReadOnly}
-                        style={isReadOnly ? readOnlyStyle : {}}
-                      >
-                        <option value="" disabled>
-                          Select Shipment
-                        </option>
-                        {shipmentTypes.map((type) => (
-                          <option key={type.shipkey} value={type.shipkey}>
-                            {type.shipmenttype}
-                          </option>
-                        ))}
-                      </select>
-                      <ErrorTooltip
-                        message={fieldErrors.shipmentTypeId}
-                      />
-                    </div>
-                  </div>
-                  {routeEditMode === "locked" && hasRouteMismatch ? (
-                    <>
-                      <div className="controller-instructions-form-field">
-                        <label>Pickup Location</label>
-                        <div
-                          className="controller-instructions-select-wrapper"
-                          ref={fieldRefs.pickup}
-                        >
-                          <input
-                            type="text"
-                            className="controller-instructions-dropdown"
-                            value={formData.pickup || ""}
-                            readOnly
-                            style={readOnlyStyle}
-                            onClick={() =>
-                              setConfirmationModal({
-                                isOpen: true,
-                                message:
-                                  "The current route no longer matches any client rates. To edit it, you will need to select a new valid starting point and dropoff from the current lists. Do you want to continue?",
-                                action: "unlock-route",
-                              })
-                            }
-                          />
-                          <ErrorTooltip message={fieldErrors.pickup} />
-                        </div>
-                      </div>
-                      <div className="controller-instructions-form-field">
-                        <label>Dropoff Location</label>
-                        <div
-                          className="controller-instructions-select-wrapper"
-                          ref={fieldRefs.dropoff}
-                        >
-                          <input
-                            type="text"
-                            className="controller-instructions-dropdown"
-                            value={formData.dropoff || ""}
-                            readOnly
-                            style={readOnlyStyle}
-                            onClick={() =>
-                              setConfirmationModal({
-                                isOpen: true,
-                                message:
-                                  "The current route no longer matches any client rates. To edit it, you will need to select a new valid starting point and dropoff from the current lists. Do you want to continue?",
-                                action: "unlock-route",
-                              })
-                            }
-                          />
-                          <ErrorTooltip message={fieldErrors.dropoff} />
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="controller-instructions-form-field">
-                        <label>Pickup Location</label>
-                        <div
-                          className="controller-instructions-select-wrapper"
-                          ref={fieldRefs.pickup}
-                        >
-                          <select
-                            className={`controller-instructions-dropdown ${
-                              fieldErrors.pickup
-                                ? "controller-instructions-error-field"
-                                : ""
-                            }`}
-                            name="pickup"
-                            value={formData.pickup || ""}
-                            onChange={handlePickupChange}
-                            disabled={isReadOnly}
-                            style={isReadOnly ? readOnlyStyle : {}}
-                          >
-                            <option value="" disabled>
-                              Select Pickup
-                            </option>
-                            {startingPoints.map((point) => (
-                              <option key={point.id} value={point.startingpoint}>
-                                {point.startingpoint}
-                              </option>
-                            ))}
-                          </select>
-                          <ErrorTooltip message={fieldErrors.pickup} />
-                        </div>
-                      </div>
-                      <div className="controller-instructions-form-field">
-                        <label>Dropoff Location</label>
-                        <div
-                          className="controller-instructions-select-wrapper"
-                          ref={fieldRefs.dropoff}
-                        >
-                          <select
-                            className={`controller-instructions-dropdown ${
-                              fieldErrors.dropoff
-                                ? "controller-instructions-error-field"
-                                : ""
-                            }`}
-                            name="dropoff"
-                            value={formData.dropoff || ""}
-                            onChange={handleDropoffChange}
-                            disabled={isReadOnly}
-                            style={isReadOnly ? readOnlyStyle : {}}
-                          >
-                            <option value="" disabled>
-                              Select Dropoff
-                            </option>
-                            {destinations.map((dest) => (
-                              <option key={dest.id} value={dest.destination}>
-                                {dest.destination}
-                              </option>
-                            ))}
-                          </select>
-                          <ErrorTooltip message={fieldErrors.dropoff} />
-                        </div>
-                      </div>
-                    </>
-                  )}
-                  {/* This surcharges section has been moved to be next to the checkbox */}
-
-                  <UnitPerSection
-                    formData={formData}
-                    fieldErrors={fieldErrors}
-                    fieldRefs={fieldRefs}
-                    isSetRate={isSetRate}
-                    isReadOnly={isReadOnly}
-                    isAddOn={isAddOn}
-                    historicalSetRate={historicalSetRate}
-                    setRateValue={setRateValue}
-                    readOnlyStyle={readOnlyStyle}
-                    onInputChange={handleInputChange}
-                    onSetRateChange={setIsSetRate}
-                  />
-                </div>
-                {/* End of main form section */}
-
-                {/* Hazardous / Surcharge checkboxes moved below Rate Type */}
-                <BookingDetailsSection
-                  formData={formData}
-                  fieldErrors={fieldErrors}
-                  fieldRefs={fieldRefs}
-                  isReadOnly={isReadOnly}
-                  isAddOn={isAddOn}
-                  today={today}
-                  readOnlyStyle={readOnlyStyle}
-                  lastFreeDateRef={lastFreeDateRef}
-                  etaDateRef={etaDateRef}
-                  onInputChange={handleInputChange}
-                  onVatChange={(val) =>
-                    setFormData((prev) => ({ ...prev, vat: val }))
-                  }
-                />
-
-                {/* Add-On Invoice link (add-on shipment type only) */}
-                {isAddOn && (
-                  <AddonInvoicePicker
-                    clientId={formData.clientId}
-                    instructionId={instructionId}
-                    value={formData.addon_id}
-                    onChange={(val) => {
-                      setFormData((prev) => ({ ...prev, addon_id: val }));
-                      if (setFieldErrors) {
-                        setFieldErrors((prev) => ({ ...prev, addon_id: "" }));
-                      }
-                    }}
-                    disabled={isReadOnly}
-                    error={fieldErrors.addon_id}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
+          {/* Add-On Invoice link (add-on shipment type only) */}
+          {isAddOn && (
+            <AddonInvoicePicker
+              clientId={formData.clientId}
+              instructionId={instructionId}
+              value={formData.addon_id}
+              onChange={(val) => {
+                setFormData((prev) => ({ ...prev, addon_id: val }));
+                if (setFieldErrors) {
+                  setFieldErrors((prev) => ({ ...prev, addon_id: "" }));
+                }
+              }}
+              disabled={isReadOnly}
+              error={fieldErrors.addon_id}
+            />
+          )}
 
           {/* Weight Details Table for shipment type 4 */}
           {String(formData.shipmentTypeId) === "4" && weightRows.length > 0 && (
@@ -537,28 +216,75 @@ export function FCcontrollerinstructionsLayout({
             />
           )}
 
-          {/* Container Details Table */}
-          {/* Only show when shipment type is NOT cross-haul (break bulk) (type 4) */}
-          {containers.length > 0 && formData.shipmentTypeId !== "4" && (
-            <ContainerDetailsTable
+          {/* Containers card: type quantities + rates + one row per container. */}
+          {/* Hidden for break bulk (type 4), which uses the weight table above. */}
+          {String(formData.shipmentTypeId) !== "4" && (
+            <ContainersCard
+              formData={formData}
+              setFormData={setFormData}
+              rateFieldsEnabled={{
+                sixMeter: !isSetRateMode,
+                twelveMeter: !isSetRateMode,
+                abnormal: !isSetRateMode,
+              }}
+              rateLockStatus={{}}
+              rateFieldNames={{
+                "6m": "rateper_6",
+                "12m": "rateper_12",
+                Abnormal: "rateper_abnormal",
+              }}
+              onRateChange={(field, value) =>
+                handleRateChange({ target: { name: field, value } })
+              }
+              handleContainerCountChange={(field, value) =>
+                handleNumericInputChange({ target: { name: field, value } })
+              }
               containers={containers}
               containerFieldErrors={containerFieldErrors}
-              shipmentTypeId={formData.shipmentTypeId}
+              handleContainerChange={handleContainerChange}
               isImport={isImport}
+              isExport={String(formData.shipmentTypeId) === "2"}
+              isCrossHaul={String(formData.shipmentTypeId) === "3"}
+              allowVgmUI={String(formData.shipmentTypeId) !== "4"}
+              availableExtraCharges={availableExtraCharges}
+              countsDisabled={isSetRateMode}
+              countError={fieldErrors.containers || ""}
               isReadOnly={isReadOnly}
-              readOnlyStyle={readOnlyStyle}
+              onDeleteContainer={handleRequestDeleteContainer}
+              showTypeSelect={true}
               isLoading={isContainerLoading}
               successMessage={containerSuccessMessage || rateUpdateMessage}
-              sectionStyle={
-                String(formData.shipmentTypeId) === "2"
-                  ? { marginTop: "-40px", paddingTop: "0" }
-                  : undefined
-              }
-              onContainerChange={handleContainerChange}
-              onDeleteContainer={handleRequestDeleteContainer}
-              onChangeContainersType={changeContainersType}
             />
           )}
+          <InstructionValueCard
+            value={instructionValue({
+              shipmentTypeId: formData.shipmentTypeId,
+              rateWeight: formData.rateWeight,
+              // Set rate: the entered rate, falling back to the one saved on
+              // the instruction (same as the save path, resolveBaseCost).
+              setRate:
+                isSetRate && !isAddOn
+                  ? Number.parseFloat(formData.setRateAmount) > 0
+                    ? Number.parseFloat(formData.setRateAmount)
+                    : historicalSetRate || 0
+                  : null,
+              unitRate: formData.unitRate,
+              weight: formData.weight,
+              weightRows,
+              counts: {
+                six: formData.num_six_meters,
+                twelve: formData.num_twelve_meters,
+                abnormal: formData.num_abnormal,
+              },
+              rates: {
+                six: formData.rateper_6,
+                twelve: formData.rateper_12,
+                abnormal: formData.rateper_abnormal,
+              },
+              containers: String(formData.shipmentTypeId) === "4" ? [] : containers,
+              vat: formData.vat,
+            })}
+          />
           <ActionButtons
             isReadOnly={isReadOnly}
             status={formData.status}
@@ -573,15 +299,18 @@ export function FCcontrollerinstructionsLayout({
           isOpen={confirmationModal.isOpen}
           title={
             confirmationModal.action === "delete" ? "Delete Instruction" :
-            confirmationModal.action === "invoice" ? "Create Invoice" :
+            confirmationModal.action === "invoice" ? "Create Group Invoice" :
             confirmationModal.action === "delete-container" ? "Delete Container" :
             confirmationModal.action === "delete-weight" ? "Delete Weight Row" :
-            confirmationModal.action === "unlock-route" ? "Unlock Route" :
+            confirmationModal.action === "unlock-route" ? "Change this instruction's rate?" :
             "Confirm"
           }
           message={confirmationModal.message}
           onConfirm={handleConfirmAction}
           onCancel={handleCancelAction}
+          {...(confirmationModal.action === "unlock-route"
+            ? { confirmText: "Yes, choose a rate", cancelText: "No, keep it" }
+            : {})}
         />
         {/* Warning Modal (shipment type change) */}
         <ConfirmationModal

@@ -21,14 +21,26 @@ export async function fetchDestinations(clientId, pickup) {
   return response.data;
 }
 
-export async function fetchRates(clientId, start, destination) {
-  const response = await api.get(`/api/instructions/client/${clientId}/rates`, {
-    params: { start, destination },
-  });
+// The client's rates for the instruction Rate dropdown, one per title:
+// [{ title, starting_point, destination, rate_source, rate_card_name }]
+export async function fetchRateTitles(clientId) {
+  const response = await api.get(`/api/instructions/client/${clientId}/rate-titles`);
   return response.data;
 }
 
-export async function fetchSetRate(clientId, pickup, dropoff) {
+// Rates are looked up by title; instructions captured before rate titles
+// existed have none and fall back to their route.
+export async function fetchRates(clientId, start, destination, title = null) {
+  const params = title ? { title } : { start, destination };
+  const response = await api.get(`/api/instructions/client/${clientId}/rates`, { params });
+  return response.data;
+}
+
+export async function fetchSetRate(clientId, pickup, dropoff, title = null) {
+  if (title) {
+    const response = await api.get(`/api/instructions/client/${clientId}/set-rate`, { params: { title } });
+    return response.data;
+  }
   const encodedPickup = encodeURIComponent(pickup);
   const encodedDropoff = encodeURIComponent(dropoff);
   const response = await api.get(
@@ -75,6 +87,29 @@ export async function checkContainerLegsExist(instructionId, containerNum) {
 
 export async function saveInstruction(controllerData, containerData, weightData) {
   const response = await api.post("/api/instructions/save-instruction", {
+    controllerData,
+    containerData,
+    weightData,
+  });
+  return response.data;
+}
+
+export async function saveInstructionGroup(clientId, instructions, groupRef = null) {
+  const response = await api.post("/api/instructions/group", {
+    clientId,
+    groupRef,
+    instructions,
+  });
+  return response.data;
+}
+
+export async function fetchInstructionGroup(groupKey) {
+  const response = await api.get(`/api/instructions/group/${groupKey}`);
+  return response.data;
+}
+
+export async function addInstructionToGroup(groupKey, controllerData, containerData, weightData) {
+  const response = await api.post(`/api/instructions/group/${groupKey}/instructions`, {
     controllerData,
     containerData,
     weightData,

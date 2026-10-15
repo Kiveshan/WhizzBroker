@@ -10,6 +10,7 @@ import {
   createInvoiceHandler,
   updateInstructionDetailsHandler,
   generateInvoicePreviewHandler, // New handler
+  getGroupInvoicePreviewHandler,
 } from "../../controllers/invoices/invoiceController.js";
 
 const router = express.Router();
@@ -26,5 +27,8 @@ router.put(
 
 // NEW: Preview endpoint
 router.post("/api/invoices/preview/:instructionId", verifyToken, generateInvoicePreviewHandler);
+
+// Combined group invoice preview
+router.get("/api/invoices/group-preview/:groupId", verifyToken, getGroupInvoicePreviewHandler);
 
 export default router;

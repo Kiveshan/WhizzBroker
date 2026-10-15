@@ -21,9 +21,19 @@ const reportsData = [
     path: "/client-subbie-commission",
   },
   {
+    title: "Income Per Client",
+    image: "/images/reports.jpg",
+    path: "/income-per-client",
+  },
+  {
     title: "VAT Recon",
     image: "/images/reports.jpg",
     path: "/vat-recon-reports",
+  },
+  {
+    title: "Audit Log",
+    image: "/images/reports.jpg",
+    path: "/audit-log",
   },
 ]
 
@@ -40,7 +50,7 @@ const ReportsPage = () => {
   }
 
   return (
-    <div className="dashboard">
+    <div className="dashboard reports-page">
       <div className="header-actions">
         <button onClick={handleBack} className="back-button">
           Back

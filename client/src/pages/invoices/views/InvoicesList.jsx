@@ -352,8 +352,8 @@ Troubleshooting tips:
                 </thead>
                 <tbody>
                   {currentInstructions.map((instruction) => (
-                    <tr key={instruction.m1key}>
-                      <td>{instruction.m1key}</td>
+                    <tr key={instruction.is_group ? `g${instruction.ikey}` : instruction.m1key}>
+                      <td>{instruction.is_group ? instruction.instruction_no : instruction.m1key}</td>
                       <td>{instruction.invoice_num}</td>
                       <td>{instruction.shipment_type}</td>
                       <td>{instruction.file_no}</td>
@@ -362,6 +362,15 @@ Troubleshooting tips:
                         <button
                           className="small-btn"
                           onClick={() => {
+                            if (instruction.is_group) {
+                              debug(
+                                `Navigating to group invoice view for group: ${instruction.instruction_group_id}`
+                              );
+                              navigate(`/group-invoice/${instruction.instruction_group_id}`, {
+                                state: { clientId, clientName, returnToClientView: !!clientId },
+                              });
+                              return;
+                            }
                             debug(
                               `Navigating to invoice view for ID: ${instruction.ikey}`
                             );

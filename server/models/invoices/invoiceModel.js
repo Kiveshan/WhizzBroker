@@ -8,19 +8,22 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
       );
     }
 
+    // Legacy per-instruction invoices (invoice.m1key set).
     let queryText = `
-      SELECT 
-        m1.m1key, 
-        m1."ksmFileRef" as instruction_no, 
-        s.shipmenttype as shipment_type, 
-        m1."clientFileRef" as file_no, 
+      SELECT
+        m1.m1key,
+        m1."ksmFileRef" as instruction_no,
+        s.shipmenttype as shipment_type,
+        m1."clientFileRef" as file_no,
         m1.status,
         i.ikey,
         i.invoice_num,
-        i.date as date
-      FROM 
+        i.date as date,
+        NULL::integer AS instruction_group_id,
+        false AS is_group
+      FROM
         public.m1_controller m1
-      LEFT JOIN 
+      LEFT JOIN
         public.shipment s ON m1.shipment_type = s.shipkey
       JOIN
         public.invoice i ON m1.m1key = i.m1key
@@ -42,7 +45,7 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
     }
 
     if (year && month) {
-      queryText += ` AND EXTRACT(YEAR FROM i.date) = $${paramIndex} 
+      queryText += ` AND EXTRACT(YEAR FROM i.date) = $${paramIndex}
                     AND EXTRACT(MONTH FROM i.date) = $${paramIndex + 1}`;
       queryParams.push(year, month);
       paramIndex += 2;
@@ -60,7 +63,56 @@ const getCompletedInvoices = async ({ year, month, type, clientId }) => {
 
     console.log("Executing query:", queryText, "with params:", queryParams);
     const result = await query(queryText, queryParams);
-    return { success: true, data: result.rows };
+    let rows = result.rows;
+
+    // Combined group invoices (invoice.m1key NULL, instruction_group_id set).
+    // A group spans mixed shipment types, so it is only listed when no specific
+    // shipment-type filter is active.
+    if (!type || type === "All") {
+      let groupText = `
+        SELECT
+          NULL::integer AS m1key,
+          COALESCE(g.group_ref, 'Group ' || g.group_key::text) AS instruction_no,
+          'Group' AS shipment_type,
+          NULL AS file_no,
+          g.status,
+          i.ikey,
+          i.invoice_num,
+          i.date AS date,
+          g.group_key AS instruction_group_id,
+          true AS is_group
+        FROM public.invoice i
+        JOIN public.instruction_group g ON i.instruction_group_id = g.group_key
+        WHERE i.m1key IS NULL
+      `;
+      const groupParams = [];
+      let gi = 1;
+      if (clientId) {
+        groupText += ` AND i.clientid = $${gi}`;
+        groupParams.push(clientId);
+        gi++;
+      }
+      if (year && month) {
+        groupText += ` AND EXTRACT(YEAR FROM i.date) = $${gi} AND EXTRACT(MONTH FROM i.date) = $${gi + 1}`;
+        groupParams.push(year, month);
+        gi += 2;
+      } else if (year) {
+        groupText += ` AND EXTRACT(YEAR FROM i.date) = $${gi}`;
+        groupParams.push(year);
+        gi++;
+      } else if (month) {
+        groupText += ` AND EXTRACT(MONTH FROM i.date) = $${gi}`;
+        groupParams.push(month);
+        gi++;
+      }
+      const groupResult = await query(groupText, groupParams);
+      rows = [...groupResult.rows, ...rows];
+    }
+
+    // Newest first across both sets.
+    rows.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return { success: true, data: rows };
   } catch (error) {
     throw error;
   }
@@ -101,6 +153,7 @@ const getInvoiceDetails = async (id) => {
         m1.booking_ref,
         m1.pickup,
         m1.dropoff,
+        m1.rate_title,
         m1.vessel_name,
         -- Base rates from m1_controller
         m1.rateper_6,
@@ -270,6 +323,24 @@ const getInvoiceDetails = async (id) => {
       leg_rate: c.leg_rate
     })));
 
+    // One summary line per distinct custom extra charge, summed across this
+    // instruction's containers. Charges have arbitrary names (unlike the
+    // fixed surcharge/hazardous/vgm columns above), so they're shown as
+    // separate summary lines rather than per-container columns.
+    const extraChargesQuery = `
+      SELECT e.charge_name, SUM(e.amount) AS amount
+      FROM public.container_extra_charge e
+      JOIN public.container c ON c.containerkey = e.containerkey
+      INNER JOIN invoice i ON i.m1key = c.m1key
+      WHERE i.ikey = $1
+      GROUP BY e.charge_name
+      ORDER BY e.charge_name
+    `;
+    const extraChargesResult = await query(extraChargesQuery, [id]);
+    const extraCharges = extraChargesResult.rows
+      .map((r) => ({ charge_name: r.charge_name, amount: Number(r.amount || 0) }))
+      .filter((c) => c.amount > 0);
+
     // If shipment type is 4 (weight-based), fetch weight items
     const shipmentTypeKey = result.rows[0].shipment_type_key;
     const isSetRate = result.rows[0].is_set_rate === true || result.rows[0].rateweight === "SetRate";
@@ -291,10 +362,11 @@ const getInvoiceDetails = async (id) => {
       const weightRes = await query(weightQuery, [id]);
       weightItems = weightRes.rows.map((r) => {
         const w = Number(r.weight || 0);
-        // For set rate: unitrate = historical_set_rate, price = set_rate × weight
-        // For normal weight-based: unitrate = unitrate, price = unitrate × weight
+        // Set rate is a flat amount per weight entry (matches calcBreakBulkCost,
+        // which priced total_cost as set_rate × row count); otherwise
+        // price = unitrate × weight.
         const rowUnitRate = isSetRate ? historicalSetRate : unitrate;
-        const price = Number((w * rowUnitRate).toFixed(2));
+        const price = Number((isSetRate ? rowUnitRate : w * rowUnitRate).toFixed(2));
         return {
           ksm_dm_no: r.ksm_dm_no || "",
           ticket_no: r.ticket_no || "",
@@ -315,6 +387,7 @@ const getInvoiceDetails = async (id) => {
         containers,
         weightItems,
         unitrate,
+        extraCharges,
       },
     };
   } catch (error) {
@@ -526,10 +599,14 @@ const checkInvoiceExists = async (m1key) => {
       );
     }
 
+    // Invoiced on its own (older single invoices) or through its group's
+    // combined invoice (m1key NULL, instruction_group_id set).
     const queryText = `
       SELECT COUNT(*) as count
-      FROM public.invoice
-      WHERE m1key = $1
+      FROM public.invoice i
+      WHERE i.m1key = $1
+         OR (i.m1key IS NULL AND i.instruction_group_id = (
+               SELECT m.instruction_group_id FROM public.m1_controller m WHERE m.m1key = $1))
     `;
 
     const result = await query(queryText, [m1key]);
@@ -682,6 +759,7 @@ const getInstructionDetailsForPreview = async (instructionId) => {
           m1.booking_ref,
           m1.pickup,
           m1.dropoff,
+          m1.rate_title,
           m1.vessel_name,
           m1.rateper_6,
           m1.rateper_12,
@@ -840,10 +918,25 @@ const getInstructionDetailsForPreview = async (instructionId) => {
 
       const containers = Array.from(containerMap.values());
 
+      // One summary line per distinct custom extra charge, summed across
+      // this instruction's containers (same shape as getInvoiceDetails).
+      const extraChargesQuery = `
+        SELECT e.charge_name, SUM(e.amount) AS amount
+        FROM public.container_extra_charge e
+        JOIN public.container c ON c.containerkey = e.containerkey
+        WHERE c.m1key = $1
+        GROUP BY e.charge_name
+        ORDER BY e.charge_name
+      `;
+      const extraChargesResult = await client.query(extraChargesQuery, [instructionId]);
+      const extraCharges = extraChargesResult.rows
+        .map((r) => ({ charge_name: r.charge_name, amount: Number(r.amount || 0) }))
+        .filter((c) => c.amount > 0);
+
       // Weight-based items for preview when shipment_type_key = 4
       let weightItems = [];
       const unitratePrev = Number(m1Result.rows[0].unitrate || 0);
-      const isSetRatePrev = m1Result.rows[0].is_set_rate === true;
+      const isSetRatePrev = m1Result.rows[0].is_set_rate === true || m1Result.rows[0].rateweight === "SetRate";
       const historicalSetRatePrev = Number(m1Result.rows[0].historical_set_rate || 0);
       if (m1Result.rows[0].shipment_type_key === 4) {
         const weightQuery = `
@@ -859,10 +952,10 @@ const getInstructionDetailsForPreview = async (instructionId) => {
         const weightRes = await client.query(weightQuery, [instructionId]);
         weightItems = weightRes.rows.map((r) => {
           const w = Number(r.weight || 0);
-          // For set rate: unitrate = historical_set_rate, price = set_rate × weight
-          // For normal weight-based: unitrate = unitrate, price = unitrate × weight
+          // Set rate is a flat amount per weight entry (matches calcBreakBulkCost);
+          // otherwise price = unitrate × weight.
           const rowUnitRate = isSetRatePrev ? historicalSetRatePrev : unitratePrev;
-          const price = Number((w * rowUnitRate).toFixed(2));
+          const price = Number((isSetRatePrev ? rowUnitRate : w * rowUnitRate).toFixed(2));
           return {
             ksm_dm_no: r.ksm_dm_no || "",
             ticket_no: r.ticket_no || "",
@@ -894,6 +987,7 @@ const getInstructionDetailsForPreview = async (instructionId) => {
           weightItems,
           unitrate: unitratePrev,
           base_rates: baseRates,
+          extraCharges,
           // Add company details
           ...companyResult.rows[0],
           // Add preview metadata
@@ -914,6 +1008,213 @@ const getInstructionDetailsForPreview = async (instructionId) => {
 };
 
 
+/**
+ * Combined group invoice data: company/billing details, plus one section per
+ * child instruction whose lines are aggregated by container type
+ * ("10 x 6m @ rate"), followed by aggregated surcharge lines. Powers the
+ * group invoice preview modal and (later) the finalised group invoice.
+ */
+const getGroupInvoicePreview = async (groupId) => {
+  const client = await pool.connect();
+  try {
+    const groupResult = await client.query(
+      `SELECT g.group_key, g.client, g.status, g.group_ref,
+              c.client AS client_name, c.companyaddress AS client_address,
+              c.cellnum AS client_telephone, c.email AS client_email,
+              c.vatregno AS client_vat, c.suburb AS client_suburb
+       FROM public.instruction_group g
+       LEFT JOIN public.m5_client c ON g.client = c.m5clientkey
+       WHERE g.group_key = $1`,
+      [groupId]
+    );
+    if (groupResult.rows.length === 0) {
+      return { success: false, message: "Instruction group not found" };
+    }
+    const group = groupResult.rows[0];
+
+    // Existing invoice for the group (present once finalised).
+    const invResult = await client.query(
+      `SELECT invoice_num, date FROM public.invoice
+       WHERE instruction_group_id = $1 AND m1key IS NULL
+       ORDER BY ikey DESC LIMIT 1`,
+      [groupId]
+    );
+    const invoice = invResult.rows[0] || null;
+
+    const companyResult = await client.query(
+      `SELECT cluster_box, vat_reg_num, address, suburb, branch_code, bank,
+              name_of_acc, companyname, swift_code, account_num,
+              COALESCE(cell_num, cell_num2) AS phonenumber
+       FROM usertable WHERE roleid = 1 AND status = 'active' LIMIT 1`
+    );
+    const company = companyResult.rows[0] || {};
+
+    const childRows = await client.query(
+      `SELECT m.m1key, m."ksmFileRef", m."clientFileRef", m.booking_ref,
+              m.vessel_name, m.pickup, m.dropoff, m.rate_title, m.vat, m.total_cost,
+              m.num_six_meters, m.num_twelve_meters, m.num_abnormal,
+              m.rateper_6, m.rateper_12, m.rateper_abnormal,
+              m.shipment_type as shipment_type_key, m.unitrate,
+              m.is_set_rate, m.historical_set_rate, m.rateweight,
+              s.shipmenttype
+       FROM public.m1_controller m
+       LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
+       WHERE m.instruction_group_id = $1
+       ORDER BY m.m1key`,
+      [groupId]
+    );
+
+    let subtotal = 0;
+    let vatTotal = 0;
+    const children = [];
+
+    for (const row of childRows.rows) {
+      const lines = [];
+      const isBreakBulk = row.shipment_type_key === 4;
+
+      if (isBreakBulk) {
+        // Break-bulk instructions are weight-based (DN/ticket/receipt
+        // rows in m1_controller_weight), not container-based. Mirrors the
+        // weight-item calculation in getInvoiceDetails /
+        // getInstructionDetailsForPreview: price = weight × unitrate, or a
+        // flat historical_set_rate per entry when the instruction is set-rate.
+        const isSetRate = row.is_set_rate === true || row.rateweight === "SetRate";
+        const rowUnitRate = isSetRate
+          ? Number(row.historical_set_rate || 0)
+          : Number(row.unitrate || 0);
+
+        const weightResult = await client.query(
+          `SELECT ksm_dm_no, ticket_no, receipt_book_no, weight
+           FROM public.m1_controller_weight
+           WHERE m1_key = $1
+           ORDER BY weight_pk ASC`,
+          [row.m1key]
+        );
+        for (const w of weightResult.rows) {
+          const weight = Number(w.weight || 0);
+          const refParts = [w.ksm_dm_no, w.ticket_no, w.receipt_book_no].filter(Boolean);
+          lines.push({
+            description: refParts.length ? `Break bulk — ${refParts.join(" / ")}` : "Break bulk",
+            quantity: isSetRate ? 1 : weight,
+            rate: rowUnitRate,
+            amount: Number((isSetRate ? rowUnitRate : weight * rowUnitRate).toFixed(2)),
+          });
+        }
+      } else {
+        const typeSpecs = [
+          ["6m container", Number(row.num_six_meters || 0), Number(row.rateper_6 || 0)],
+          ["12m container", Number(row.num_twelve_meters || 0), Number(row.rateper_12 || 0)],
+          ["Abnormal load", Number(row.num_abnormal || 0), Number(row.rateper_abnormal || 0)],
+        ];
+        for (const [label, qty, rate] of typeSpecs) {
+          if (qty > 0) {
+            // Qty has its own column, so the description is just the type.
+            lines.push({
+              description: label,
+              quantity: qty,
+              rate,
+              amount: Number((qty * rate).toFixed(2)),
+            });
+          }
+        }
+      }
+
+      // Aggregated surcharge lines from this instruction's containers.
+      const surchargeResult = await client.query(
+        `SELECT
+           COALESCE(SUM(CASE WHEN "Add Surcharges" THEN "Surcharge Amount" ELSE 0 END), 0) AS surcharge,
+           COALESCE(SUM(CASE WHEN "Add Surcharges" AND is_12m_surcharge THEN surcharge_12m_amount ELSE 0 END), 0) AS surcharge_12m,
+           COALESCE(SUM(CASE WHEN "Hazardous" THEN "Hazardous Amount" ELSE 0 END), 0) AS hazardous,
+           COALESCE(SUM(CASE WHEN vgm THEN "vgm amount" ELSE 0 END), 0) AS vgm
+         FROM public.container WHERE m1key = $1`,
+        [row.m1key]
+      );
+      const s = surchargeResult.rows[0];
+      const surchargeLines = [
+        ["Surcharge", Number(s.surcharge) + Number(s.surcharge_12m)],
+        ["Hazardous", Number(s.hazardous)],
+        ["VGM", Number(s.vgm)],
+      ];
+      for (const [label, amount] of surchargeLines) {
+        if (amount > 0) {
+          lines.push({ description: label, quantity: null, rate: null, amount: Number(amount.toFixed(2)) });
+        }
+      }
+
+      // One line per distinct custom extra charge, summed across this
+      // instruction's containers (charges have arbitrary names, unlike the
+      // fixed Surcharge/Hazardous/VGM set above).
+      const extraChargesResult = await client.query(
+        `SELECT e.charge_name, SUM(e.amount) AS amount
+         FROM public.container_extra_charge e
+         JOIN public.container c ON c.containerkey = e.containerkey
+         WHERE c.m1key = $1
+         GROUP BY e.charge_name
+         ORDER BY e.charge_name`,
+        [row.m1key]
+      );
+      for (const charge of extraChargesResult.rows) {
+        const amount = Number(charge.amount || 0);
+        if (amount > 0) {
+          lines.push({ description: charge.charge_name, quantity: null, rate: null, amount: Number(amount.toFixed(2)) });
+        }
+      }
+
+      const childSubtotal = lines.reduce((sum, l) => sum + l.amount, 0);
+      const vatRate = Number(row.vat || 0);
+      const childVat = Number(((childSubtotal * vatRate) / 100).toFixed(2));
+      subtotal += childSubtotal;
+      vatTotal += childVat;
+
+      children.push({
+        m1key: row.m1key,
+        shipmentType: row.shipmenttype,
+        bookingRef: row.booking_ref,
+        clientFileRef: row.clientFileRef,
+        companyFileRef: row.ksmFileRef,
+        vesselName: row.vessel_name,
+        pickup: row.pickup,
+        dropoff: row.dropoff,
+        rateTitle: row.rate_title,
+        vatRate,
+        lines,
+        subtotal: Number(childSubtotal.toFixed(2)),
+      });
+    }
+
+    return {
+      success: true,
+      data: {
+        group: {
+          groupKey: group.group_key,
+          groupRef: group.group_ref,
+          status: group.status,
+          invoiceNum: invoice?.invoice_num || null,
+          invoiceDate: invoice?.date || null,
+        },
+        client: {
+          name: group.client_name,
+          address: group.client_address,
+          suburb: group.client_suburb,
+          telephone: group.client_telephone,
+          email: group.client_email,
+          vat: group.client_vat,
+        },
+        company,
+        children,
+        subtotal: Number(subtotal.toFixed(2)),
+        vat: Number(vatTotal.toFixed(2)),
+        total: Number((subtotal + vatTotal).toFixed(2)),
+      },
+    };
+  } catch (error) {
+    console.error("Error building group invoice preview:", error);
+    return { success: false, message: error.message };
+  } finally {
+    client.release();
+  }
+};
+
 export {
   getCompletedInvoices,
   getInvoiceDetails,
@@ -922,4 +1223,5 @@ export {
   createInvoice,
   updateInstructionDetails,
   getInstructionDetailsForPreview,
+  getGroupInvoicePreview,
 };

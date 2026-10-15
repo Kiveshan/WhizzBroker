@@ -1,5 +1,6 @@
 import express from "express";
 import helmet from "helmet";
+import compression from "compression";
 import expressSession from "express-session";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
@@ -35,9 +36,14 @@ app.use(
   })
 );
 
+// Gzip responses (JS bundle, CSS, JSON). Done here rather than in nginx because
+// the EB-generated nginx.conf already sets gzip directives, and redefining them
+// in .platform/ would fail nginx's config check and break the deploy.
+app.use(compression());
+
 // Enhanced CORS configuration
 app.use((req, res, next) => {
-  const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000"];
+  const allowedOrigins = ["http://localhost:3000", "http://127.0.0.1:3000" , "http://whizzbroker-env.eba-mfcpnkar.af-south-1.elasticbeanstalk.com", "https://whizzbroker.co.za"];
   const origin = req.headers.origin;
 
   if (allowedOrigins.includes(origin)) {
@@ -83,9 +89,15 @@ const sessionConfig = {
   name: "whizzaway.sid", // Custom session cookie name
 };
 
-// In production, trust the first proxy
+// Behind ALB -> nginx on Elastic Beanstalk: trust both hops so req.ip is the
+// real client IP. Without this every request appears to come from nginx
+// (127.0.0.1) and the per-IP auth rate limiter becomes one global bucket.
+// EB sets NODE_ENV=deployed, not production.
+if (process.env.NODE_ENV === "production" || process.env.NODE_ENV === "deployed") {
+  app.set("trust proxy", 2);
+}
+
 if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
   sessionConfig.cookie.secure = true;
 }
 
@@ -186,7 +198,20 @@ if (process.env.NODE_ENV == "deployed") {
   const buildDir = path.join(__dirname, "public", "build");
 
   // Serve built assets (index.html at "/", /static/*, favicon, manifest…).
-  app.use(express.static(buildDir));
+  // Files under /static/ have content hashes in their names, so a new build
+  // always gets new URLs and they can be cached for a year. Everything else
+  // (index.html especially) must be revalidated so deploys are picked up.
+  app.use(
+    express.static(buildDir, {
+      setHeaders: (res, filePath) => {
+        if (filePath.startsWith(path.join(buildDir, "static"))) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        } else {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    })
+  );
 
   // SPA history fallback: browser navigations (Accept: text/html) — the root
   // URL and client-side deep links like /Dashboard — get index.html so React
@@ -194,6 +219,7 @@ if (process.env.NODE_ENV == "deployed") {
   // application/json, not text/html) fall through to the API router below.
   app.get("*", (req, res, next) => {
     if (req.headers.accept && req.headers.accept.includes("text/html")) {
+      res.setHeader("Cache-Control", "no-cache");
       return res.sendFile(path.join(buildDir, "index.html"));
     }
     next();

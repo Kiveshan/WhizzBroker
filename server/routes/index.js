@@ -11,6 +11,7 @@ import manageTrailerRoutes from "./manage/trailerRoutes.js";
 import supplierRoutes from "./manage/supplierRoutes.js";
 import expenseTypeRoutes from "./manage/expenseTypeRoutes.js";
 import manageClientRateRoutes from "./manage/clientRateRoutes.js";
+import manageRateCardRoutes from "./manage/rateCardRoutes.js";
 import manageCompanyRoutes from "./manage/companyRoutes.js";
 import paymentRoutes from "./payments/paymentRoutes.js";
 import clientRoutes from "./clients/clientRoutes.js";
@@ -33,9 +34,19 @@ import creditNoteRoutes from "./creditNote/creditNoteRoutes.js";
 import profitLossRoutes from "./profit-loss/profitLossRoutes.js";
 import vatReconRoutes from "./vat-recon/vat-reconRoutes.js";
 import landingRoutes from "./landing/landingRoutes.js";
-import { verifyToken } from "../middleware/auth.js";
+import { verifyToken, requireRoles } from "../middleware/auth.js";
+import { auditTrail } from "../middleware/auditTrail.js";
+import { STAFF_ROLES } from "../config/roles.js";
 
 const router = express.Router();
+
+// ---------------------------------------------------------------------------
+// Audit trail — mounted ahead of everything, including the auth guard, so that
+// failed logins and rejected (401/403) requests are recorded alongside the
+// successful ones. It records every state-changing request plus the sensitive
+// reads registered in config/auditActions.js; see middleware/auditTrail.js.
+// ---------------------------------------------------------------------------
+router.use(auditTrail());
 
 // ---------------------------------------------------------------------------
 // Public / self-authenticating routes — mounted BEFORE the global auth guard.
@@ -47,17 +58,17 @@ router.use(authroutes);
 router.use(landingRoutes);
 // testRoutes: /test-connection health check.
 router.use(testroutes);
-// statementRoutes: /api/statements/generate authenticates the scheduled job via
-//   API_SECRET (and falls back to verifyToken for UI users); its GET routes
-//   self-guard with verifyToken. Must sit before the global guard so the
-//   non-JWT API_SECRET token is not rejected by it.
-router.use(statementRoutes);
 
 // ---------------------------------------------------------------------------
 // Global authentication guard — every route mounted below requires a valid JWT.
 // ---------------------------------------------------------------------------
 router.use(verifyToken);
+// Only roles with screens may use the API (see STAFF_ROLES). Area-specific
+// role guards sit on the individual routes in each module.
+router.use(requireRoles(...STAFF_ROLES));
 
+// Client statements are derived on demand — no scheduled job, no bypass.
+router.use(statementRoutes);
 router.use(creditNoteRoutes);
 router.use(adminroutes);
 router.use(manageEmployeeRoutes);
@@ -67,6 +78,7 @@ router.use(manageDriverRatesRoutes);
 router.use(manageSubbieRoutes);
 router.use(manageTrailerRoutes);
 router.use(manageClientRateRoutes);
+router.use(manageRateCardRoutes);
 router.use(manageCompanyRoutes);
 router.use(supplierRoutes);
 router.use(expenseTypeRoutes);
