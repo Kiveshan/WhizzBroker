@@ -35,9 +35,18 @@ import profitLossRoutes from "./profit-loss/profitLossRoutes.js";
 import vatReconRoutes from "./vat-recon/vat-reconRoutes.js";
 import landingRoutes from "./landing/landingRoutes.js";
 import { verifyToken, requireRoles } from "../middleware/auth.js";
+import { auditTrail } from "../middleware/auditTrail.js";
 import { STAFF_ROLES } from "../config/roles.js";
 
 const router = express.Router();
+
+// ---------------------------------------------------------------------------
+// Audit trail — mounted ahead of everything, including the auth guard, so that
+// failed logins and rejected (401/403) requests are recorded alongside the
+// successful ones. It records every state-changing request plus the sensitive
+// reads registered in config/auditActions.js; see middleware/auditTrail.js.
+// ---------------------------------------------------------------------------
+router.use(auditTrail());
 
 // ---------------------------------------------------------------------------
 // Public / self-authenticating routes — mounted BEFORE the global auth guard.

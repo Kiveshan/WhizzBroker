@@ -5,7 +5,7 @@ import UserApprovalList from "./UserApprovalList";
 import CompanyManagement from "./CompanyManagement";
 import SubcontractorBackfill from "./SubcontractorBackfill";
 import DriverRateAudit from "./DriverRateAudit";
-import AuditLogViewer from "./AuditLogViewer";
+import AuditLogReport from "../../Reports/views/AuditLogReport";
 import "../css/AdminDashboard.css";
 // Import the TestConnection component
 // import TestConnection from "./TestConnection"
@@ -63,7 +63,7 @@ function AdminDashboard() {
           {activeTab === "companies" && <CompanyManagement />}
           {activeTab === "backfill" && <SubcontractorBackfill />}
           {activeTab === "rate-audit" && <DriverRateAudit />}
-          {activeTab === "audit-log" && <AuditLogViewer />}
+          {activeTab === "audit-log" && <AuditLogReport embedded />}
         </div>
       </div>
     </div>

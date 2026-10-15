@@ -24,7 +24,38 @@ import {
   getInstructionGroupById,
   addInstructionToGroup,
 } from "../../models/instructions/instructionModel.js"
-import { auditFromReq } from "../../utils/auditLogger.js"
+import { auditFromReq, getClientName } from "../../utils/auditLogger.js"
+import { diffInstruction } from "../../utils/auditChanges.js"
+
+// Before/after list for an FC instruction save (ported from Whizz-Away). Client
+// and shipment type are stored as ids, so their names are looked up — only
+// when they changed.
+const buildInstructionChanges = async (previous, current) => {
+  const before = previous?.instruction
+  const after = current?.instruction
+  if (!before || !after) return null
+
+  const lookups = { clients: {}, shipmentTypes: {} }
+  if (String(before.client ?? "") !== String(after.client ?? "")) {
+    const [fromName, toName] = await Promise.all([
+      getClientName(before.client),
+      getClientName(after.client),
+    ])
+    lookups.clients = { [before.client]: fromName, [after.client]: toName }
+  }
+  if (String(before.shipment_type ?? "") !== String(after.shipment_type ?? "")) {
+    const types = await getShipmentTypes()
+    lookups.shipmentTypes = Object.fromEntries(types.map((t) => [t.shipkey, t.shipmenttype]))
+  }
+
+  return diffInstruction({
+    before,
+    after,
+    beforeContainers: previous.containers,
+    afterContainers: current.containers,
+    lookups,
+  })
+}
 
 // Helper function to calculate total cost based on rate weight type
 // Supports FC shipment type 4 using weight rows + unit rate
@@ -945,7 +976,18 @@ export const updateFCInstructionAndContainersHandler = async (req, res) => {
       containersToSave,
       Array.isArray(weightData) ? weightData : [],
     )
-    res.status(200).json({ success: true, message: "Instruction and containers updated successfully", data: result })
+    const { previous, ...data } = result
+
+    // Hand the audit trail a plain before/after list of what this save
+    // actually changed (auditTrail.js stores it on the row). Best-effort: a
+    // failure here must never fail a save that has already committed.
+    try {
+      req.auditChanges = await buildInstructionChanges(previous, data)
+    } catch (auditErr) {
+      console.error("Failed to build instruction audit changes:", auditErr.message)
+    }
+
+    res.status(200).json({ success: true, message: "Instruction and containers updated successfully", data })
   } catch (error) {
     console.error(`[${new Date().toISOString()}] [CONTROLLER] Error in updateFCInstructionAndContainersHandler:`, error)
     res.status(500).json({

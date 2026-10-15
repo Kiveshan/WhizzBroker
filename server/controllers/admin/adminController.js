@@ -158,8 +158,26 @@ const reactivateCompanyHandler = async (req, res) => {
 
 const getAuditLogHandler = async (req, res) => {
   try {
-    const { page, limit, actionType, entityType, search, from, to } = req.query;
-    const result = await getAuditLog({ page, limit, actionType, entityType, search, from, to });
+    const { page, limit, actionType, entityType, outcome, actorId, search, from, to } = req.query;
+    // The view is decided here from the caller's role, never from the query
+    // string: Admin sees the full trail including raw request data;
+    // Manager/Director see every action except internet-scanner noise and
+    // System Admin's own actions.
+    const isAdmin = req.user.roleid === ROLES.ADMIN;
+    const result = await getAuditLog({
+      page,
+      limit,
+      actionType,
+      entityType,
+      outcome,
+      actorId,
+      search,
+      from,
+      to,
+      hideAdminActors: !isAdmin,
+      hideBotTraffic: !isAdmin,
+      includeRequestData: isAdmin,
+    });
     res.json(result);
   } catch (err) {
     console.error("Error fetching audit log:", err);

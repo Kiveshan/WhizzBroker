@@ -120,6 +120,7 @@ import {
   ClientSubbieCommissionReport,
   VatReconReportPage,
   IncomePerClientReport,
+  AuditLogReport,
 } from "./pages/Reports";
 
 // CSS Imports
@@ -214,6 +215,7 @@ function DynamicHeader() {
     "/client-subbie-commission": "Client Subbie Commission Report",
     "/income-per-client": "Income Per Client Report",
     "/vat-recon-reports": "VAT Reconciliation Report",
+    "/audit-log": "Audit Log",
   };
 
   const getTitle = () => {
@@ -488,6 +490,7 @@ function ContentWrapper() {
           path="/income-per-client"
           element={<IncomePerClientReport />}
         />
+        <Route path="/audit-log" element={<AuditLogReport />} />
         <Route path="/view-client-list" element={<ClientList />} />
         <Route path="/view-add-on-list" element={<AddOnList />} />
         <Route path="/add-on-form" element={<AddOnForm />} />
@@ -529,6 +532,7 @@ function App() {
     "/profit-loss-reports": "Income & Expenditure Reports",
     "/income-expenditure-reports/:month/:year": "Income & Expenditure Report",
     "/vat-recon-reports": "VAT Reconciliation Report",
+    "/audit-log": "Audit Log",
   };
 
   // Set page title based on current route

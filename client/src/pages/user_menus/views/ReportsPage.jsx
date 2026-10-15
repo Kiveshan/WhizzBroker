@@ -30,6 +30,11 @@ const reportsData = [
     image: "/images/reports.jpg",
     path: "/vat-recon-reports",
   },
+  {
+    title: "Audit Log",
+    image: "/images/reports.jpg",
+    path: "/audit-log",
+  },
 ]
 
 const ReportsPage = () => {

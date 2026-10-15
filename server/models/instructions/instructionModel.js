@@ -3293,6 +3293,11 @@ export const updateFCInstructionAndContainers = async (
     return {
       instruction: finalInstructionResult.rows[0],
       containers: finalContainersResult.rows,
+      // State before this update, for the audit trail's before/after list.
+      previous: {
+        instruction: currentInstruction,
+        containers: currentContainers,
+      },
       changes: {
         instructionUpdated: instructionNeedsUpdate,
         containersUpdated: containerChanges.toUpdate.length,

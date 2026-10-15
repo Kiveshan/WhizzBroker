@@ -10,7 +10,12 @@ import {
   reactivateCompanyHandler,
   getAuditLogHandler,
 } from "../../controllers/admin/adminController.js";
-import { verifyToken, verifyAdminAccess } from "../../middleware/auth.js";
+import {
+  verifyToken,
+  verifyAdminAccess,
+  requireRoles,
+} from "../../middleware/auth.js";
+import { MANAGEMENT_ROLES } from "../../config/roles.js";
 
 const router = express.Router();
 
@@ -53,10 +58,12 @@ router.post(
   reactivateCompanyHandler
 );
 
+// Widened beyond Admin: Manager/Director own the Reports section and this is
+// read-only. Admin always passes requireRoles.
 router.get(
   "/api/admin/audit-log",
   verifyToken,
-  verifyAdminAccess,
+  requireRoles(...MANAGEMENT_ROLES),
   getAuditLogHandler
 );
 
