@@ -16,7 +16,13 @@ AWS.config.update({
 });
 
 const s3 = new AWS.S3();
-const bucketName = process.env.S3_BUCKET_NAME || "sherwyn-whizz-away";
+// No fallback: a default bucket name would silently send this company's
+// documents to whichever bucket that name belongs to (it used to default to the
+// Whizz-Away bucket). Unset means S3 calls fail with a missing-Bucket error.
+const bucketName = process.env.S3_BUCKET_NAME;
+if (!bucketName) {
+  console.error("S3_BUCKET_NAME is not set — document uploads and downloads will fail.");
+}
 
 const storage = multer.memoryStorage();
 
@@ -35,7 +41,7 @@ const checkBucket = async (bucketName) => {
   }
 };
 
-checkBucket(bucketName);
+if (bucketName) checkBucket(bucketName);
 
 const uploadPaymentProof = multer({
   storage: storage,
@@ -116,6 +122,32 @@ const uploadFuelExpense = multer({
   },
 });
 
+// Rendered subcontractor statement documents (PDF/XLSX) attached to an export
+// snapshot. Unlike the uploaders above this one accepts spreadsheets too, and
+// rejects images — a statement document is never a photo.
+const XLSX_MIME =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+const uploadStatementDocument = multer({
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB — a statement PDF is orders of magnitude smaller
+  },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowed =
+      (ext === ".pdf" && file.mimetype === "application/pdf") ||
+      (ext === ".xlsx" &&
+        (file.mimetype === XLSX_MIME ||
+          file.mimetype === "application/octet-stream"));
+
+    if (allowed) {
+      return cb(null, true);
+    }
+    cb(new Error("Only PDF and XLSX statement documents are allowed!"));
+  },
+});
+
 const getSignedUrl = (key, expiresInSeconds = 3600) => {
   return s3.getSignedUrl("getObject", {
     Bucket: bucketName,
@@ -129,6 +161,7 @@ export {
   uploadInstruction,
   uploadFuelExpense,
   uploadPaymentProof,
+  uploadStatementDocument,
   getSignedUrl,
   bucketName,
   uploadPurchaseOrder,

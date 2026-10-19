@@ -58,6 +58,10 @@ const STUB_SHIPMENT_TYPES = [
   { shipkey: 5, shipmenttype: "Add-On" },
 ];
 
+const STUB_RATE_TITLES = [
+  { title: "DBN - JHB Standard", starting_point: "Durban", destination: "Johannesburg", rate_source: "client" },
+];
+
 const STUB_STARTING_POINTS = [{ start: "Cape Town" }];
 const STUB_DESTINATIONS    = [{ destination: "Durban" }];
 
@@ -93,6 +97,8 @@ function mockAllSuccessful() {
       return Promise.resolve({ data: STUB_CLIENTS });
     if (url === "/api/instructions/shipment-types")
       return Promise.resolve({ data: STUB_SHIPMENT_TYPES });
+    if (url.includes("/rate-titles"))
+      return Promise.resolve({ data: STUB_RATE_TITLES });
     if (url.includes("/starting-points"))
       return Promise.resolve({ data: STUB_STARTING_POINTS });
     if (url.includes("/destinations/"))
@@ -126,6 +132,8 @@ describe("FCcontrollerinstructions component — loading state", () => {
       if (url === "/api/instructions/active-clients") return new Promise(() => {});
       if (url === "/api/instructions/shipment-types")
         return Promise.resolve({ data: STUB_SHIPMENT_TYPES });
+      if (url.includes("/rate-titles"))
+        return Promise.resolve({ data: STUB_RATE_TITLES });
       if (url.includes("/starting-points"))
         return Promise.resolve({ data: STUB_STARTING_POINTS });
       if (url.includes("/destinations/"))
@@ -154,6 +162,8 @@ describe("FCcontrollerinstructions component — data load failure", () => {
         return Promise.resolve({ data: [] }); // empty — triggers failure
       if (url === "/api/instructions/shipment-types")
         return Promise.resolve({ data: STUB_SHIPMENT_TYPES });
+      if (url.includes("/rate-titles"))
+        return Promise.resolve({ data: STUB_RATE_TITLES });
       if (url.includes("/starting-points"))
         return Promise.resolve({ data: STUB_STARTING_POINTS });
       if (url.includes("/destinations/"))
@@ -179,6 +189,8 @@ describe("FCcontrollerinstructions component — data load failure", () => {
         return Promise.resolve({ data: STUB_CLIENTS });
       if (url === "/api/instructions/shipment-types")
         return Promise.resolve({ data: [] }); // empty — triggers failure
+      if (url.includes("/rate-titles"))
+        return Promise.resolve({ data: STUB_RATE_TITLES });
       if (url.includes("/starting-points"))
         return Promise.resolve({ data: STUB_STARTING_POINTS });
       if (url.includes("/destinations/"))
@@ -195,14 +207,16 @@ describe("FCcontrollerinstructions component — data load failure", () => {
     });
   });
 
-  test("shows failure message when starting points array is empty", async () => {
+  test("shows failure message when the client has no rates", async () => {
     api.get.mockImplementation((url) => {
       if (url === "/api/instructions/active-clients")
         return Promise.resolve({ data: STUB_CLIENTS });
       if (url === "/api/instructions/shipment-types")
         return Promise.resolve({ data: STUB_SHIPMENT_TYPES });
-      if (url.includes("/starting-points"))
+      if (url.includes("/rate-titles"))
         return Promise.resolve({ data: [] }); // empty — triggers failure
+      if (url.includes("/starting-points"))
+        return Promise.resolve({ data: STUB_STARTING_POINTS });
       if (url.includes("/destinations/"))
         return Promise.resolve({ data: STUB_DESTINATIONS });
       return Promise.resolve({ data: [] });

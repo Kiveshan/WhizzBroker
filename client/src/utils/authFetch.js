@@ -5,15 +5,35 @@
 //
 // Do NOT use this for third-party / S3 presigned URLs — those must not receive our
 // Authorization header.
-export const authFetch = (url, options = {}) => {
+//
+// On a 401 (expired/invalid token), mirrors api.js's handleTokenExpiration: clears
+// the stored session and redirects to login, instead of leaving the caller to show
+// a raw "Invalid token" error with no way forward.
+const handleUnauthorized = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  window.dispatchEvent(new CustomEvent("tokenExpired"));
+  window.dispatchEvent(new CustomEvent("userLoggedOut"));
+  if (window.location.pathname !== "/") {
+    window.location.href = "/";
+  }
+};
+
+export const authFetch = async (url, options = {}) => {
   const token = localStorage.getItem("token");
-  return fetch(url, {
+  const response = await fetch(url, {
     ...options,
     headers: {
       ...(options.headers || {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
+
+  if (response.status === 401) {
+    handleUnauthorized();
+  }
+
+  return response;
 };
 
 export default authFetch;

@@ -18,6 +18,9 @@ import {
   getPaymentsReceivedPerMonthController,
   getPaymentClientsController,
   getClientSubbieCommissionReportController,
+  getIncomePerClientReportController,
+  getWorkVolumePerClientController,
+  getWorkVolumePerSubbieController,
 } from "../../controllers/analytics/analyticsController.js";
 import { verifyToken } from "../../middleware/auth.js";
 
@@ -54,5 +57,8 @@ router.get(
   verifyToken,
   getClientSubbieCommissionReportController
 );
+router.get("/api/income-per-client", verifyToken, getIncomePerClientReportController);
+router.get("/api/work-volume-per-client", verifyToken, getWorkVolumePerClientController);
+router.get("/api/work-volume-per-subbie", verifyToken, getWorkVolumePerSubbieController);
 
 export default router;

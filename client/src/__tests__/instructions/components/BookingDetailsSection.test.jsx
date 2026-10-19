@@ -34,11 +34,11 @@ const defaultProps = {
 beforeEach(() => jest.clearAllMocks());
 
 describe("BookingDetailsSection — rendering", () => {
-  it("renders Booking Reference, Client File Ref, KSM File Ref", () => {
+  it("renders Booking Ref, Client File Reference, Company File Reference", () => {
     render(<BookingDetailsSection {...defaultProps} />);
-    expect(screen.getByText("Booking Reference")).toBeInTheDocument();
-    expect(screen.getByText("Client File Ref")).toBeInTheDocument();
-    expect(screen.getByText("Ksm File Reference")).toBeInTheDocument();
+    expect(screen.getByText("Booking Ref")).toBeInTheDocument();
+    expect(screen.getByText("Client File Reference")).toBeInTheDocument();
+    expect(screen.getByText("Company File Reference")).toBeInTheDocument();
   });
 
   it("renders form values from formData", () => {

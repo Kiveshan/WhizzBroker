@@ -53,7 +53,7 @@ function validateForm(formData, { isCrossHaul, isWeightBased, isAddOn, isSetRate
   if (!formData.dropoff) errors.dropoff = "Dropoff location is required";
 
   if (!isAddOn) {
-    if (!formData.task) errors.task = "KSM File Reference is required";
+    if (!formData.task) errors.task = "File Reference is required";
     if (!formData.lastFreeDate) errors.lastFreeDate = "Last Free Date is required";
     if (!formData.bookingRef) errors.bookingRef = "Booking reference is required";
     if (!formData.fileRef) errors.fileRef = "Client File Reference is required";
@@ -252,7 +252,7 @@ describe("validateForm (create form)", () => {
     shipmentTypeId: "1",
     pickup: "Cape Town",
     dropoff: "Durban",
-    task: "KSM-001",
+    task: "TASK-001",
     lastFreeDate: "2026-05-01",
     bookingRef: "BR-001",
     fileRef: "FR-001",

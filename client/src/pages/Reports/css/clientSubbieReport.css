@@ -444,3 +444,9 @@
     flex-direction: column;
   }
 }
+
+/* Loss-making commission or instruction margin. */
+.client-subbie-summary-value.is-negative,
+.client-subbie-table td.is-negative {
+  color: #b42318;
+}

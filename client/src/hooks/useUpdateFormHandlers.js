@@ -17,6 +17,7 @@ export function useUpdateFormHandlers({
   initializeContainers,
   containersRef,
   fetchRates,
+  rateOptions = [],
   setIsSetRate,
   setWeightRows,
   setFieldErrors,
@@ -276,34 +277,29 @@ export function useUpdateFormHandlers({
     ]
   );
 
-  // ─── pickup / dropoff ────────────────────────────────────────────────────────
+  // ─── rate (picked by title) ──────────────────────────────────────────────────
+  // Choosing a different rate fills in its route (blank when it has none) and
+  // applies its base prices. Existing containers keep their saved surcharge /
+  // hazardous / VGM amounts; the server prices only newly ticked ones.
 
-  const handlePickupChange = useCallback(
+  const handleRateTitleChange = useCallback(
     async (e) => {
-      const pickupLocation = e.target.value;
+      const title = e.target.value;
+      const rate = rateOptions.find((r) => r.title === title);
       setFormData((prev) => ({
         ...prev,
-        pickup: pickupLocation,
-        dropoff: "",
+        rate_title: title,
+        pickup: rate?.starting_point || "",
+        dropoff: rate?.destination || "",
       }));
+      clearFieldError("rate_title");
       clearFieldError("pickup");
-      if (formData.clientId && pickupLocation) {
-        await fetchRates(formData.clientId, pickupLocation);
-      }
-    },
-    [formData.clientId, setFormData, clearFieldError, fetchRates]
-  );
-
-  const handleDropoffChange = useCallback(
-    async (e) => {
-      const dropoffLocation = e.target.value;
-      setFormData((prev) => ({ ...prev, dropoff: dropoffLocation }));
       clearFieldError("dropoff");
-      if (formData.pickup && dropoffLocation) {
-        await fetchRates(formData.clientId, formData.pickup, dropoffLocation);
+      if (formData.clientId && title) {
+        await fetchRates(formData.clientId, null, null, title);
       }
     },
-    [formData.clientId, formData.pickup, setFormData, clearFieldError, fetchRates]
+    [formData.clientId, rateOptions, setFormData, clearFieldError, fetchRates]
   );
 
   // ─── generic input ───────────────────────────────────────────────────────────
@@ -536,8 +532,7 @@ export function useUpdateFormHandlers({
     if (
       isLoading.clients ||
       isLoading.shipmentTypes ||
-      isLoading.startingPoints ||
-      isLoading.destinations
+      isLoading.rateOptions
     ) {
       return;
     }
@@ -548,8 +543,7 @@ export function useUpdateFormHandlers({
   return {
     handleClientChange,
     handleShipmentTypeChange,
-    handlePickupChange,
-    handleDropoffChange,
+    handleRateTitleChange,
     handleInputChange,
     handleNumericInputChange,
     handleRateChange,

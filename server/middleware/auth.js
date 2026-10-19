@@ -1,5 +1,4 @@
 import jwt from "jsonwebtoken"
-import crypto from "crypto"
 import { secretKey } from "../config/secrets.js"
 import { ROLES } from "../config/roles.js"
 
@@ -66,30 +65,29 @@ const verifyAdminAccess = (req, res, next) => {
   return next()
 }
 
-// Authenticates the EventBridge/Lambda statement-generation jobs via a shared
-// API_SECRET bearer token, falling back to normal JWT auth for UI users.
-// Fail-closed: if API_SECRET is not configured, the job path is disabled rather
-// than matching an undefined token. Constant-time compare to avoid timing leaks.
-const authenticateScheduledJob = (req, res, next) => {
-  const authHeader = req.headers.authorization
-  const token = authHeader && authHeader.split(" ")[1]
-  const apiSecret = process.env.API_SECRET
-
-  if (token && apiSecret) {
-    const tokenBuf = Buffer.from(token)
-    const secretBuf = Buffer.from(apiSecret)
-    if (
-      tokenBuf.length === secretBuf.length &&
-      crypto.timingSafeEqual(tokenBuf, secretBuf)
-    ) {
-      req.isScheduledJob = true
-      return next()
-    }
+// Role guard. Use after verifyToken: requireRoles(...MANAGEMENT_ROLES).
+// Admins always pass. Apply it per route, never with router.use() inside a
+// route module — modules are mounted at "/", so a module-level guard would
+// also block every route mounted after it in routes/index.js.
+const requireRoles = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      error: "Authentication required",
+      message: "You must be logged in to access this resource",
+      code: "NO_USER",
+    })
   }
 
-  // Not the scheduled job — require a normal user JWT.
-  req.isScheduledJob = false
-  return verifyToken(req, res, next)
+  const roleid = Number(req.user.roleid)
+  if (roleid === ROLES.ADMIN || roles.includes(roleid)) {
+    return next()
+  }
+
+  return res.status(403).json({
+    error: "Unauthorized",
+    message: "You do not have permission to access this resource",
+    code: "INSUFFICIENT_PERMISSIONS",
+  })
 }
 
-export { verifyToken, verifyAdminAccess, authenticateScheduledJob }
+export { verifyToken, verifyAdminAccess, requireRoles }

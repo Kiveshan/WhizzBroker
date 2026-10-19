@@ -59,7 +59,7 @@ const uploadFileToS3 = async (s3, file, instructionId) => {
 
       await s3
         .upload({
-          Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+          Bucket: process.env.S3_BUCKET_NAME,
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,
@@ -81,7 +81,7 @@ const uploadFileToS3 = async (s3, file, instructionId) => {
 
       await s3
         .upload({
-          Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+          Bucket: process.env.S3_BUCKET_NAME,
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,
@@ -97,7 +97,7 @@ const uploadFileToS3 = async (s3, file, instructionId) => {
 
     await s3
       .upload({
-        Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+        Bucket: process.env.S3_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
@@ -111,7 +111,7 @@ const uploadFileToS3 = async (s3, file, instructionId) => {
 
     await s3
       .upload({
-        Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+        Bucket: process.env.S3_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
@@ -130,7 +130,7 @@ const uploadFuelSlipToS3 = async (s3, file, truckId) => {
 
       await s3
         .upload({
-          Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+          Bucket: process.env.S3_BUCKET_NAME,
           Key: key,
           Body: file.buffer,
           ContentType: file.mimetype,
@@ -145,7 +145,7 @@ const uploadFuelSlipToS3 = async (s3, file, truckId) => {
 
     await s3
       .upload({
-        Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+        Bucket: process.env.S3_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
@@ -159,7 +159,7 @@ const uploadFuelSlipToS3 = async (s3, file, truckId) => {
 
     await s3
       .upload({
-        Bucket: process.env.S3_BUCKET_NAME || "sherwyn-whizz-away",
+        Bucket: process.env.S3_BUCKET_NAME,
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,

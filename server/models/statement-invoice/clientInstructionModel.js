@@ -10,33 +10,53 @@ const getClientInstructions = async (clientId, { year, month, type }) => {
 
     let queryText = `
       SELECT 
-        m1.m1key, 
-        m1."ksmFileRef" as instruction_no, 
-        s.shipmenttype as shipment_type, 
-        m1."clientFileRef" as file_no, 
+        m1.m1key,
+        m1."ksmFileRef" as instruction_no,
+        s.shipmenttype as shipment_type,
+        m1."clientFileRef" as file_no,
         m1.status,
+        m1.instruction_group_id,
         m1.created_at as pickupdate,
-        m1.total_cost AS base_total_cost,
+        -- A group invoice covers every child in the group, so the displayed
+        -- amount is the combined total across all of the group's children
+        -- (not just this row's own instruction) to match what the invoice
+        -- actually bills. Singleton groups collapse back to the child's own cost.
+        CASE
+          WHEN m1.instruction_group_id IS NULL THEN COALESCE(m1.total_cost, 0)
+          ELSE (
+            SELECT COALESCE(SUM(gm.total_cost), 0)
+            FROM public.m1_controller gm
+            WHERE gm.instruction_group_id = m1.instruction_group_id
+          )
+        END AS base_total_cost,
         COALESCE(m1.vat, 0) AS vat_percentage,
-        (COALESCE(m1.total_cost, 0) * (1 + COALESCE(m1.vat, 0)::numeric / 100)) AS total_cost,
+        CASE
+          WHEN m1.instruction_group_id IS NULL THEN
+            (COALESCE(m1.total_cost, 0) * (1 + COALESCE(m1.vat, 0)::numeric / 100))
+          ELSE (
+            SELECT COALESCE(SUM(gm.total_cost * (1 + COALESCE(gm.vat, 0)::numeric / 100)), 0)
+            FROM public.m1_controller gm
+            WHERE gm.instruction_group_id = m1.instruction_group_id
+          )
+        END AS total_cost,
         i.ikey,
         i.invoice_num,
         i.date as invoice_date,
         i.groupid as invoice_group_id,
-        st.statement_key as statement_id
-      FROM 
+        -- Statements are derived, so the key is the client and the month the
+        -- invoice falls in: "<clientId>-YYYY-MM" (statementDerivation.js).
+        (m1.client || '-' || to_char(i.date, 'YYYY-MM')) AS statement_id
+      FROM
         public.m1_controller m1
-      LEFT JOIN 
+      LEFT JOIN
         public.shipment s ON m1.shipment_type = s.shipkey
       INNER JOIN
-        public.invoice i ON m1.m1key = i.m1key
-      LEFT JOIN LATERAL (
-        SELECT statement_key
-        FROM public.statements st
-        WHERE st.clientid = m1.client
-        ORDER BY st.generation_date DESC
-        LIMIT 1
-      ) st ON TRUE
+        public.invoice i ON i.m1key = m1.m1key
+        OR (
+          i.m1key IS NULL
+          AND m1.instruction_group_id IS NOT NULL
+          AND i.instruction_group_id = m1.instruction_group_id
+        )
       WHERE 
         m1.client = $1
         AND m1.status = 'Completed'

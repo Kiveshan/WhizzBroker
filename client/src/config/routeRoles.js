@@ -42,6 +42,8 @@ export const ROUTE_ROLES = [
   { pattern: "/DirectorAnalytics", roles: [4, 1] },
   { pattern: "/wage-reports", roles: [1, 4] },
   { pattern: "/client-subbie-commission", roles: [1, 4] },
+  { pattern: "/income-per-client", roles: [1, 4] },
+  { pattern: "/audit-log", roles: [1, 4] },
   { pattern: "/profit-loss-reports", roles: [1, 4] },
   { pattern: "/income-expenditure-reports/:month/:year", roles: [1, 4] },
   { pattern: "/vat-recon-reports", roles: [1, 4] },
@@ -55,6 +57,8 @@ export const ROUTE_ROLES = [
   { pattern: "/DirectorClientPaymentList", roles: [4, 1] },
   { pattern: "/DirectorDocs", roles: [4, 1] },
   { pattern: "/DirectorManagerViewAssignment", roles: [4, 1] },
+  { pattern: "/DirectorGroupAssignment", roles: [4, 1] },
+  { pattern: "/DirectorInstructionGroupView", roles: [4, 1, 2] },
   { pattern: "/DirectorManagerViewFuelExpense", roles: [4, 1] },
   { pattern: "/DirectorExpenses/:truckId", roles: [4, 1] },
   { pattern: "/director-client-list-payments", roles: [4, 1] },
@@ -69,7 +73,7 @@ export const ROUTE_ROLES = [
 
   // ---------- Instruction edit / assignment flows (⚠️ uncertain role mix) ----------
   { pattern: "/FCcontrollerinstructions", roles: [3, 2, 1, 4] },
-  { pattern: "/FCcontrollerInstructionDetails", roles: [3, 2, 1, 4] },
+  { pattern: "/FCInstructionGroup", roles: [3, 2, 1, 4] },
   { pattern: "/instructions", roles: [3, 2, 1, 4] },
   { pattern: "/update-instructions", roles: [3, 2, 1, 4] },
   { pattern: "/Upload-Instruction-Documents", roles: [3, 2, 1, 4] },

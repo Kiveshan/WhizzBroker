@@ -1,4 +1,5 @@
 import { authFetch } from "../../../../../utils/authFetch.js";
+import { finalDestination } from "../../../../../utils/assignments/finalDestination.js";
 
 export const navigateToDocuments = ({
   instructionId,
@@ -66,7 +67,9 @@ export const handleFinaliseClick = async ({
 
     const instructionDetails = await response.json();
     const pickup = instructionDetails.pickup;
-    const dropoff = instructionDetails.dropoff;
+    // Rates without a route leave the instruction without a dropoff; the last
+    // leg's destination is then where everything has to end up.
+    const dropoff = finalDestination(instructionDetails.dropoff, legs);
 
     const missingItems = await checkContainersReachDropoff(dropoff);
 

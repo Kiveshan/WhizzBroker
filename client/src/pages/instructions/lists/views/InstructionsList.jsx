@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
+import ExcelJS from "exceljs"
 import "../../css/InstructionsList.css"
 import api from "../../../../api"
 import Pagination from "../../../../components/Pagination"
@@ -156,21 +157,6 @@ const Instructions = () => {
     setCurrentPage(1)
   }
 
-  // Helper function to determine status priority for sorting
-  const getStatusPriority = (status) => {
-    const normalized = (status || "").toLowerCase()
-    switch (normalized) {
-      case "new":
-        return 1 // Highest priority
-      case "in progress":
-        return 3
-      case "completed":
-        return 4
-      default:
-        return 5 // Lowest priority
-    }
-  }
-
   const getFilteredInstructions = () => {
     let filtered = [...instructions]
 
@@ -247,20 +233,30 @@ const Instructions = () => {
       filtered = filtered.filter((item) => searchMatchedKeys.has(String(item.m1key)))
     }
 
-    // Sort by status priority first, then by instruction number (descending)
+    // Sort by last free date, then stack date, soonest to latest
     filtered.sort((a, b) => {
-      // Primary sort: Status priority
-      const priorityA = getStatusPriority(a.status)
-      const priorityB = getStatusPriority(b.status)
-
-      if (priorityA !== priorityB) {
-        return priorityA - priorityB
+      const toTime = (value) => {
+        if (!value) return Infinity
+        const time = new Date(value).getTime()
+        return Number.isNaN(time) ? Infinity : time
       }
 
-      // Secondary sort: Instruction number (descending)
+      const lastFreeA = toTime(a.lastFreeDate)
+      const lastFreeB = toTime(b.lastFreeDate)
+      if (lastFreeA !== lastFreeB) {
+        return lastFreeA - lastFreeB
+      }
+
+      const stackA = toTime(a.stackdate || a.stackDate)
+      const stackB = toTime(b.stackdate || b.stackDate)
+      if (stackA !== stackB) {
+        return stackA - stackB
+      }
+
+      // Fallback: instruction number (descending)
       const instructionA = Number.parseInt(a.m1controllerkey || a.m1key || 0)
       const instructionB = Number.parseInt(b.m1controllerkey || b.m1key || 0)
-      return instructionB - instructionA // Descending order
+      return instructionB - instructionA
     })
 
     return filtered
@@ -306,6 +302,83 @@ const Instructions = () => {
     setCurrentPage(pageNumber)
   }
 
+  const getTypeText = (item) => {
+    return (
+      item.type_text ||
+      (item.shipment_type === 1 || item.shipment_type === "1"
+        ? "import"
+        : item.shipment_type === 2 || item.shipment_type === "2"
+          ? "export"
+          : item.shipment_type === 3 || item.shipment_type === "3"
+            ? "cross-haul"
+            : item.shipment_type === 4 || item.shipment_type === "4"
+              ? "cross-haul (break bulk)"
+              : item.shipment_type === 5 || item.shipment_type === "5"
+                ? "add-on"
+                : item.type)
+    )
+  }
+
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet("Instructions")
+
+    worksheet.columns = [
+      { header: "Instruction No", key: "instructionNo", width: 20 },
+      { header: "Group Ref", key: "groupRef", width: 15 },
+      { header: "Invoice No", key: "invoiceNo", width: 20 },
+      { header: "Booking Ref", key: "bookingRef", width: 20 },
+      { header: "Client Ref", key: "clientRef", width: 20 },
+      { header: "File Ref", key: "fileRef", width: 20 },
+      { header: "Type", key: "type", width: 20 },
+      { header: "Rate", key: "rate", width: 32 },
+      { header: "Status", key: "status", width: 15 },
+      { header: "Creation Date", key: "creationDate", width: 18 },
+    ]
+
+    worksheet.getRow(1).font = { bold: true }
+    worksheet.getRow(1).fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE6F3FF" },
+    }
+
+    filteredInstructions.forEach((item) => {
+      const isAddOn =
+        item.shipment_type === 5 ||
+        item.shipment_type === "5" ||
+        (item.type_text || "").toLowerCase() === "add-on" ||
+        (item.type_text || "").toLowerCase() === "add on"
+
+      worksheet.addRow({
+        instructionNo: item.m1controllerkey || item.m1key,
+        groupRef: item.instruction_group_id ? item.group_ref || item.instruction_group_id : "",
+        invoiceNo: (isAddOn ? item.addon_invoice_number : item.invoice_num) || "N/A",
+        bookingRef: item.booking_ref || "N/A",
+        clientRef: item.client_ref || "N/A",
+        fileRef: item.ksm_file_ref || "N/A",
+        type: getTypeText(item),
+        rate: item.rate_title || "",
+        status: item.status || "",
+        creationDate: (item.startingdate || item.pickupdate)
+          ? new Date(item.startingdate || item.pickupdate).toLocaleDateString()
+          : "Not Set",
+      })
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    const datePart = new Date().toISOString().slice(0, 10)
+    link.download = `Instructions_${clientName ? clientName.replace(/\s+/g, "_") + "_" : ""}${datePart}.xlsx`
+    link.click()
+    window.URL.revokeObjectURL(url)
+  }
+
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1)
@@ -323,11 +396,12 @@ const Instructions = () => {
     return status
   }
 
-  // Handle view instruction click - explicitly pass all state to FCcontrollerinstructions
-  const handleViewInstruction = (instructionId) => {
-    // Create state object with all necessary parameters
+  // Handle view instruction click. Grouped instructions open the whole group
+  // (tabbed form where more instructions can be added); legacy ungrouped
+  // instructions still open the single-instruction update form.
+  const handleViewInstruction = (item) => {
     const stateToPass = {
-      instructionId,
+      instructionId: item.m1key,
       clientId,
       clientName,
       selectedMonth,
@@ -335,9 +409,14 @@ const Instructions = () => {
       activeFilter,
     }
 
-    // Log the state being passed to FCcontrollerinstructions
-    console.log("Navigating to FCcontrollerinstructions with state:", stateToPass)
+    if (item.instruction_group_id) {
+      const groupState = { ...stateToPass, groupId: item.instruction_group_id }
+      console.log("Navigating to FCInstructionGroup with state:", groupState)
+      navigate("/FCInstructionGroup", { state: groupState })
+      return
+    }
 
+    console.log("Navigating to FCcontrollerinstructions with state:", stateToPass)
     navigate("/FCcontrollerinstructions", { state: stateToPass })
   }
   // Added this new function
@@ -468,6 +547,14 @@ const Instructions = () => {
               minWidth: "220px",
             }}
           />
+          <button
+            className="btn btn-blue"
+            style={{ marginLeft: "10px" }}
+            onClick={handleExportExcel}
+            disabled={loading || filteredInstructions.length === 0}
+          >
+            Export to Excel
+          </button>
         </div>
         <div className="tables-container">
           {loading ? (
@@ -482,8 +569,9 @@ const Instructions = () => {
                   <th>Invoice No</th>
                   <th>Booking Ref</th>
                   <th>Client Ref</th>
-                  <th>KSM File Ref</th>
+                  <th>File Ref</th>
                   <th>Type</th>
+                  <th>Rate</th>
                   <th>Status</th>
                   <th>Creation Date</th>
                   <th>Instruction</th>
@@ -493,11 +581,11 @@ const Instructions = () => {
 <tbody>
   {containerSearchLoading ? (
     <tr>
-      <td colSpan="10">Searching...</td>
+      <td colSpan="11">Searching...</td>
     </tr>
   ) : currentInstructions.length === 0 ? (
     <tr>
-      <td colSpan="10">No instructions found</td>
+      <td colSpan="11">No instructions found</td>
     </tr>
   ) : (
     currentInstructions.map((item) => {
@@ -506,7 +594,14 @@ const Instructions = () => {
 
       return (
         <tr key={item.m1controllerkey || item.m1key}>
-          <td>Instruction {item.m1controllerkey || item.m1key}</td>
+          <td>
+            Instruction {item.m1controllerkey || item.m1key}
+            {item.instruction_group_id && (
+              <div style={{ fontSize: "0.8rem", color: "#6c757d" }}>
+                Group {item.group_ref || item.instruction_group_id}
+              </div>
+            )}
+          </td>
           <td>
             {item.shipment_type === 5 || item.shipment_type === "5" || (item.type_text || "").toLowerCase() === "add-on" || (item.type_text || "").toLowerCase() === "add on"
               ? (item.addon_invoice_number || "N/A")
@@ -529,6 +624,7 @@ const Instructions = () => {
                         ? "add-on"
                         : item.type)}
           </td>
+          <td>{item.rate_title || (item.pickup && item.dropoff ? `${item.pickup} → ${item.dropoff}` : "—")}</td>
           <td>{renderStatus(item.status)}</td>
           <td>
             {(item.startingdate || item.pickupdate)
@@ -538,7 +634,7 @@ const Instructions = () => {
           <td>
             <button
               className="view-btn"
-              onClick={() => handleViewInstruction(item.m1key)}
+              onClick={() => handleViewInstruction(item)}
             >
               View
             </button>
@@ -566,6 +662,14 @@ const Instructions = () => {
           activeFilter,
           selectedLegIndex: 0,
         };
+        // Grouped instructions open the whole-group assignment carousel;
+        // legacy ungrouped instructions keep the single-instruction flow.
+        if (item.instruction_group_id) {
+          navigate("/GroupAssignment", {
+            state: { ...stateToPass, groupId: item.instruction_group_id },
+          });
+          return;
+        }
         console.log("Navigating to update-instructions with state:", stateToPass);
         navigate("/update-instructions", {
           state: stateToPass,

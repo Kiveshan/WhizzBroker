@@ -1,32 +1,33 @@
 /**
  * useInstructionData — data-fetching lifecycle for both instruction forms.
  *
- * Manages: clients, shipment types, starting points, destinations, and
- * optionally an existing instruction record (update form only).
- * Also owns route-mismatch detection and route-sync side effects.
+ * Manages: clients, shipment types, the selected client's rates (one per
+ * title, for the Rate dropdown), and optionally an existing instruction
+ * record (update form only). Also owns rate-mismatch detection: an existing
+ * instruction whose rate title is no longer on the client's rates (or an
+ * older instruction priced by route, with no title) starts locked.
  *
  * @param {object} options
  * @param {boolean} [options.fetchExisting=false]   – fetch instruction on mount (update form)
  * @param {string}  [options.instructionId]         – required when fetchExisting=true
  * @param {string}  [options.clientId=""]           – reactive: re-fetches when changed
- * @param {string}  [options.pickup=""]             – reactive: re-fetches destinations when changed
- * @param {string}  [options.dropoff=""]            – used for auto-select + route sync
+ * @param {string}  [options.rateTitle=""]          – the instruction's rate title
+ * @param {string}  [options.pickup=""]             – route of an older instruction without a title
+ * @param {string}  [options.dropoff=""]
  * @param {function} [options.onFormUpdate]         – (partialFormData) => void
- *                                                     called when hook auto-selects a single
- *                                                     option or syncs a renamed route value.
+ *                                                     called when the hook syncs a title's
+ *                                                     capitalisation to the client's rate.
  * @param {function} [options.onError]              – (message: string) => void
  *                                                     called on any fetch failure.
  * @param {function} [options.on404]                – () => void
- *                                                     called when starting-points returns 404
- *                                                     (create form: show "no rates" modal).
+ *                                                     called when the client has no rates.
  *
  * @returns {{
  *   clients:          object[],
  *   shipmentTypes:    object[],
- *   startingPoints:   { id: string, startingpoint: string }[],
- *   destinations:     { id: string, destination: string }[],
+ *   rateOptions:      { title, starting_point, destination, rate_source, rate_card_name }[],
  *   instructionRecord: object | null,   // raw API data for update form
- *   isLoading:        { clients: boolean, shipmentTypes: boolean, startingPoints: boolean, destinations: boolean, instruction: boolean },
+ *   isLoading:        { clients: boolean, shipmentTypes: boolean, rateOptions: boolean, instruction: boolean },
  *   isLoadingComplete: boolean,
  *   hasRouteMismatch:    boolean,
  *   setHasRouteMismatch: function,
@@ -40,8 +41,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchClients,
   fetchShipmentTypes,
-  fetchStartingPoints,
-  fetchDestinations,
+  fetchRateTitles,
   fetchInstruction,
 } from "../services/instructionService.js";
 
@@ -49,6 +49,7 @@ export function useInstructionData({
   fetchExisting = false,
   instructionId = null,
   clientId = "",
+  rateTitle = "",
   pickup = "",
   dropoff = "",
   onFormUpdate = null,
@@ -57,15 +58,13 @@ export function useInstructionData({
 } = {}) {
   const [clients, setClients] = useState([]);
   const [shipmentTypes, setShipmentTypes] = useState([]);
-  const [startingPoints, setStartingPoints] = useState([]);
-  const [destinations, setDestinations] = useState([]);
+  const [rateOptions, setRateOptions] = useState([]);
   const [instructionRecord, setInstructionRecord] = useState(null);
 
   const [isLoading, setIsLoading] = useState({
     clients: true,
     shipmentTypes: true,
-    startingPoints: false,
-    destinations: false,
+    rateOptions: false,
     instruction: fetchExisting && !!instructionId,
   });
 
@@ -131,159 +130,77 @@ export function useInstructionData({
     return () => { cancelled = true; };
   }, [fetchExisting, instructionId]);
 
-  // ── Starting points (reactive on clientId) ───────────────────────────────
+  // ── Client rates (reactive on clientId) ──────────────────────────────────
 
   useEffect(() => {
     if (!clientId) {
-      setStartingPoints([]);
-      setIsLoading((prev) => ({ ...prev, startingPoints: false }));
+      setRateOptions([]);
+      setIsLoading((prev) => ({ ...prev, rateOptions: false }));
       return;
     }
     let cancelled = false;
     const load = async () => {
-      setIsLoading((prev) => ({ ...prev, startingPoints: true }));
+      setIsLoading((prev) => ({ ...prev, rateOptions: true }));
       try {
-        const raw = await fetchStartingPoints(clientId);
-        const formatted = Array.isArray(raw)
-          ? raw
-              .map((point, index) => ({
-                id: point.id || `point-${index}`,
-                startingpoint:
-                  point.starting_point || point.startingpoint || String(point),
-              }))
-              .filter((p) => p.startingpoint)
-          : [];
+        const raw = await fetchRateTitles(clientId);
         if (cancelled) return;
-        setStartingPoints(formatted);
-        // Auto-select single option when pickup is not yet set
-        if (formatted.length === 1 && !pickup) {
-          onFormUpdateRef.current?.({ pickup: formatted[0].startingpoint });
-        }
+        const options = Array.isArray(raw) ? raw.filter((r) => r && r.title) : [];
+        setRateOptions(options);
+        if (options.length === 0) on404Ref.current?.();
       } catch (error) {
-        console.error("[useInstructionData] Error fetching starting points:", error);
+        console.error("[useInstructionData] Error fetching client rates:", error);
         if (!cancelled) {
-          if (error.response?.status === 404) {
-            on404Ref.current?.();
-          } else {
-            onErrorRef.current?.("Failed to fetch starting points. Please try again.");
-          }
-          setStartingPoints([]);
+          onErrorRef.current?.("Failed to fetch the client's rates. Please try again.");
+          setRateOptions([]);
         }
       } finally {
-        if (!cancelled) setIsLoading((prev) => ({ ...prev, startingPoints: false }));
+        if (!cancelled) setIsLoading((prev) => ({ ...prev, rateOptions: false }));
       }
     };
     load();
     return () => { cancelled = true; };
-  // pickup intentionally NOT in deps: auto-select reads snapshot at fetch time
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientId]);
 
-  // ── Destinations (reactive on clientId + pickup) ─────────────────────────
+  // ── Rate mismatch detection ──────────────────────────────────────────────
+  // Lock when the instruction's rate can't be picked from the client's current
+  // rates: its title was renamed/removed, or it is an older instruction priced
+  // by route with no title. Unlocking (confirmed by the user) lets them choose.
+
+  const titleKey = (t) => String(t ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 
   useEffect(() => {
-    if (!clientId || !pickup) {
-      setDestinations([]);
-      setIsLoading((prev) => ({ ...prev, destinations: false }));
-      return;
-    }
-    let cancelled = false;
-    const load = async () => {
-      setIsLoading((prev) => ({ ...prev, destinations: true }));
-      try {
-        const raw = await fetchDestinations(clientId, pickup);
-        const formatted = Array.isArray(raw)
-          ? raw.map((dest) => ({
-              id: dest.id || dest.destination,
-              destination: dest.destination || String(dest),
-            }))
-          : [];
-        if (cancelled) return;
-        setDestinations(formatted);
-        // Auto-select single option when dropoff is not yet set
-        if (formatted.length === 1 && !dropoff) {
-          onFormUpdateRef.current?.({ dropoff: formatted[0].destination });
-        }
-      } catch (error) {
-        console.error("[useInstructionData] Error fetching destinations:", error);
-        if (!cancelled) {
-          onErrorRef.current?.("Failed to fetch destinations. Please try again.");
-          setDestinations([]);
-        }
-      } finally {
-        if (!cancelled) setIsLoading((prev) => ({ ...prev, destinations: false }));
-      }
-    };
-    load();
-    return () => { cancelled = true; };
-  // dropoff intentionally NOT in deps: auto-select reads snapshot at fetch time
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId, pickup]);
-
-  // ── Route mismatch detection ─────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!isLoading.destinations && clientId && pickup && destinations.length === 0) {
-      console.log("[useInstructionData] Route mismatch detected:", { clientId, pickup });
+    if (isLoading.rateOptions || !clientId) return;
+    const matched = rateTitle && rateOptions.some((r) => titleKey(r.title) === titleKey(rateTitle));
+    const legacyRouteOnly = !rateTitle && pickup && dropoff;
+    if ((rateTitle && !matched) || legacyRouteOnly) {
       setHasRouteMismatch(true);
       setRouteEditMode("locked");
-    } else if (!isLoading.destinations && destinations.length > 0) {
+    } else {
       setHasRouteMismatch(false);
       setRouteEditMode("editable");
     }
-  }, [isLoading.destinations, destinations.length, clientId, pickup]);
+  // Only re-evaluate when the rate list loads or the client changes; once the
+  // user unlocks, choosing a rate must not re-lock it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading.rateOptions, rateOptions, clientId]);
 
-  // ── Pickup route-sync (fuzzy match after API rename) ─────────────────────
-
-  useEffect(() => {
-    if (routeEditMode === "locked") return;
-    if (!isLoading.startingPoints && startingPoints.length > 0 && pickup) {
-      const exactMatch = startingPoints.find((p) => p.startingpoint === pickup);
-      if (!exactMatch) {
-        const fuzzyMatch = startingPoints.find(
-          (p) =>
-            p.startingpoint.toLowerCase().includes(pickup.toLowerCase()) ||
-            pickup.toLowerCase().includes(p.startingpoint.toLowerCase())
-        );
-        if (fuzzyMatch) {
-          console.log(
-            `[useInstructionData] Syncing pickup "${pickup}" → "${fuzzyMatch.startingpoint}"`
-          );
-          onFormUpdateRef.current?.({ pickup: fuzzyMatch.startingpoint });
-        }
-      }
-    }
-  }, [isLoading.startingPoints, startingPoints, pickup, routeEditMode]);
-
-  // ── Dropoff route-sync (fuzzy match after API rename) ────────────────────
+  // ── Title sync (same rate, different capitalisation/spacing) ─────────────
 
   useEffect(() => {
-    if (routeEditMode === "locked") return;
-    if (!isLoading.destinations && destinations.length > 0 && dropoff) {
-      const exactMatch = destinations.find((d) => d.destination === dropoff);
-      if (!exactMatch) {
-        const fuzzyMatch = destinations.find(
-          (d) =>
-            d.destination.toLowerCase().includes(dropoff.toLowerCase()) ||
-            dropoff.toLowerCase().includes(d.destination.toLowerCase())
-        );
-        if (fuzzyMatch) {
-          console.log(
-            `[useInstructionData] Syncing dropoff "${dropoff}" → "${fuzzyMatch.destination}"`
-          );
-          onFormUpdateRef.current?.({ dropoff: fuzzyMatch.destination });
-        }
-      }
+    if (routeEditMode === "locked" || !rateTitle) return;
+    const match = rateOptions.find((r) => titleKey(r.title) === titleKey(rateTitle));
+    if (match && match.title !== rateTitle) {
+      onFormUpdateRef.current?.({ rate_title: match.title });
     }
-  }, [isLoading.destinations, destinations, dropoff, routeEditMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rateOptions, rateTitle, routeEditMode]);
 
   // ── isLoadingComplete ─────────────────────────────────────────────────────
 
   const isLoadingComplete =
     !isLoading.clients &&
     !isLoading.shipmentTypes &&
-    !isLoading.startingPoints &&
-    !isLoading.destinations &&
+    !isLoading.rateOptions &&
     !isLoading.instruction;
 
   // ── refetch ───────────────────────────────────────────────────────────────
@@ -295,8 +212,7 @@ export function useInstructionData({
   return {
     clients,
     shipmentTypes,
-    startingPoints,
-    destinations,
+    rateOptions,
     instructionRecord,
     isLoading,
     isLoadingComplete,

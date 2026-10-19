@@ -32,7 +32,12 @@ import {
   getDocuments,
   generateInvoice,
   fixInvoiceSequence,
-  updateLegNumber
+  updateLegNumber,
+  getGroupForAssignment,
+  createAssignment,
+  resolveAssignmentRate,
+  deleteAssignment,
+  finaliseInstructionGroup,
 } from "../../models/assignments/assignmentModel.js";
 
 export const getDriversHandler = async (req, res) => {
@@ -669,5 +674,108 @@ export const updateLegNumberHandler = async (req, res) => {
       message: "Failed to update leg number",
       error: err.message,
     });
+  }
+};
+
+// ─── Instruction group assignments ────────────────────────────────────────────
+
+export const getGroupForAssignmentHandler = async (req, res) => {
+  try {
+    const group = await getGroupForAssignment(req.params.groupId);
+    if (!group) {
+      return res.status(404).json({ success: false, message: "Instruction group not found" });
+    }
+    res.status(200).json(group);
+  } catch (error) {
+    console.error("Error fetching group for assignment:", error);
+    res.status(500).json({ success: false, message: "Failed to load group", error: error.message });
+  }
+};
+
+// Anything the operator can fix by changing their selection is a 400 carrying
+// the model's message, not a server fault.
+const ASSIGNMENT_USER_ERRORS = new Set([
+  "ROUTE_REQUIRED",
+  "RATE_UNRESOLVED",
+  "CONTAINERS_REQUIRED",
+  "CONTAINERS_INVALID",
+  "CONTAINERS_TAKEN",
+  "MANUAL_RATE_REQUIRED",
+]);
+
+export const createAssignmentHandler = async (req, res) => {
+  try {
+    const { m1key } = req.params;
+    const { subbieId, containerKeys, startingpoint, destination, legDate, manualRate } = req.body;
+    if (!subbieId) {
+      return res.status(400).json({ success: false, message: "subbieId is required" });
+    }
+    const result = await createAssignment({
+      m1key,
+      subbieId,
+      containerKeys,
+      startingpoint,
+      destination,
+      legDate,
+      manualRate,
+    });
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    console.error("Error creating assignment:", error);
+    if (ASSIGNMENT_USER_ERRORS.has(error.code)) {
+      // 409 for a lost race on containers so the client knows to reload.
+      const status = error.code === "CONTAINERS_TAKEN" ? 409 : 400;
+      return res.status(status).json({ success: false, message: error.message, code: error.code });
+    }
+    res.status(500).json({ success: false, message: "Failed to assign", error: error.message });
+  }
+};
+
+// Live rate preview for the assignment screen. Runs createAssignment's own
+// calculation without writing, so what the operator sees while choosing is
+// exactly what gets saved. A rate that cannot be resolved is a normal answer
+// here, not an error — it comes back as success:false with the reason so the
+// screen can explain it inline instead of throwing on every keystroke.
+export const previewAssignmentRateHandler = async (req, res) => {
+  try {
+    const { m1key } = req.params;
+    const { containerKeys, startingpoint, destination, legDate, manualRate } = req.body;
+    const result = await resolveAssignmentRate({
+      m1key,
+      containerKeys,
+      startingpoint,
+      destination,
+      legDate,
+      manualRate,
+    });
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    if (ASSIGNMENT_USER_ERRORS.has(error.code)) {
+      return res.status(200).json({ success: false, code: error.code, message: error.message });
+    }
+    console.error("Error previewing assignment rate:", error);
+    res.status(500).json({ success: false, message: "Failed to work out the rate", error: error.message });
+  }
+};
+
+export const deleteAssignmentHandler = async (req, res) => {
+  try {
+    const result = await deleteAssignment(req.params.legkey);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error removing assignment:", error);
+    const status = error.code === "NOT_FOUND" ? 404 : 500;
+    res.status(status).json({ success: false, message: error.message, code: error.code });
+  }
+};
+
+export const finaliseGroupHandler = async (req, res) => {
+  try {
+    const result = await finaliseInstructionGroup(req.params.groupId);
+    res.status(200).json(result);
+  } catch (error) {
+    console.error("Error finalising group:", error);
+    const status = error.code === "GROUP_INCOMPLETE" ? 400 : 500;
+    res.status(status).json({ success: false, message: error.message, code: error.code });
   }
 };

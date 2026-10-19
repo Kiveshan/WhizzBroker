@@ -7,29 +7,28 @@ import { useInstructionData } from "../../../hooks/useInstructionData";
 jest.mock("../../../services/instructionService", () => ({
   fetchClients: jest.fn(),
   fetchShipmentTypes: jest.fn(),
-  fetchStartingPoints: jest.fn(),
-  fetchDestinations: jest.fn(),
+  fetchRateTitles: jest.fn(),
   fetchInstruction: jest.fn(),
 }));
 
 import {
   fetchClients,
   fetchShipmentTypes,
-  fetchStartingPoints,
-  fetchDestinations,
+  fetchRateTitles,
   fetchInstruction,
 } from "../../../services/instructionService";
 
 const CLIENTS = [{ m5clientkey: 1, name: "ACME" }];
 const SHIPMENT_TYPES = [{ shipkey: 1, shipmenttype: "Import" }];
-const STARTING_POINTS_RAW = [{ starting_point: "Cape Town" }];
-const DESTINATIONS_RAW = [{ destination: "Durban" }];
+const RATE_TITLES = [
+  { title: "DBN-JHB Express", starting_point: "Durban", destination: "Johannesburg", rate_source: "client" },
+  { title: "Local delivery", starting_point: null, destination: null, rate_source: "card" },
+];
 
 function defaultMocks() {
   fetchClients.mockResolvedValue(CLIENTS);
   fetchShipmentTypes.mockResolvedValue(SHIPMENT_TYPES);
-  fetchStartingPoints.mockResolvedValue(STARTING_POINTS_RAW);
-  fetchDestinations.mockResolvedValue(DESTINATIONS_RAW);
+  fetchRateTitles.mockResolvedValue(RATE_TITLES);
   fetchInstruction.mockResolvedValue(null);
 }
 
@@ -60,192 +59,98 @@ describe("base data loading", () => {
   });
 });
 
-// ── Starting points ──────────────────────────────────────────────────────────
+// ── Client rates ─────────────────────────────────────────────────────────────
 
-describe("starting points", () => {
-  it("fetches starting points when clientId is provided", async () => {
-    const { result } = renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "", dropoff: "" })
-    );
-    await waitFor(() => expect(result.current.isLoading.startingPoints).toBe(false));
-    expect(fetchStartingPoints).toHaveBeenCalledWith("1");
-    expect(result.current.startingPoints).toEqual([
-      { id: "point-0", startingpoint: "Cape Town" },
-    ]);
+describe("client rates", () => {
+  it("fetches the client's rates when clientId is provided", async () => {
+    const { result } = renderHook(() => useInstructionData({ clientId: "1" }));
+    await waitFor(() => expect(result.current.rateOptions).toEqual(RATE_TITLES));
+    expect(fetchRateTitles).toHaveBeenCalledWith("1");
   });
 
-  it("does NOT fetch starting points when clientId is empty", async () => {
+  it("does NOT fetch rates when clientId is empty", async () => {
     const { result } = renderHook(() => useInstructionData({ clientId: "" }));
     await waitFor(() => expect(result.current.isLoadingComplete).toBe(true));
-    expect(fetchStartingPoints).not.toHaveBeenCalled();
-    expect(result.current.startingPoints).toEqual([]);
+    expect(fetchRateTitles).not.toHaveBeenCalled();
+    expect(result.current.rateOptions).toEqual([]);
   });
 
-  it("auto-selects pickup when only one starting point and pickup is empty", async () => {
-    const onFormUpdate = jest.fn();
-    renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "", dropoff: "", onFormUpdate })
-    );
-    await waitFor(() => expect(onFormUpdate).toHaveBeenCalled());
-    expect(onFormUpdate).toHaveBeenCalledWith({ pickup: "Cape Town" });
-  });
-
-  it("does NOT auto-select pickup when pickup is already set", async () => {
-    const onFormUpdate = jest.fn();
-    renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "Cape Town", dropoff: "", onFormUpdate })
-    );
-    await waitFor(() => expect(fetchStartingPoints).toHaveBeenCalled());
-    // Give time for any spurious calls
-    await new Promise((r) => setTimeout(r, 50));
-    expect(onFormUpdate).not.toHaveBeenCalledWith({ pickup: expect.anything() });
-  });
-
-  it("calls on404 when starting-points returns 404", async () => {
-    fetchStartingPoints.mockRejectedValue({ response: { status: 404 } });
+  it("calls on404 when the client has no rates", async () => {
+    fetchRateTitles.mockResolvedValue([]);
     const on404 = jest.fn();
     renderHook(() => useInstructionData({ clientId: "1", on404 }));
     await waitFor(() => expect(on404).toHaveBeenCalledTimes(1));
   });
 
-  it("calls onError (not on404) for non-404 failures", async () => {
-    fetchStartingPoints.mockRejectedValue(new Error("500"));
+  it("calls onError when the rate fetch fails", async () => {
+    fetchRateTitles.mockRejectedValue(new Error("boom"));
     const onError = jest.fn();
-    const on404 = jest.fn();
-    renderHook(() => useInstructionData({ clientId: "1", onError, on404 }));
-    await waitFor(() => expect(onError).toHaveBeenCalled());
-    expect(on404).not.toHaveBeenCalled();
+    const { result } = renderHook(() => useInstructionData({ clientId: "1", onError }));
+    await waitFor(() => expect(result.current.isLoading.rateOptions).toBe(false));
+    expect(onError).toHaveBeenCalledWith(expect.stringContaining("rates"));
+    expect(result.current.rateOptions).toEqual([]);
   });
 });
 
-// ── Destinations ─────────────────────────────────────────────────────────────
+// ── Rate mismatch detection ──────────────────────────────────────────────────
 
-describe("destinations", () => {
-  it("fetches destinations when clientId and pickup are provided", async () => {
+describe("rate mismatch detection", () => {
+  it("stays editable when the instruction's title is on the client's rates", async () => {
     const { result } = renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "Cape Town", dropoff: "" })
+      useInstructionData({ clientId: "1", rateTitle: "DBN-JHB Express" })
     );
-    await waitFor(() => expect(result.current.isLoading.destinations).toBe(false));
-    expect(fetchDestinations).toHaveBeenCalledWith("1", "Cape Town");
-    expect(result.current.destinations).toEqual([
-      { id: "Durban", destination: "Durban" },
-    ]);
-  });
-
-  it("does NOT fetch destinations when pickup is empty", async () => {
-    const { result } = renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "", dropoff: "" })
-    );
-    await waitFor(() => expect(result.current.isLoadingComplete).toBe(true));
-    expect(fetchDestinations).not.toHaveBeenCalled();
-  });
-
-  it("auto-selects dropoff when only one destination and dropoff is empty", async () => {
-    const onFormUpdate = jest.fn();
-    renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "Cape Town", dropoff: "", onFormUpdate })
-    );
-    await waitFor(() => expect(onFormUpdate).toHaveBeenCalledWith({ dropoff: "Durban" }));
-  });
-
-  it("does NOT auto-select dropoff when dropoff is already set", async () => {
-    const onFormUpdate = jest.fn();
-    renderHook(() =>
-      useInstructionData({
-        clientId: "1",
-        pickup: "Cape Town",
-        dropoff: "Durban",
-        onFormUpdate,
-      })
-    );
-    await waitFor(() => expect(fetchDestinations).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r, 50));
-    expect(onFormUpdate).not.toHaveBeenCalledWith({ dropoff: expect.anything() });
-  });
-});
-
-// ── Route mismatch ───────────────────────────────────────────────────────────
-
-describe("route mismatch detection", () => {
-  it("sets hasRouteMismatch=true and routeEditMode=locked when destinations empty", async () => {
-    fetchDestinations.mockResolvedValue([]);
-    const { result } = renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "Cape Town", dropoff: "" })
-    );
-    await waitFor(() => expect(result.current.isLoading.destinations).toBe(false));
-    expect(result.current.hasRouteMismatch).toBe(true);
-    expect(result.current.routeEditMode).toBe("locked");
-  });
-
-  it("clears hasRouteMismatch when destinations are found", async () => {
-    const { result } = renderHook(() =>
-      useInstructionData({ clientId: "1", pickup: "Cape Town", dropoff: "" })
-    );
-    await waitFor(() => expect(result.current.isLoading.destinations).toBe(false));
+    await waitFor(() => expect(result.current.rateOptions.length).toBe(2));
     expect(result.current.hasRouteMismatch).toBe(false);
+    expect(result.current.routeEditMode).toBe("editable");
+  });
+
+  it("locks when the title is no longer on the client's rates", async () => {
+    const { result } = renderHook(() =>
+      useInstructionData({ clientId: "1", rateTitle: "Renamed rate" })
+    );
+    await waitFor(() => expect(result.current.routeEditMode).toBe("locked"));
+    expect(result.current.hasRouteMismatch).toBe(true);
+  });
+
+  it("locks an older instruction priced by route with no title", async () => {
+    const { result } = renderHook(() =>
+      useInstructionData({ clientId: "1", rateTitle: "", pickup: "Cape Town", dropoff: "Durban" })
+    );
+    await waitFor(() => expect(result.current.routeEditMode).toBe("locked"));
+    expect(result.current.hasRouteMismatch).toBe(true);
+  });
+
+  it("stays editable for a new instruction with nothing chosen yet", async () => {
+    const { result } = renderHook(() => useInstructionData({ clientId: "1" }));
+    await waitFor(() => expect(result.current.rateOptions.length).toBe(2));
     expect(result.current.routeEditMode).toBe("editable");
   });
 });
 
-// ── Route sync ───────────────────────────────────────────────────────────────
+// ── Title sync ───────────────────────────────────────────────────────────────
 
-describe("pickup route-sync", () => {
-  it("syncs pickup when API renames it (fuzzy match)", async () => {
-    fetchStartingPoints.mockResolvedValue([{ starting_point: "Cape Town Port" }]);
+describe("title sync", () => {
+  it("syncs the title's capitalisation/spacing to the client's rate", async () => {
     const onFormUpdate = jest.fn();
     renderHook(() =>
-      useInstructionData({
-        clientId: "1",
-        pickup: "Cape Town", // stale name
-        dropoff: "Durban",
-        onFormUpdate,
-      })
+      useInstructionData({ clientId: "1", rateTitle: "dbn-jhb  express", onFormUpdate })
     );
     await waitFor(() =>
-      expect(onFormUpdate).toHaveBeenCalledWith({ pickup: "Cape Town Port" })
+      expect(onFormUpdate).toHaveBeenCalledWith({ rate_title: "DBN-JHB Express" })
     );
   });
 
-  it("skips pickup sync when routeEditMode is locked", async () => {
-    fetchDestinations.mockResolvedValue([]); // triggers mismatch → locked
-    fetchStartingPoints.mockResolvedValue([{ starting_point: "Cape Town Port" }]);
+  it("does not sync when the title already matches exactly", async () => {
     const onFormUpdate = jest.fn();
     const { result } = renderHook(() =>
-      useInstructionData({
-        clientId: "1",
-        pickup: "Cape Town",
-        dropoff: "Durban",
-        onFormUpdate,
-      })
+      useInstructionData({ clientId: "1", rateTitle: "Local delivery", onFormUpdate })
     );
-    await waitFor(() => expect(result.current.routeEditMode).toBe("locked"));
-    // After lock, sync should NOT have fired for pickup
-    const pickupUpdates = onFormUpdate.mock.calls.filter(
-      ([arg]) => arg && "pickup" in arg
-    );
-    expect(pickupUpdates).toHaveLength(0);
+    await waitFor(() => expect(result.current.rateOptions.length).toBe(2));
+    expect(onFormUpdate).not.toHaveBeenCalled();
   });
 });
 
-describe("dropoff route-sync", () => {
-  it("syncs dropoff when API renames it (fuzzy match)", async () => {
-    fetchDestinations.mockResolvedValue([{ destination: "Durban Harbour" }]);
-    const onFormUpdate = jest.fn();
-    renderHook(() =>
-      useInstructionData({
-        clientId: "1",
-        pickup: "Cape Town",
-        dropoff: "Durban", // stale name
-        onFormUpdate,
-      })
-    );
-    await waitFor(() =>
-      expect(onFormUpdate).toHaveBeenCalledWith({ dropoff: "Durban Harbour" })
-    );
-  });
-});
-
-// ── fetchExisting (update form) ───────────────────────────────────────────────
+// ── Instruction record ───────────────────────────────────────────────────────
 
 describe("fetchExisting — instruction record", () => {
   it("returns null instructionRecord when fetchExisting=false", async () => {

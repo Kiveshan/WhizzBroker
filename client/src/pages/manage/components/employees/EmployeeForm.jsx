@@ -2,8 +2,11 @@ import { useRef, useState } from "react";
 import { extractFilenameFromUrl } from "../../utils/helpers";
 import { validatePassword, getPasswordStrength } from "../../../../utils/passwordValidator.js";
 import { Eye, EyeOff } from "lucide-react";
+import { useAuth } from "../../../../context/AuthContext";
 
 const EmployeeForm = ({ employee, loading, isEditing, onSave, onCancel, onChange, onDeleteDocument }) => {
+  const { user } = useAuth();
+  const canViewSalary = user?.roleid === 4 || user?.roleid === 7;
   const emailRef = useRef(null);
   const [alert, setAlert] = useState({ show: false, message: "" });
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
@@ -257,16 +260,18 @@ const EmployeeForm = ({ employee, loading, isEditing, onSave, onCancel, onChange
           />
         </div>
 
-        <div className="manage-form-group">
-          <label>
-            Base Salary
-          </label>
-          <input
-            type="text"
-            value={employee.base_salary || ""}
-            onChange={(e) => onChange("base_salary", e.target.value)}
-          />
-        </div>
+        {canViewSalary && (
+          <div className="manage-form-group">
+            <label>
+              Base Salary
+            </label>
+            <input
+              type="text"
+              value={employee.base_salary || ""}
+              onChange={(e) => onChange("base_salary", e.target.value)}
+            />
+          </div>
+        )}
 
         {!hideEmailAndPassword && (
           <>
@@ -404,83 +409,87 @@ const EmployeeForm = ({ employee, loading, isEditing, onSave, onCancel, onChange
           </div>
         )}
         {/* Deductions */}
-        <div style={{ gridColumn: "1 / span 3" }}>
-          <h3 style={{ textAlign: "center", marginTop: "30px" }}>Employee Salary Deductions</h3>
-        </div>
+        {canViewSalary && (
+          <>
+            <div style={{ gridColumn: "1 / span 3" }}>
+              <h3 style={{ textAlign: "center", marginTop: "30px" }}>Employee Salary Deductions</h3>
+            </div>
 
-        <div className="manage-form-group">
-          <label>Income Tax (%)</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={employee.income_tax_rate || ""}
-            onChange={(e) => onChange("income_tax_rate", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Income Tax (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={employee.income_tax_rate || ""}
+                onChange={(e) => onChange("income_tax_rate", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>UIF (%)</label>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.01"
-            value={employee.deduction_uif || ""}
-            onChange={(e) => onChange("deduction_uif", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>UIF (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={employee.deduction_uif || ""}
+                onChange={(e) => onChange("deduction_uif", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>Loan</label>
-          <input
-            type="number"
-            min="0"
-            value={employee.deduction_loan || ""}
-            onChange={(e) => onChange("deduction_loan", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Loan</label>
+              <input
+                type="number"
+                min="0"
+                value={employee.deduction_loan || ""}
+                onChange={(e) => onChange("deduction_loan", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>Bonus</label>
-          <input
-            type="number"
-            min="0"
-            value={employee.deduction_bonus || ""}
-            onChange={(e) => onChange("deduction_bonus", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Bonus</label>
+              <input
+                type="number"
+                min="0"
+                value={employee.deduction_bonus || ""}
+                onChange={(e) => onChange("deduction_bonus", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>Savings</label>
-          <input
-            type="number"
-            min="0"
-            value={employee.deduction_savings || ""}
-            onChange={(e) => onChange("deduction_savings", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Savings</label>
+              <input
+                type="number"
+                min="0"
+                value={employee.deduction_savings || ""}
+                onChange={(e) => onChange("deduction_savings", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>Damage</label>
-          <input
-            type="number"
-            min="0"
-            value={employee.deduction_damage || ""}
-            onChange={(e) => onChange("deduction_damage", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Damage</label>
+              <input
+                type="number"
+                min="0"
+                value={employee.deduction_damage || ""}
+                onChange={(e) => onChange("deduction_damage", e.target.value)}
+              />
+            </div>
 
-        <div className="manage-form-group">
-          <label>Other Deductions</label>
-          <input
-            type="number"
-            min="0"
-            value={employee.deduction_other_deductions || ""}
-            onChange={(e) => onChange("deduction_other_deductions", e.target.value)}
-          />
-        </div>
+            <div className="manage-form-group">
+              <label>Other Deductions</label>
+              <input
+                type="number"
+                min="0"
+                value={employee.deduction_other_deductions || ""}
+                onChange={(e) => onChange("deduction_other_deductions", e.target.value)}
+              />
+            </div>
+          </>
+        )}
 
         {/* Document Upload */}
    

@@ -1021,11 +1021,11 @@ export function useApi(state, actions) {
     }, [state, actions, fetchPaginatedData])
 
   const saveClientRates = useCallback(
-    async (ratesData) => {
+    async (ratesData = [], rateCards = []) => {
       actions.setLoading(true)
       try {
         const clientId = state.newClientRate.clientId
-        console.log("Saving client rates:", { clientId, ratesData })
+        console.log("Saving client rates:", { clientId, ratesData, rateCards })
 
         // Validate that we have a client ID
         if (!clientId) {
@@ -1033,9 +1033,9 @@ export function useApi(state, actions) {
           return false
         }
 
-        // Validate that we have at least one rate
-        if (!ratesData || ratesData.length === 0) {
-          actions.showAlert("Please add at least one rate.")
+        // A client can be priced from rate cards alone
+        if (ratesData.length === 0 && rateCards.length === 0) {
+          actions.showAlert("Please add at least one rate or assign a rate card.")
           return false
         }
 
@@ -1044,7 +1044,8 @@ export function useApi(state, actions) {
 
         const validRates = ratesData
           .filter((rate) => {
-            return rate.starting_point && rate.destination && (hasValue(rate["6m_rate"]) || hasValue(rate["12m_rate"]))
+            // Rates are identified by title; the route is optional
+            return rate.title?.trim() && (hasValue(rate["6m_rate"]) || hasValue(rate["12m_rate"]))
           })
           .map((rate) => {
             const surcharge6M = rate.surcharge6M ?? rate.surcharges ?? ""
@@ -1058,15 +1059,16 @@ export function useApi(state, actions) {
             }
           })
 
-        if (validRates.length === 0) {
+        if (validRates.length !== ratesData.length || (validRates.length === 0 && rateCards.length === 0)) {
           actions.showAlert(
-            "Please provide valid starting point, destination, and at least one rate (6m or 12m) for each entry.",
+            "Each rate needs a title and a 6m or 12m price.",
           )
           return false
         }
 
         const payload = {
           rates: validRates,
+          rateCards,
         }
 
         const url = `/api/client-rates/${clientId}`
@@ -1087,7 +1089,12 @@ export function useApi(state, actions) {
         actions.resetFormData("ClientRate")
         actions.setEditing("ClientRate", null)
         actions.hideForm("showClientRateForm")
-        actions.showAlert("Client rates saved successfully!")
+        const moved = response.data?.renamedInstructions || 0
+        actions.showAlert(
+          moved
+            ? `Client rates saved successfully! ${moved} open instruction${moved === 1 ? "" : "s"} moved to the renamed rate titles.`
+            : "Client rates saved successfully!",
+        )
         return true
       } catch (err) {
         console.error("Error saving client rates:", err)

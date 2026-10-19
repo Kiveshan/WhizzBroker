@@ -3,6 +3,24 @@ import bcrypt from "bcrypt"
 import { validatePassword } from "../../utils/passwordValidator.js"
 import { logPasswordChange, logEmployeeCreation } from "../../utils/auditLogger.js"
 
+// An empty salary field arrives as "", which parseFloat turns into NaN, and
+// Postgres stores NaN happily in float8 and numeric alike. Treat blank and
+// unparseable input as "no salary" instead. (Ported from Whizz-Away 83f3ef9a.)
+const toAmount = (value) => {
+  const n = Number.parseFloat(value)
+  return Number.isFinite(n) ? n : null
+}
+
+const DEDUCTION_FIELDS = [
+  "income_tax_rate",
+  "deduction_other_deductions",
+  "deduction_uif",
+  "deduction_bonus",
+  "deduction_savings",
+  "deduction_loan",
+  "deduction_damage",
+]
+
 const getEmployeeBasic = async (id) => {
   let client
   try {
@@ -209,7 +227,7 @@ const createEmployee = async (employeeData, documentUrls, adminId = null, userAg
       roleid || null,
       email || null,
       hashedPassword,
-      base_salary != null ? Number.parseFloat(base_salary) : null,
+      toAmount(base_salary),
       company_reg_num || null,
       documentUrls[0] || null,
       documentUrls[1] || null,
@@ -218,14 +236,14 @@ const createEmployee = async (employeeData, documentUrls, adminId = null, userAg
     const result = await client.query(insertEmployeeQuery, insertValues)
     const newEmployee = result.rows[0]
 
-    if (base_salary != null) {
+    if (toAmount(base_salary) != null) {
       const insertSalaryHistoryQuery = `
         INSERT INTO base_salary_history (userid, base, date)
         VALUES ($1, $2, $3)
       `
       const salaryHistoryValues = [
         newEmployee.userid,
-        Number.parseFloat(base_salary),
+        toAmount(base_salary),
         deductionDate,
       ]
       await client.query(insertSalaryHistoryQuery, salaryHistoryValues)
@@ -338,6 +356,13 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
       passwordChanged = true
     }
 
+    // Salary and deductions are only sent by Directors/Admins — the controller
+    // strips them for other roles. Absent means "leave unchanged": treating it
+    // as blank set base_salary to NULL and saved an all-zero deductions row
+    // whenever a Manager edited an employee's name or phone.
+    const salaryProvided = base_salary !== undefined
+    const deductionsProvided = DEDUCTION_FIELDS.some((f) => employeeData[f] !== undefined)
+
     const updateEmpQuery = `
       UPDATE m5_employee SET
         name = $1, surname = $2, telephonenum = $3, cellnum = $4, employeenum = $5,
@@ -355,7 +380,7 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
       roleid || null,
       email || null,
       hashedPassword,
-      base_salary != null ? Number.parseFloat(base_salary) : null,
+      salaryProvided ? toAmount(base_salary) : currentBaseSalary,
       document_url1 || null,
       document_url2 || null,
       document_url3 || null,
@@ -364,7 +389,8 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
     const result = await client.query(updateEmpQuery, updateValues)
     const updatedEmployee = result.rows[0]
 
-    if (base_salary != null && Number.parseFloat(base_salary) !== Number.parseFloat(currentBaseSalary)) {
+    const newBaseSalary = toAmount(base_salary)
+    if (salaryProvided && newBaseSalary != null && newBaseSalary !== Number.parseFloat(currentBaseSalary)) {
       const currentDate = new Date()
       const dateTruncated = currentDate.toISOString().split('T')[0]
 
@@ -383,7 +409,7 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
           WHERE id = $2
         `
         const updateSalaryHistoryValues = [
-          Number.parseFloat(base_salary),
+          newBaseSalary,
           checkResult.rows[0].id
         ]
         await client.query(updateSalaryHistoryQuery, updateSalaryHistoryValues)
@@ -394,7 +420,7 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
         `
         const salaryHistoryValues = [
           updatedEmployee.userid,
-          Number.parseFloat(base_salary),
+          newBaseSalary,
           currentDate,
         ]
         await client.query(insertSalaryHistoryQuery, salaryHistoryValues)
@@ -429,7 +455,7 @@ const updateEmployee = async (id, employeeData, documentUrls, adminId = null, us
       newValues.loan === Number.parseFloat(last.deduction_loan) &&
       newValues.damage === Number.parseFloat(last.deduction_damage)
 
-    if (!isDuplicate) {
+    if (deductionsProvided && !isDuplicate) {
       const insertHistoryQuery = `
         INSERT INTO employee_deduction_history (
           employeeid, effective_date, income_tax_rate, deduction_other_deductions,

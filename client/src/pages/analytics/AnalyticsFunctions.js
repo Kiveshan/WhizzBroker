@@ -23,7 +23,9 @@ export const getChartWidth = (dataLength, activeFilter) => {
     activeFilter === "incomeVsExpense" ||
     activeFilter === "turnoverVsSubbieExpense" ||
     activeFilter === "turnoverVsFuelPerTruck" ||
-    activeFilter === "paymentsReceivedPerMonth"
+    activeFilter === "paymentsReceivedPerMonth" ||
+    activeFilter === "workVolumePerClient" ||
+    activeFilter === "workVolumePerSubbie"
   ) {
     return 1000;
   }
@@ -201,6 +203,24 @@ export const CustomBarLabelForDefault = ({ x, y, width, value }) => {
       fontSize={12}
     >
       {labelText}
+    </text>
+  );
+};
+
+export const CustomBarLabelForCount = ({ x, y, width, value }) => {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  return (
+    <text
+      x={x + width / 2}
+      y={y - 10}
+      fill="#000"
+      textAnchor="middle"
+      dominantBaseline="middle"
+      fontSize={12}
+    >
+      {value.toLocaleString()}
     </text>
   );
 };
@@ -906,6 +926,59 @@ export const fetchPaymentsReceivedPerMonth = async (month, year, clientId, setIs
   } catch (err) {
     console.error("Error fetching payments received:", err);
     setError(err.message || "Failed to load payments data");
+    return [];
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+export const fetchWorkVolumePerClient = async (month, year, setIsLoading, setError) => {
+  setIsLoading(true);
+  setError(null);
+  try {
+    const response = await api.get("/api/work-volume-per-client", {
+      params: { month, year, _t: new Date().getTime() },
+    });
+    if (response.data.success) {
+      return response.data.data.map((item) => ({
+        name: item.name,
+        value: Number(item.value) || 0,
+        month: item.month,
+        year: item.year,
+      }));
+    } else {
+      throw new Error(response.data.message || "Failed to fetch data");
+    }
+  } catch (err) {
+    console.error("Error fetching work volume per client:", err);
+    setError(err.message);
+    return [];
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+export const fetchWorkVolumePerSubbie = async (month, year, setIsLoading, setError) => {
+  setIsLoading(true);
+  setError(null);
+  try {
+    const response = await api.get("/api/work-volume-per-subbie", {
+      params: { month, year, _t: new Date().getTime() },
+    });
+    if (response.data.success) {
+      return response.data.data.map((item) => ({
+        name: item.name,
+        value: Number(item.value) || 0,
+        jobCount: Number(item.jobCount) || 0,
+        month: item.month,
+        year: item.year,
+      }));
+    } else {
+      throw new Error(response.data.message || "Failed to fetch data");
+    }
+  } catch (err) {
+    console.error("Error fetching work volume per subbie:", err);
+    setError(err.message);
     return [];
   } finally {
     setIsLoading(false);

@@ -5,7 +5,8 @@ import {
   saveClientRatesHandler,
   deleteClientRateHandler,
 } from "../../controllers/manage/clientRateController.js"
-import { verifyToken } from "../../middleware/auth.js"
+import { verifyToken, requireRoles } from "../../middleware/auth.js"
+import { MANAGEMENT_ROLES } from "../../config/roles.js"
 
 const router = express.Router()
 
@@ -16,9 +17,9 @@ router.get("/api/client-rates", verifyToken, getAllClientsForRatesHandler)
 router.get("/api/client-rates/client/:clientId", verifyToken, getClientRatesByClientIdHandler)
 
 // Save client rates (replaces all existing rates for the client)
-router.post("/api/client-rates/:clientId", verifyToken, saveClientRatesHandler)
+router.post("/api/client-rates/:clientId", verifyToken, requireRoles(...MANAGEMENT_ROLES), saveClientRatesHandler)
 
 // Delete individual rate
-router.delete("/api/client-rates/rate/:rateId", verifyToken, deleteClientRateHandler)
+router.delete("/api/client-rates/rate/:rateId", verifyToken, requireRoles(...MANAGEMENT_ROLES), deleteClientRateHandler)
 
 export default router

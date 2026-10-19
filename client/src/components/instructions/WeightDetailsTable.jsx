@@ -1,5 +1,5 @@
 /**
- * WeightDetailsTable — KSM DN Number / Ticket Number / Receipt Book Number /
+ * WeightDetailsTable — DN Number / Ticket Number / Receipt Book Number /
  * Weight table for cross-haul (break bulk, shipment type 4).
  *
  * The weight field only accepts numeric input; the caller controls whether
@@ -46,7 +46,7 @@ export function WeightDetailsTable({
               <thead>
                 <tr>
                   <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
-                    KSM DN Number
+                    DN Number
                   </th>
                   <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
                     Ticket Number

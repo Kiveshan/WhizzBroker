@@ -1,5 +1,123 @@
 import { pool } from "../../config/database.js";
 
+// ---------------------------------------------------------------------------
+// Group-aware invoice helpers.
+//
+// An invoice is either legacy (invoice.m1key set: one child instruction) or a
+// combined group invoice (invoice.m1key IS NULL, invoice.instruction_group_id
+// set: every m1_controller row in that group). Paid state lives only on the
+// children (m1_controller.paid_amount / payment_status), because statements,
+// credit notes and analytics all read it per child. A group invoice's total is
+// SUM(child total_cost * (1 + vat/100)) and its paid amount SUM(child
+// paid_amount), so a credit note posted against any one child reduces the
+// group invoice's balance automatically.
+//
+// Spreading a payment over children: fill in order. Children are taken in
+// m1key order and each is paid up to its own outstanding gross before the next
+// one receives anything, so earlier children become "paid" and at most one is
+// "partial". The exact per-child split is stored on the payment line item as
+// child_allocations [{ m1key, amount }], and reversal subtracts exactly those
+// amounts, so it undoes the allocation even if credit notes or other payments
+// touched the children in between.
+// ---------------------------------------------------------------------------
+
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
+const statusFor = (paid, gross) => {
+  if (paid <= 0.01) return "unpaid";
+  if (paid >= gross - 0.01) return "paid";
+  return "partial";
+};
+
+// Loads an invoice and its child instruction(s), locking the children for the
+// rest of the transaction. Returns null if the invoice is not this client's.
+const loadInvoiceChildren = async (client, invoiceId, clientId) => {
+  const invoiceResult = await client.query(
+    `SELECT ikey AS invoice_id, invoice_num, date, m1key, instruction_group_id
+     FROM invoice
+     WHERE ikey = $1 AND clientid = $2`,
+    [invoiceId, clientId]
+  );
+  if (invoiceResult.rows.length === 0) return null;
+  const invoice = invoiceResult.rows[0];
+  const isGroup = invoice.m1key == null;
+  if (isGroup && invoice.instruction_group_id == null) return null;
+
+  const childrenResult = await client.query(
+    `SELECT
+       m1key,
+       COALESCE(total_cost, 0) AS total_cost,
+       COALESCE(vat, 0) AS vat,
+       COALESCE(paid_amount, 0) AS paid_amount
+     FROM m1_controller
+     WHERE ${isGroup ? "instruction_group_id = $1" : "m1key = $1"}
+     ORDER BY m1key
+     FOR UPDATE`,
+    [isGroup ? invoice.instruction_group_id : invoice.m1key]
+  );
+  if (childrenResult.rows.length === 0) return null;
+
+  const children = childrenResult.rows.map((r) => {
+    const base = Number(r.total_cost) || 0;
+    const vatRate = Number(r.vat) || 0;
+    return {
+      m1key: r.m1key,
+      gross: base + base * (vatRate / 100),
+      paid: Number(r.paid_amount) || 0,
+    };
+  });
+
+  return {
+    invoice_id: invoice.invoice_id,
+    invoice_num: invoice.invoice_num,
+    is_group: isGroup,
+    m1key: invoice.m1key,
+    children,
+    total_with_vat: children.reduce((s, c) => s + c.gross, 0),
+    current_paid: children.reduce((s, c) => s + c.paid, 0),
+  };
+};
+
+// Splits amount across children, filling each child's outstanding gross in
+// m1key order. Any rounding remainder (bounded by the 0.01 overpay tolerance
+// in createPayment) lands on the last child that received money.
+const allocateToChildren = (children, amount) => {
+  const allocations = [];
+  let left = round2(amount);
+  for (const child of children) {
+    if (left <= 0) break;
+    const room = round2(child.gross - child.paid);
+    if (room <= 0) continue;
+    const take = round2(Math.min(room, left));
+    allocations.push({ m1key: child.m1key, amount: take });
+    left = round2(left - take);
+  }
+  if (left > 0) {
+    if (allocations.length > 0) {
+      const last = allocations[allocations.length - 1];
+      last.amount = round2(last.amount + left);
+    } else {
+      allocations.push({ m1key: children[children.length - 1].m1key, amount: left });
+    }
+  }
+  return allocations;
+};
+
+// Applies signed per-child deltas (+ for allocation, - for reversal) and
+// recomputes each touched child's payment_status.
+const applyChildDeltas = async (client, children, deltas) => {
+  for (const { m1key, amount } of deltas) {
+    const child = children.find((c) => String(c.m1key) === String(m1key));
+    if (!child) continue;
+    const newPaid = Math.max(round2(child.paid + amount), 0);
+    child.paid = newPaid;
+    await client.query(
+      `UPDATE m1_controller SET paid_amount = $1, payment_status = $2 WHERE m1key = $3`,
+      [newPaid, statusFor(newPaid, child.gross), m1key]
+    );
+  }
+};
+
 const createPayment = async (
   clientId,
   { fileupload, reference, line_items }
@@ -51,30 +169,17 @@ const createPayment = async (
       }
 
       if (type === "Invoice") {
-        // Load invoice + controller to compute VAT-inclusive total and amount due
-        const invoiceQuery = `
-          SELECT 
-            i.ikey AS invoice_id,
-            i.invoice_num,
-            i.date,
-            m.m1key,
-            m.total_cost,
-            COALESCE(m.vat, 0) AS vat,
-            COALESCE(m.paid_amount, 0) AS paid_amount
-          FROM invoice i
-          JOIN m1_controller m ON i.m1key = m.m1key
-          WHERE i.ikey = $1 AND i.clientid = $2
-        `;
-        const invoiceResult = await client.query(invoiceQuery, [id, clientId]);
-        if (invoiceResult.rows.length === 0) {
+        // Load invoice + child instruction(s) (legacy or group) to compute the
+        // VAT-inclusive total and amount due
+        if (processedItems.some((p) => p.type === "Invoice" && String(p.invoice_id) === String(id))) {
+          throw new Error("The same invoice cannot appear twice in one payment");
+        }
+        const row = await loadInvoiceChildren(client, id, clientId);
+        if (!row) {
           throw new Error("Invoice not found for this client");
         }
-        const row = invoiceResult.rows[0];
-        const baseTotal = Number(row.total_cost) || 0;
-        const vatRate = Number(row.vat) || 0;
-        const vatAmount = baseTotal * (vatRate / 100);
-        const totalWithVat = baseTotal + vatAmount;
-        const currentPaid = Number(row.paid_amount) || 0;
+        const totalWithVat = row.total_with_vat;
+        const currentPaid = row.current_paid;
         const amountDue = totalWithVat - currentPaid;
         if (amountDue <= 0) {
           throw new Error(
@@ -92,6 +197,9 @@ const createPayment = async (
           invoice_id: row.invoice_id,
           invoice_num: row.invoice_num,
           m1key: row.m1key,
+          is_group: row.is_group,
+          children: row.children,
+          child_allocations: allocateToChildren(row.children, numericAmount),
           amount_to_pay: numericAmount,
           current_paid: currentPaid,
           total_with_vat: totalWithVat,
@@ -156,10 +264,10 @@ const createPayment = async (
       const { type, id } = item;
       const processed = processedItems.find((p) => {
         if (type === "Invoice") {
-          return p.type === "Invoice" && p.invoice_id === id;
+          return p.type === "Invoice" && String(p.invoice_id) === String(id);
         }
         if (type === "Add-on") {
-          return p.type === "Add-on" && p.addon_id === id;
+          return p.type === "Add-on" && String(p.addon_id) === String(id);
         }
         return false;
       });
@@ -185,6 +293,8 @@ const createPayment = async (
           balance_after_payment: remainingDue,
           this_payment: item.amount_to_pay,
           payment_ref: item.line_reference || "",
+          // Server-computed per-child split; deletePayment reverses exactly this
+          child_allocations: processed.child_allocations,
         };
       }
 
@@ -242,23 +352,7 @@ const createPayment = async (
     // Apply allocations back to invoices/add-ons
     for (const item of processedItems) {
       if (item.type === "Invoice") {
-        const newPaid = item.current_paid + item.amount_to_pay;
-        const isPaid = newPaid >= item.total_with_vat - 0.01;
-        const status = isPaid ? "paid" : "partial";
-        const updateInvoiceQuery = `
-          UPDATE m1_controller
-          SET paid_amount = $1, payment_status = $2
-          FROM invoice i
-          WHERE i.m1key = m1_controller.m1key
-            AND i.ikey = $3
-            AND i.clientid = $4
-        `;
-        await client.query(updateInvoiceQuery, [
-          newPaid,
-          status,
-          item.invoice_id,
-          clientId,
-        ]);
+        await applyChildDeltas(client, item.children, item.child_allocations);
       } else if (item.type === "Add-on") {
         const newPaid = item.current_paid + item.amount_to_pay;
         const isPaid = newPaid >= item.total - 0.01;
@@ -427,6 +521,27 @@ const getClientInvoices = async (clientId) => {
       WHERE i.clientid = $1
         AND (m.total_cost + (m.total_cost * (COALESCE(m.vat, 0)::numeric / 100)) - COALESCE(m.paid_amount, 0)) > 0
       UNION ALL
+      -- Combined group invoices (invoice.m1key IS NULL): totals summed over
+      -- every child instruction in the group. vat is reported only when all
+      -- children share one rate.
+      SELECT
+        'Invoice' AS type,
+        i.ikey AS id,
+        i.invoice_num,
+        i.date,
+        SUM(m.total_cost) AS total_cost,
+        CASE WHEN MIN(COALESCE(m.vat, 0)) = MAX(COALESCE(m.vat, 0))
+             THEN MIN(COALESCE(m.vat, 0)) ELSE NULL END AS vat,
+        SUM(COALESCE(m.paid_amount, 0)) AS paid_amount,
+        SUM(m.total_cost * (1 + COALESCE(m.vat, 0)::numeric / 100)) AS total,
+        (SUM(m.total_cost * (1 + COALESCE(m.vat, 0)::numeric / 100)) - SUM(COALESCE(m.paid_amount, 0))) AS amount_due
+      FROM invoice i
+      JOIN m1_controller m ON m.instruction_group_id = i.instruction_group_id
+      WHERE i.clientid = $1
+        AND i.m1key IS NULL
+      GROUP BY i.ikey, i.invoice_num, i.date
+      HAVING (SUM(m.total_cost * (1 + COALESCE(m.vat, 0)::numeric / 100)) - SUM(COALESCE(m.paid_amount, 0))) > 0.005
+      UNION ALL
       SELECT 
         'Add-on' AS type,
         a.addon_id AS id,
@@ -499,58 +614,38 @@ const deletePayment = async (clientId, paymentId) => {
       if (!type || !id || !numericAmount) continue;
 
       if (type === "Invoice") {
-        // Load invoice + controller to recompute totals and current paid
-        const invoiceQuery = `
-          SELECT 
-            i.ikey AS invoice_id,
-            m.m1key,
-            m.total_cost,
-            COALESCE(m.vat, 0) AS vat,
-            COALESCE(m.paid_amount, 0) AS paid_amount
-          FROM invoice i
-          JOIN m1_controller m ON i.m1key = m.m1key
-          WHERE i.ikey = $1 AND i.clientid = $2
-        `;
-        const invoiceResult = await client.query(invoiceQuery, [id, clientId]);
-        if (invoiceResult.rows.length === 0) {
+        // Load invoice + child instruction(s) (legacy or group)
+        const row = await loadInvoiceChildren(client, id, clientId);
+        if (!row) {
           // If the invoice is gone, skip reversing for this line
           continue;
         }
 
-        const row = invoiceResult.rows[0];
-        const baseTotal = Number(row.total_cost) || 0;
-        const vatRate = Number(row.vat) || 0;
-        const vatAmount = baseTotal * (vatRate / 100);
-        const totalWithVat = baseTotal + vatAmount;
-        const currentPaid = Number(row.paid_amount) || 0;
-
-        // Reverse this payment's contribution
-        const newPaidRaw = currentPaid - numericAmount;
-        const newPaid = newPaidRaw < 0 ? 0 : newPaidRaw;
-
-        let status = null;
-        if (newPaid <= 0 + 0.01) {
-          status = "unpaid";
-        } else if (newPaid >= totalWithVat - 0.01) {
-          status = "paid";
+        // Undo exactly the per-child split recorded at allocation time.
+        // Payments made before child_allocations existed were always legacy
+        // single-child invoices: take the whole amount off that child. A group
+        // line without a recorded split (not expected) is unwound in reverse
+        // fill order, last child first.
+        let reversal;
+        if (Array.isArray(item.child_allocations) && item.child_allocations.length > 0) {
+          reversal = item.child_allocations.map((a) => ({
+            m1key: Number(a.m1key),
+            amount: -round2(a.amount),
+          }));
+        } else if (!row.is_group) {
+          reversal = [{ m1key: row.children[0].m1key, amount: -round2(numericAmount) }];
         } else {
-          status = "partial";
+          reversal = [];
+          let left = round2(numericAmount);
+          for (const child of [...row.children].reverse()) {
+            if (left <= 0) break;
+            const take = round2(Math.min(child.paid, left));
+            if (take <= 0) continue;
+            reversal.push({ m1key: child.m1key, amount: -take });
+            left = round2(left - take);
+          }
         }
-
-        const updateInvoiceQuery = `
-          UPDATE m1_controller
-          SET paid_amount = $1, payment_status = $2
-          FROM invoice i
-          WHERE i.m1key = m1_controller.m1key
-            AND i.ikey = $3
-            AND i.clientid = $4
-        `;
-        await client.query(updateInvoiceQuery, [
-          newPaid,
-          status,
-          row.invoice_id,
-          clientId,
-        ]);
+        await applyChildDeltas(client, row.children, reversal);
       } else if (type === "Add-on") {
         // Load add-on to recompute totals and current paid
         const addonQuery = `

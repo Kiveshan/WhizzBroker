@@ -1,25 +1,106 @@
 "use client";
 
-import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
 import api from "../../../../api";
 import jsPDF from "jspdf";
 import { Workbook } from "exceljs";
+import { loadBrandLogo, brandLogoHeight } from "../../../../utils/brandLogo.js";
+import {
+  requestStatementExport,
+  uploadStatementDocument,
+  fetchStatementExports,
+  statementFromPayload,
+  saveBlob,
+  openStoredDocument,
+} from "../services/statementExportService";
+import {
+  formatRand,
+  formatStatementDate,
+  formatLegDate,
+} from "../services/statementFormatting.js";
 import "../css/SubcontractorStatementDetail.css";
 
+// A statement can run to hundreds of legs, so the on-screen table is paged.
+// Exports are unaffected — they render from the server payload, not from this
+// view, so a downloaded document always contains every leg.
+const LEGS_PER_PAGE_OPTIONS = [
+  { value: 50, label: "50 rows" },
+  { value: 100, label: "100 rows" },
+  { value: 200, label: "200 rows" },
+  { value: 100000, label: "All rows" },
+];
+
+const GROUP_OPTIONS = ["None", "Client", "Week"];
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+/** "2026-08" -> "August 2026". Split rather than parsed: "YYYY-MM-DD" reads as
+ *  UTC midnight and renders as the previous month west of UTC. */
+const formatPeriodLabel = (period) => {
+  if (!period) return "";
+  const [year, month] = String(period).split("-").map(Number);
+  return `${MONTH_NAMES[month - 1] || ""} ${year}`.trim();
+};
+
+/** Calendar-week bucket within the statement month, e.g. "1-7 August". */
+const weekLabelFor = (dateValue, period) => {
+  const day = new Date(dateValue).getDate();
+  if (Number.isNaN(day)) return "Unknown week";
+  const start = Math.floor((day - 1) / 7) * 7 + 1;
+  const [year, month] = String(period).split("-").map(Number);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const end = Math.min(start + 6, daysInMonth);
+  return `${start}-${end} ${MONTH_NAMES[month - 1] || ""}`.trim();
+};
+
+/**
+ * Bucket legs for display. Subtotals and counts are taken from the full set of
+ * legs handed in, so a collapsed group still reports its real total.
+ */
+const buildLegGroups = (legs, grouping, period, collapsed) => {
+  const buckets = new Map();
+
+  legs.forEach((leg) => {
+    const key =
+      grouping === "Client"
+        ? leg.clientName || "Unknown client"
+        : weekLabelFor(leg.date, period);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(leg);
+  });
+
+  return Array.from(buckets.entries()).map(([key, rows]) => {
+    const isCollapsed = Boolean(collapsed[key]);
+    return {
+      key,
+      label: key,
+      showHeader: true,
+      collapsed: isCollapsed,
+      countLabel: `${rows.length} ${rows.length === 1 ? "leg" : "legs"}`,
+      subtotal: rows.reduce((sum, leg) => sum + Number(leg.rate || 0), 0),
+      rows: isCollapsed ? [] : rows,
+    };
+  });
+};
+
 const SubcontractorStatementDetail = () => {
-  const navigate = useNavigate();
   const location = useLocation();
-  console.log("Received state:", location.state);
   const {
-    statementId,
+    statementKey,
+    period,
     subcontractorName,
     subcontractorId,
     subei_reg_num,
-    legids,
-    date,
     vatStatus,
   } = location.state || {};
+
+  // Midday avoids any timezone rolling the month backwards when the date is
+  // formatted for display or a filename.
+  const date = period ? `${period}-01T12:00:00` : null;
 
   const [statement, setStatement] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -28,11 +109,79 @@ const SubcontractorStatementDetail = () => {
   const [companyInfo, setCompanyInfo] = useState(null);
   const [subcontractorInfo, setSubcontractorInfo] = useState(null);
 
+  // Export snapshots: every document produced from this statement, frozen at
+  // the moment it was produced.
+  const [exportHistory, setExportHistory] = useState([]);
+  const [exportMessage, setExportMessage] = useState("");
+  const [exportError, setExportError] = useState(false);
+
   const statementRef = useRef(null);
+  const tableScrollRef = useRef(null);
+
+  // Period and VAT status still have to appear in the filename even though the
+  // statement number is gone from the documents themselves: without them, the
+  // VAT and Non-VAT copies of the same month would overwrite each other in a
+  // downloads folder.
+  const buildFilename = (extension) =>
+    [
+      "Subcontractor-Statement",
+      String(subcontractorName || "").trim().replace(/\s+/g, "-"),
+      period,
+      vatStatus === "NON_VAT" ? "NonVAT" : "VAT",
+    ]
+      .filter(Boolean)
+      .join("-") + `.${extension}`;
+
+  const [legPage, setLegPage] = useState(1);
+  const [legsPerPage, setLegsPerPage] = useState(100);
+  const [legQuery, setLegQuery] = useState("");
+  const [sortKey, setSortKey] = useState("date");
+  const [sortDir, setSortDir] = useState(1);
+  const [grouping, setGrouping] = useState("None");
+  const [collapsedGroups, setCollapsedGroups] = useState({});
+
+  const periodLabel = formatPeriodLabel(period);
+
+  // The month the legs were driven — carried straight through from the list.
+  const exportPeriod = period;
+
+  const refreshExports = useCallback(async () => {
+    if (!subei_reg_num || !exportPeriod) return;
+    try {
+      const rows = await fetchStatementExports({
+        subeiRegNum: subei_reg_num,
+        period: exportPeriod,
+        vatStatus: vatStatus,
+      });
+      setExportHistory(rows);
+    } catch (err) {
+      console.error("Error fetching export history:", err);
+    }
+  }, [subei_reg_num, exportPeriod, vatStatus]);
 
   useEffect(() => {
-    if (!statementId || !legids) {
-      setError("No statement or leg data selected");
+    refreshExports();
+  }, [refreshExports]);
+
+  useEffect(() => {
+    setLegPage(1);
+    setLegQuery("");
+    setGrouping("None");
+    setCollapsedGroups({});
+  }, [statementKey]);
+
+  // Any change of view starts the leg table from the top. The table scrolls
+  // inside its own container, and that scroll position otherwise survives the
+  // change: switching grouping, sorting, paging or searching while scrolled
+  // opened the new view partway down, with its first rows already tucked under
+  // the sticky column header — which read as rows being cut off or missing.
+  useEffect(() => {
+    if (tableScrollRef.current) tableScrollRef.current.scrollTop = 0;
+  }, [statementKey, grouping, sortKey, sortDir, legPage, legsPerPage, legQuery]);
+
+  useEffect(() => {
+    if (!statementKey || !subei_reg_num) {
+      setError("No statement selected");
       setLoading(false);
       return;
     }
@@ -40,28 +189,22 @@ const SubcontractorStatementDetail = () => {
     const fetchStatementDetail = async () => {
       try {
         setLoading(true);
-        let legKeys;
-        try {
-          const parsedLegids = JSON.parse(legids);
-          legKeys = parsedLegids.map((item) => item.legkey);
-          console.log("Parsed legKeys:", legKeys);
-        } catch (e) {
-          console.error("Invalid legids JSON:", e, "Received:", legids);
-          legKeys = [];
-        }
 
-        if (legKeys.length === 0) {
-          throw new Error("No valid leg keys found in legids");
-        }
-
-        const response = await api.get("/subcontractor/statement-details", {
-          params: {
-            statementId,
-            legKeys: legKeys.join(","),
-            subei_reg_num,
-          },
-        });
-        console.log("Statement details response:", response.data);
+        // Three independent lookups, so they go in parallel rather than in
+        // series — the legs query is the slow one and the other two no longer
+        // wait behind it.
+        //
+        // The server resolves the statement's legs from the key; the page no
+        // longer round-trips a leg list it would have to keep in step.
+        const [response, companyResponse, subResponse] = await Promise.all([
+          api.get("/subcontractor/statement-details", {
+            params: { statementKey, subei_reg_num },
+          }),
+          api.get("/subcontractor/company-info", {
+            params: { roleid: 1, status: "active" },
+          }),
+          api.get("/subcontractor/info", { params: { subei_reg_num } }),
+        ]);
 
         if (!response.data)
           throw new Error("Failed to fetch statement details");
@@ -82,22 +225,14 @@ const SubcontractorStatementDetail = () => {
           0
         );
 
-        const companyResponse = await api.get("/subcontractor/company-info", {
-          params: { roleid: 1, status: "active" },
-        });
         const companyData = companyResponse.data[0] || {};
+        // Only the name is rendered anywhere (statement header, PDF header and
+        // footer). The address/phone/email fields were unused and carried US
+        // placeholder values that would have printed on a real statement.
         setCompanyInfo({
-          name: companyData.companyname || "Construction Management Pro",
-          address:
-            companyData.address ||
-            "123 Business Ave, Suite 100, City, State 12345",
-          phone: companyData.cell_num || "+1 (555) 000-0000",
-          email: companyData.email || "billing@constructionpro.com",
+          name: (companyData.companyname || "").trim(),
         });
 
-        const subResponse = await api.get("/subcontractor/info", {
-          params: { subei_reg_num },
-        });
         const subData = subResponse.data[0] || {};
         setSubcontractorInfo({
           name: subcontractorName,
@@ -106,10 +241,8 @@ const SubcontractorStatementDetail = () => {
         });
 
         setStatement({
-          statementId,
           subcontractorName,
           subcontractorId,
-          // generationDate is expected to already be adjusted (DB date minus 1 day)
           generationDate: date,
           workItems,
           summary: {
@@ -126,13 +259,16 @@ const SubcontractorStatementDetail = () => {
     };
 
     fetchStatementDetail();
-  }, [statementId, subcontractorId, subcontractorName, subei_reg_num, legids]);
+  }, [statementKey, date, subcontractorId, subcontractorName, subei_reg_num]);
 
-  const generatePDF = () => {
-    if (isGenerating || !statement || !companyInfo || !subcontractorInfo)
-      return;
-    setIsGenerating(true);
-
+  // `statement` is a PARAMETER here, deliberately shadowing the component state
+  // of the same name: a document must render from the server's frozen snapshot
+  // payload, never from whatever the page happens to be displaying. Returns the
+  // rendered file instead of saving it, so the caller can both hand it to the
+  // user and upload it against the snapshot.
+  // `logo` is from loadBrandLogo() ({ dataUrl } or null); null lays the header
+  // out as plain text, as before the TDA letterhead was added.
+  const buildPdf = (statement, logo = null) => {
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
@@ -150,29 +286,46 @@ const SubcontractorStatementDetail = () => {
     const darkGray = [26, 54, 93]; // #1a365d
     const mediumGray = [74, 85, 104]; // #4a5568
 
-    // Professional Header with gradient-like background
+    // Professional Header with gradient-like background. The box grows when the
+    // logo is present so the letterhead sits above the legal company name.
+    const logoWidth = 48;
+    const headerHeight = logo ? 32 : 25;
     doc.setFillColor(...lightBlue);
-    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, 25, 3, 3, "F");
+    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, headerHeight, 3, 3, "F");
 
     // Header border
     doc.setDrawColor(...primaryBlue);
     doc.setLineWidth(0.5);
-    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, 25, 3, 3, "S");
+    doc.roundedRect(margin - 5, y - 5, pageWidth + 10, headerHeight, 3, 3, "S");
+
+    if (logo) {
+      doc.addImage(
+        logo.dataUrl,
+        "JPEG",
+        margin + pageWidth / 2 - logoWidth / 2,
+        y - 1,
+        logoWidth,
+        brandLogoHeight(logoWidth)
+      );
+    }
 
     // Company Name
-    doc.setFontSize(22);
+    doc.setFontSize(logo ? 12 : 22);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...darkGray);
-    doc.text(companyInfo.name, margin + pageWidth / 2, y + 8, {
-      align: "center",
-    });
+    doc.text(
+      companyInfo.name,
+      margin + pageWidth / 2,
+      logo ? y - 1 + brandLogoHeight(logoWidth) + 5 : y + 8,
+      { align: "center" }
+    );
 
     // Company Details
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(...mediumGray);
 
-    y += 35;
+    y += headerHeight + 10;
 
     // Document Title
     doc.setFontSize(18);
@@ -183,49 +336,29 @@ const SubcontractorStatementDetail = () => {
     });
     y += 15;
 
-    // Statement Info Boxes
+    // Statement Date Box. The statement-number box that used to sit beside it
+    // was dropped, so the date box is centred rather than left in a half-width
+    // column with a gap where the number was.
     const boxWidth = (pageWidth - 10) / 2;
+    const boxX = margin + (pageWidth - boxWidth) / 2;
 
-    // Statement Number Box
     doc.setFillColor(...lightGray);
-    doc.roundedRect(margin, y, boxWidth, 15, 2, 2, "F");
+    doc.roundedRect(boxX, y, boxWidth, 15, 2, 2, "F");
     doc.setDrawColor(226, 232, 240);
     doc.setLineWidth(0.3);
-    doc.roundedRect(margin, y, boxWidth, 15, 2, 2, "S");
+    doc.roundedRect(boxX, y, boxWidth, 15, 2, 2, "S");
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(...primaryBlue);
-    doc.text("STATEMENT NUMBER", margin + boxWidth / 2, y + 5, {
-      align: "center",
-    });
-    doc.setFontSize(14);
-    doc.setTextColor(...darkGray);
-    doc.text(`#${statementId}`, margin + boxWidth / 2, y + 11, {
-      align: "center",
-    });
-
-    // Statement Date Box
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(margin + boxWidth + 10, y, boxWidth, 15, 2, 2, "F");
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(margin + boxWidth + 10, y, boxWidth, 15, 2, 2, "S");
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(...primaryBlue);
-    doc.text("STATEMENT DATE", margin + boxWidth + 10 + boxWidth / 2, y + 5, {
+    doc.text("STATEMENT DATE", boxX + boxWidth / 2, y + 5, {
       align: "center",
     });
     doc.setFontSize(10);
     doc.setTextColor(...darkGray);
     doc.text(
-      new Date(statement.generationDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      margin + boxWidth + 10 + boxWidth / 2,
+      formatStatementDate(statement.generationDate),
+      boxX + boxWidth / 2,
       y + 11,
       { align: "center" }
     );
@@ -350,11 +483,7 @@ const SubcontractorStatementDetail = () => {
         fontStyle: "bold",
         textColor: primaryBlue,
         formatter: (item) =>
-          new Date(item.date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
+          formatLegDate(item.date),
       },
       {
         width: colWidths[1],
@@ -600,17 +729,15 @@ const SubcontractorStatementDetail = () => {
       doc.text(`Page ${i} of ${pageCount}`, 210 - margin, 287, { align: 'right' });
     }
 
-    // Save PDF with descriptive filename
-    const dateStr = new Date(statement.generationDate).toLocaleDateString('en-GB');
-    doc.save(`Subcontractor-Statement-${statementId}-${subcontractorName}-${dateStr}.pdf`);
-    setIsGenerating(false);
+    return {
+      blob: doc.output("blob"),
+      filename: buildFilename("pdf"),
+    };
   };
 
-  const generateExcel = async () => {
-    if (isGenerating || !statement || !companyInfo || !subcontractorInfo)
-      return;
-    setIsGenerating(true);
-
+  // Same shadowing rule as buildPdf: renders from the snapshot payload, returns
+  // the file rather than saving it.
+  const buildExcel = async (statement) => {
     try {
       const workbook = new Workbook();
       const worksheet = workbook.addWorksheet("Statement");
@@ -628,17 +755,14 @@ const SubcontractorStatementDetail = () => {
 
       let currentRow = 1;
 
-      // Header Info
-      worksheet.getCell(`A${currentRow}`).value = "Statement #";
-      worksheet.getCell(`B${currentRow}`).value = statementId;
-      worksheet.getCell(`D${currentRow}`).value = "Statement Date:";
-      worksheet.getCell(`E${currentRow}`).value = new Date(statement.generationDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      worksheet.getCell(`F${currentRow}`).value = "VAT Status:";
-      worksheet.getCell(`G${currentRow}`).value = vatStatus === "NON_VAT" ? "Non VAT" : "VAT";
+      // Header Info. The statement number was removed, so date and VAT status
+      // shift left into the columns it used to occupy.
+      worksheet.getCell(`A${currentRow}`).value = "Statement Date:";
+      worksheet.getCell(`B${currentRow}`).value = formatStatementDate(
+        statement.generationDate
+      );
+      worksheet.getCell(`D${currentRow}`).value = "VAT Status:";
+      worksheet.getCell(`E${currentRow}`).value = vatStatus === "NON_VAT" ? "Non VAT" : "VAT";
       currentRow += 2;
 
       // Subcontractor Info
@@ -671,11 +795,7 @@ const SubcontractorStatementDetail = () => {
       statement.workItems.forEach((item) => {
         const row = worksheet.getRow(currentRow);
         row.values = [
-          new Date(item.date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
+          formatLegDate(item.date),
           item.containerNumber || "N/A",
           item.clientName || "N/A",
           item.destination || "N/A",
@@ -697,23 +817,93 @@ const SubcontractorStatementDetail = () => {
       worksheet.getCell(`B${currentRow}`).numFmt = '"R"#,##0.00';
       worksheet.getCell(`B${currentRow}`).font = { bold: true };
 
-      // Generate file
-      const dateBG = new Date(statement.generationDate).toLocaleDateString("en-GB");
       const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `Subcontractor-Statement-${statementId}-${subcontractorName}-${dateBG}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      return {
+        blob: new Blob([buffer], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }),
+        filename: buildFilename("xlsx"),
+      };
     } catch (err) {
-      console.error("Error generating Excel:", err);
-      alert("Failed to generate Excel file. Please try again.");
+      console.error("Error building Excel workbook:", err);
+      // Surfaced by handleExport, which reports it and re-enables the buttons.
+      throw err;
+    }
+  };
+
+  /**
+   * Print/export is what makes a statement real, so it is the moment we freeze
+   * it. The server re-derives the figures, stores that snapshot, and returns the
+   * payload; the document is rendered from that payload and the resulting file
+   * is uploaded back against the same snapshot.
+   *
+   * Re-exporting content that has not changed hands back the document already on
+   * file rather than producing a second one, so a reprint is byte-for-byte what
+   * the subcontractor received the first time.
+   */
+  const handleExport = async (format) => {
+    if (isGenerating || !statement || !companyInfo || !subcontractorInfo) return;
+
+    if (!exportPeriod) {
+      setExportError(true);
+      setExportMessage("Cannot determine the statement period for this export.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setExportError(false);
+    setExportMessage("");
+
+    try {
+      const result = await requestStatementExport({
+        subeiRegNum: subei_reg_num,
+        period: exportPeriod,
+        vatStatus,
+        format,
+      });
+
+      if (!result.document_pending && result.export?.document_url) {
+        openStoredDocument(result.export.document_url);
+        setExportMessage(
+          `Statement unchanged — re-issued the ${format} already on file.`
+        );
+        await refreshExports();
+        return;
+      }
+
+      const snapshot = statementFromPayload(result.payload, {
+        subcontractorName,
+        subcontractorId,
+        generationDate: date,
+      });
+
+      const { blob, filename } =
+        format === "PDF" ? buildPdf(snapshot, await loadBrandLogo()) : await buildExcel(snapshot);
+
+      saveBlob(blob, filename);
+
+      // The snapshot exists either way; a failed upload leaves it without a
+      // stored document rather than losing the record of the export.
+      try {
+        await uploadStatementDocument(result.export.export_id, blob, filename);
+        setExportMessage(
+          `${format} downloaded and saved to export history.`
+        );
+      } catch (uploadErr) {
+        console.error("Error archiving statement document:", uploadErr);
+        setExportError(true);
+        setExportMessage(
+          `${format} downloaded, but archiving the copy failed. The export is recorded; the stored document is missing.`
+        );
+      }
+
+      await refreshExports();
+    } catch (err) {
+      console.error("Error exporting statement:", err);
+      setExportError(true);
+      setExportMessage(
+        err.response?.data?.message || `Failed to export ${format}.`
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -740,171 +930,416 @@ const SubcontractorStatementDetail = () => {
       </div>
     );
 
+  // --- Search, sort, group -------------------------------------------------
+  // Subtotals are computed over the whole filtered set, never over one page, so
+  // a group's subtotal is always that group's real total. Grouping therefore
+  // shows every row: a subtotal that disagreed with the rows beneath it would
+  // be worse than a long table.
+  const query = legQuery.trim().toLowerCase();
+  const filteredLegs = query
+    ? statement.workItems.filter((leg) =>
+        [
+          leg.clientName,
+          leg.containerNumber,
+          leg.destination,
+          leg.instructionNumber,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(query)
+      )
+    : statement.workItems.slice();
+
+  const sortedLegs = filteredLegs.sort((a, b) => {
+    const left = a[sortKey];
+    const right = b[sortKey];
+    if (sortKey === "rate") return (Number(left) - Number(right)) * sortDir;
+    if (sortKey === "date") return (new Date(left) - new Date(right)) * sortDir;
+    return String(left ?? "").localeCompare(String(right ?? "")) * sortDir;
+  });
+
+  const filteredTotal = sortedLegs.reduce(
+    (sum, leg) => sum + Number(leg.rate || 0),
+    0
+  );
+
+  const isGrouped = grouping !== "None";
+  const totalPages = Math.max(1, Math.ceil(sortedLegs.length / legsPerPage));
+  const safePage = Math.min(legPage, totalPages);
+  const pageStart = isGrouped ? 0 : (safePage - 1) * legsPerPage;
+  const pagedLegs = isGrouped
+    ? sortedLegs
+    : sortedLegs.slice(pageStart, pageStart + legsPerPage);
+
+  const legGroups = isGrouped
+    ? buildLegGroups(pagedLegs, grouping, period, collapsedGroups)
+    : [{ key: "all", showHeader: false, rows: pagedLegs }];
+
+  const rangeLabel =
+    sortedLegs.length === 0
+      ? "No legs match this search"
+      : isGrouped
+      ? `Showing all ${sortedLegs.length} legs`
+      : `Showing ${pageStart + 1}-${pageStart + pagedLegs.length} of ${
+          sortedLegs.length
+        }`;
+
+  const legCountLabel = `${sortedLegs.length} ${
+    sortedLegs.length === 1 ? "leg" : "legs"
+  }`;
+
+  const allLegsLabel = `${statement.workItems.length} ${
+    statement.workItems.length === 1 ? "leg" : "legs"
+  }`;
+
+  const caretFor = (key) =>
+    sortKey === key ? (sortDir === 1 ? " ↑" : " ↓") : "";
+
+  const toggleSort = (key) => {
+    setSortDir((dir) => (sortKey === key ? -dir : 1));
+    setSortKey(key);
+    setLegPage(1);
+  };
+
+  const sortableHeader = (key, label, className) => (
+    <th
+      className={`${className} sortable`}
+      onClick={() => toggleSort(key)}
+      title={`Sort by ${label}`}
+    >
+      {label}
+      <span className="sort-caret">{caretFor(key)}</span>
+    </th>
+  );
+
   return (
     <div className="statement-detail-wrapper">
       <div className="statement-page">
         <div className="statement-paper" ref={statementRef}>
-          {/* Professional Header */}
-          <div className="statement-header">
-            <div className="company-logo-section">
-              <h1 className="company-name">{companyInfo.name}</h1>
+          {/* Masthead */}
+          <div className="statement-masthead">
+            <div>
+              {companyInfo.name && (
+                <div className="company-name">{companyInfo.name}</div>
+              )}
+              <div className="company-tagline">
+                Statement of work completed by subcontractor
+              </div>
+            </div>
+            <div className="masthead-right">
+              <div className="masthead-kicker">Subcontractor Statement</div>
+              <div className="masthead-period">{periodLabel}</div>
             </div>
           </div>
 
-          {/* Statement Title */}
-          <div className="statement-title-section">
-            <div className="statement-number">Statement #{statementId}</div>
-          </div>
-
-          {/* Billing Information */}
-          <div className="billing-section">
-            <div className="billing-info">
-              <div className="billing-header">Bill To:</div>
-              <div className="subcontractor-details">
-                <div className="subcontractor-name">
-                  {subcontractorInfo.name}
-                </div>
-                <div className="subcontractor-address">
+          {/* Bill-to, key figures, and the export panel */}
+          <div className="head-grid">
+            <div className="meta-grid">
+              <div>
+                <div className="field-label">Bill to</div>
+                <div className="billed-party">{subcontractorInfo.name}</div>
+                <div className="billed-detail">
                   {subcontractorInfo.location}
+                  <br />
+                  Contact: {subcontractorInfo.contact_person}
                 </div>
-                <div className="contact-person">
-                  <span className="label">Contact:</span>{" "}
-                  {subcontractorInfo.contact_person}
+                <div className="meta-row-group">
+                  <div>
+                    <div className="field-label">Statement date</div>
+                    <div className="field-value">
+                      {formatStatementDate(date)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="field-label">Reg no</div>
+                    <div className="field-value">{subei_reg_num}</div>
+                  </div>
+                  <div>
+                    <div className="field-label">VAT status</div>
+                    <div className="field-value">
+                      {vatStatus === "NON_VAT" ? "Non VAT" : "VAT"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="total-callout">
+                <div>
+                  <div className="callout-label">Total amount due</div>
+                  <div className="callout-value">
+                    {formatRand(statement.summary.finalAmount)}
+                  </div>
+                </div>
+                <div className="callout-meta">
+                  {allLegsLabel} &middot; {periodLabel}
                 </div>
               </div>
             </div>
-            <div className="statement-meta">
-              <div className="meta-row">
-                <span className="meta-label">Statement Date:</span>
-                <span className="meta-value">
-                  {new Date(statement.generationDate).toLocaleDateString(
-                    "en-US",
-                    {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    }
-                  )}
-                </span>
+
+            <aside className="export-panel">
+              <div>
+                <div className="field-label">Issue statement</div>
+                <div className="export-buttons">
+                  <button
+                    className="export-btn primary"
+                    onClick={() => handleExport("PDF")}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? "Working..." : "Download PDF"}
+                  </button>
+                  <button
+                    className="export-btn secondary"
+                    onClick={() => handleExport("XLSX")}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? "Working..." : "Download Excel"}
+                  </button>
+                </div>
+                {/* Load-bearing, not decoration: exports render from the
+                    server's frozen payload, so the search and paging below
+                    cannot silently truncate a document. */}
+                <div className="export-note">
+                  Exports always contain every leg, regardless of the filters
+                  below.
+                </div>
               </div>
-              <div className="meta-row">
-                <span className="meta-label">Subcontractor Reg No :</span>
-                <span className="meta-value">{subcontractorId}</span>
+
+              {exportMessage && (
+                <div
+                  className={`export-message ${exportError ? "error" : "success"}`}
+                  role="status"
+                >
+                  {exportMessage}
+                </div>
+              )}
+
+              <div className="export-history">
+                <div className="field-label">Export history</div>
+                {exportHistory.length === 0 ? (
+                  <div className="export-history-empty">
+                    Not exported yet. Downloading a copy archives exactly what
+                    was sent.
+                  </div>
+                ) : (
+                  <div className="export-history-list">
+                    {exportHistory.map((row) => {
+                      const drifted =
+                        Math.abs(
+                          Number(row.amount) -
+                            Number(statement.summary.finalAmount)
+                        ) > 0.005;
+
+                      return (
+                        <div className="export-entry" key={row.export_id}>
+                          <div className="export-entry-main">
+                            <div className="export-entry-head">
+                              <span className="export-format">
+                                {row.document_format || "—"}
+                              </span>{" "}
+                              &middot; {formatRand(row.amount)}
+                            </div>
+                            <div className="export-entry-sub">
+                              {new Date(row.exported_at).toLocaleString(
+                                "en-ZA",
+                                { dateStyle: "medium", timeStyle: "short" }
+                              )}{" "}
+                              &middot; {row.exported_by_name || "—"}
+                            </div>
+                            {drifted && (
+                              <div className="export-drift">
+                                Differs from current figures
+                              </div>
+                            )}
+                          </div>
+                          {row.document_url ? (
+                            <button
+                              className="export-open"
+                              onClick={() =>
+                                openStoredDocument(row.document_url)
+                              }
+                            >
+                              Open
+                            </button>
+                          ) : (
+                            <span className="export-missing">Not archived</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
+            </aside>
           </div>
 
-          {/* Work Items Table */}
-          <div className="work-items-section">
-            <h3 className="section-title">Work Completed</h3>
-            <div className="table-container">
-              <table className="work-items-table">
-                <thead>
-                  <tr>
-                    <th className="col-date">Date</th>
-                    <th className="col-starting">Container Number</th>
-                    <th className="col-client">Client</th>
-                    <th className="col-destination">Destination</th>
-                    <th className="col-instruction-number">Instruction No</th>
-                    <th className="col-rate">Rate</th>
-                    <th className="col-instruction">Instructions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {statement.workItems.map((item, index) => (
+          {/* Work completed */}
+          <div className="work-heading">
+            <div className="work-title">Work completed</div>
+            <div className="work-range">{rangeLabel}</div>
+          </div>
+
+          <div className="work-toolbar">
+            <input
+              type="text"
+              className="leg-search"
+              placeholder="Search client, container, destination..."
+              value={legQuery}
+              onChange={(e) => {
+                setLegQuery(e.target.value);
+                setLegPage(1);
+              }}
+            />
+
+            <div className="group-toggle">
+              <span className="group-label">Group</span>
+              {GROUP_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  className={`group-btn ${grouping === option ? "active" : ""}`}
+                  onClick={() => {
+                    setGrouping(option);
+                    setCollapsedGroups({});
+                    setLegPage(1);
+                  }}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+
+            <select
+              className="rows-per-page"
+              value={legsPerPage}
+              disabled={isGrouped}
+              title={
+                isGrouped
+                  ? "Grouped statements show every leg, so each subtotal matches the rows beneath it"
+                  : "Rows per page"
+              }
+              onChange={(e) => {
+                setLegsPerPage(Number(e.target.value));
+                setLegPage(1);
+              }}
+            >
+              {LEGS_PER_PAGE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="table-container" ref={tableScrollRef}>
+            <table className="work-items-table">
+              <thead>
+                <tr>
+                  {sortableHeader("date", "Date", "col-date")}
+                  {sortableHeader(
+                    "containerNumber",
+                    "Container no",
+                    "col-starting"
+                  )}
+                  {sortableHeader("clientName", "Client", "col-client")}
+                  {sortableHeader(
+                    "destination",
+                    "Destination",
+                    "col-destination"
+                  )}
+                  {sortableHeader(
+                    "instructionNumber",
+                    "Instr no",
+                    "col-instruction-number"
+                  )}
+                  {sortableHeader("rate", "Rate", "col-rate")}
+                  <th className="col-instruction">Instructions</th>
+                </tr>
+              </thead>
+              {legGroups.map((group) => (
+                <tbody key={group.key}>
+                  {group.showHeader && (
+                    <tr
+                      className="group-row"
+                      onClick={() =>
+                        setCollapsedGroups((prev) => ({
+                          ...prev,
+                          [group.key]: !prev[group.key],
+                        }))
+                      }
+                    >
+                      <td colSpan="4" className="group-label-cell">
+                        {group.collapsed ? "▸" : "▾"} {group.label}
+                      </td>
+                      <td className="group-count">{group.countLabel}</td>
+                      <td className="group-subtotal">
+                        {formatRand(group.subtotal)}
+                      </td>
+                      <td />
+                    </tr>
+                  )}
+                  {group.rows.map((item, index) => (
                     <tr
                       key={item.id}
                       className={index % 2 === 0 ? "row-even" : "row-odd"}
                     >
-                      <td className="col-date">
-                        {new Date(item.date).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </td>
+                      <td className="col-date">{formatLegDate(item.date)}</td>
                       <td className="col-starting">{item.containerNumber}</td>
                       <td className="col-client">{item.clientName}</td>
                       <td className="col-destination">{item.destination}</td>
                       <td className="col-instruction-number">
                         {item.instructionNumber}
                       </td>
-                      <td className="col-rate">
-                        R
-                        {item.rate.toLocaleString("en-US", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </td>
+                      <td className="col-rate">{formatRand(item.rate)}</td>
                       <td className="col-instruction">{item.instruction}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+              ))}
+            </table>
           </div>
 
-          {/* Payment Summary */}
-          <div className="payment-summary-section">
-            <div className="summary-container">
-              <div className="summary-header">Payment Summary</div>
-              <div className="summary-content">
-                <div className="summary-row subtotal-row">
-                  <span className="summary-label">Subtotal:</span>
-                  <span className="summary-value">
-                    R
-                    {statement.summary.totalAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
-                <div className="summary-divider"></div>
-                <div className="summary-row total-row">
-                  <span className="summary-label">Total Amount Due:</span>
-                  <span className="summary-value">
-                    R
-                    {statement.summary.finalAmount.toLocaleString("en-US", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </span>
-                </div>
+          <div className="work-footer">
+            {!isGrouped && totalPages > 1 && (
+              <div className="pager">
+                <button
+                  className="pager-btn"
+                  onClick={() => setLegPage((page) => Math.max(1, page - 1))}
+                  disabled={safePage === 1}
+                >
+                  Previous
+                </button>
+                <span className="pager-summary">
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  className="pager-btn"
+                  onClick={() => setLegPage(Math.min(totalPages, safePage + 1))}
+                  disabled={safePage === totalPages}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            <div className="totals-block">
+              <div className="totals-row">
+                <span>Subtotal &middot; {legCountLabel}</span>
+                <span className="totals-value">{formatRand(filteredTotal)}</span>
+              </div>
+              <div className="totals-row grand">
+                <span>Total amount due</span>
+                <span className="totals-value grand-value">
+                  {formatRand(statement.summary.finalAmount)}
+                </span>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="statement-actions">
-          <button
-            className="back-btn"
-            onClick={() =>
-              navigate("/Creditors/SubcontractorStatements", {
-                state: {
-                  subcontractorId: statement.subcontractorId,
-                  subcontractorName: statement.subcontractorName,
-                  subei_reg_num: subei_reg_num,
-                },
-              })
-            }
-          >
-            Back
-          </button>
-          <button
-            className={`download-btn ${isGenerating ? "generating" : ""}`}
-            onClick={generatePDF}
-            disabled={isGenerating}
-          >
-            {isGenerating ? "Generating PDF..." : "Download PDF"}
-          </button>
-          <button
-            className={`download-btn ${isGenerating ? "generating" : ""}`}
-            onClick={generateExcel}
-            disabled={isGenerating}
-          >
-            {isGenerating ? "Generating Excel..." : "Download Excel"}
-          </button>
+          <div className="statement-footnote">
+            <span>{companyInfo.name}</span>
+            <span>
+              Statement period {periodLabel} &middot; {allLegsLabel}
+            </span>
+          </div>
         </div>
       </div>
     </div>

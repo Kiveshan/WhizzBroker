@@ -19,6 +19,11 @@ const BASE_FORM = {
   createdAt: "2024-01-15",
 };
 
+const RATE_OPTIONS = [
+  { title: "DBN-JHB Express", starting_point: "Durban", destination: "Johannesburg" },
+  { title: "Local delivery", starting_point: null, destination: null },
+];
+
 const defaultProps = {
   formData: BASE_FORM,
   clients: CLIENTS,
@@ -45,14 +50,61 @@ describe("ClientInfoSection — rendering", () => {
     expect(screen.getByDisplayValue("jane@acme.com")).toBeInTheDocument();
   });
 
-  it("renders creation date when showCreationDate=true (default)", () => {
+  it("hides the Rate row when showLocations is not set", () => {
     render(<ClientInfoSection {...defaultProps} />);
-    expect(screen.getByDisplayValue("2024-01-15")).toBeInTheDocument();
+    expect(screen.queryByText("Rate")).not.toBeInTheDocument();
+    expect(screen.queryByText("Route")).not.toBeInTheDocument();
   });
 
-  it("hides creation date when showCreationDate=false", () => {
-    render(<ClientInfoSection {...defaultProps} showCreationDate={false} />);
-    expect(screen.queryByDisplayValue("2024-01-15")).not.toBeInTheDocument();
+  it("renders the Rate dropdown with titles and routes when showLocations=true", () => {
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        showLocations={true}
+        rateOptions={RATE_OPTIONS}
+      />
+    );
+    expect(screen.getByText("Rate")).toBeInTheDocument();
+    expect(screen.getByText("Route")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /DBN-JHB Express\s+—\s+Durban → Johannesburg/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Local delivery" })).toBeInTheDocument();
+  });
+
+  it("shows the chosen rate's route read-only", () => {
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        formData={{ ...BASE_FORM, rate_title: "DBN-JHB Express", pickup: "Durban", dropoff: "Johannesburg" }}
+        showLocations={true}
+        rateOptions={RATE_OPTIONS}
+      />
+    );
+    expect(screen.getByDisplayValue("Durban → Johannesburg")).toBeInTheDocument();
+  });
+
+  it("keeps a saved title that is no longer on the client's rates selectable", () => {
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        formData={{ ...BASE_FORM, rate_title: "Old rate" }}
+        showLocations={true}
+        rateOptions={RATE_OPTIONS}
+      />
+    );
+    expect(screen.getByRole("option", { name: /Old rate \(no longer on this client's rates\)/ })).toBeInTheDocument();
+  });
+
+  it("shows an older instruction's route in the locked rate field", () => {
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        formData={{ ...BASE_FORM, pickup: "Cape Town", dropoff: "Durban" }}
+        showLocations={true}
+        rateOptions={RATE_OPTIONS}
+        pickupLocked={true}
+      />
+    );
+    expect(screen.getAllByDisplayValue("Cape Town → Durban").length).toBeGreaterThan(0);
   });
 });
 
@@ -65,12 +117,6 @@ describe("ClientInfoSection — disabled state", () => {
   it("client dropdown is enabled when clientLocked=false and not readOnly", () => {
     render(<ClientInfoSection {...defaultProps} clientLocked={false} />);
     expect(screen.getByRole("combobox")).not.toBeDisabled();
-  });
-
-  it("creation date input is disabled when isReadOnly", () => {
-    render(<ClientInfoSection {...defaultProps} isReadOnly={true} />);
-    const dateInput = screen.getByDisplayValue("2024-01-15");
-    expect(dateInput).toBeDisabled();
   });
 });
 
@@ -88,12 +134,19 @@ describe("ClientInfoSection — callbacks", () => {
     expect(onClientChange).toHaveBeenCalledTimes(1);
   });
 
-  it("calls onChange when creation date changes", () => {
-    const onChange = jest.fn();
-    render(<ClientInfoSection {...defaultProps} onChange={onChange} />);
-    const dateInput = screen.getByDisplayValue("2024-01-15");
-    fireEvent.change(dateInput, { target: { value: "2024-02-01" } });
-    expect(onChange).toHaveBeenCalledTimes(1);
+  it("calls onRateChange when a rate is chosen", () => {
+    const onRateChange = jest.fn();
+    render(
+      <ClientInfoSection
+        {...defaultProps}
+        showLocations={true}
+        rateOptions={RATE_OPTIONS}
+        onRateChange={onRateChange}
+      />
+    );
+    const rate = screen.getByDisplayValue("Select Rate");
+    fireEvent.change(rate, { target: { value: "Local delivery" } });
+    expect(onRateChange).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -27,6 +27,7 @@ export function isFieldValid(fieldName, value, {
     case "clientId":
     case "shipmentTypeId":
     case "task":
+    case "rate_title":
     case "pickup":
     case "dropoff":
     case "pickupTime":
@@ -85,13 +86,15 @@ export function validateForm(formData, containers = [], flags = {}) {
   // ── Common required fields ────────────────────────────────────────────────
   if (!formData.clientId) fail("clientId", "Client is required");
   if (!formData.shipmentTypeId) fail("shipmentTypeId", "Shipment type is required");
-  if (!formData.pickup) fail("pickup", "Pickup location is required");
-  if (!formData.dropoff) fail("dropoff", "Dropoff location is required");
+  // A rate is chosen by title. Instructions captured before rate titles
+  // existed have none and are valid with their pick-up / drop-off route.
+  const hasLegacyRoute = Boolean(formData.pickup && formData.dropoff);
+  if (!formData.rate_title && !hasLegacyRoute) fail("rate_title", "Rate is required");
 
   // ── Create-form rules ─────────────────────────────────────────────────────
   if (mode === "create") {
     if (!isAddOn) {
-      if (!formData.task) fail("task", "KSM File Reference is required");
+      if (!formData.task) fail("task", "File Reference is required");
       if (!formData.lastFreeDate) fail("lastFreeDate", "Last Free Date is required");
       if (!formData.bookingRef) fail("bookingRef", "Booking reference is required");
       if (!formData.fileRef) fail("fileRef", "Client File Reference is required");
@@ -137,7 +140,7 @@ export function validateForm(formData, containers = [], flags = {}) {
   // ── Update-form rules ─────────────────────────────────────────────────────
   } else if (mode === "update") {
     if (!isAddOn) {
-      if (!formData.ksmFileRef) fail("ksmFileRef", "KSM File Reference is required");
+      if (!formData.ksmFileRef) fail("ksmFileRef", "File Reference is required");
       if (!formData.clientFileRef) fail("clientFileRef", "Client File Reference is required");
       if (!formData.bookingRef) fail("bookingRef", "Booking Reference is required");
       if (!formData.description) fail("description", "Description is required");

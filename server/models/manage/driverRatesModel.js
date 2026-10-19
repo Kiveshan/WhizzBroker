@@ -842,6 +842,56 @@ export const getRouteLegDates = async (startingpoint, destination) => {
   }
 }
 
+// ─── Which rate column (6m/12m) a leg is paid from ──────────────────────────
+//
+// Must match how the leg was priced when it was created. Group assignments
+// (resolveAssignmentRate in assignmentModel.js) leave legs_m2.containernumber
+// empty and claim containers via container.legkey, so matching on
+// containernumber finds nothing and the old COALESCE(..., '6m') repriced every
+// 12m group load at the 6m rate. Resolution order:
+//   1. legacy leg naming one container    -> that container's type (6m if blank)
+//   2. group leg with claimed containers  -> sizes of the claimed containers
+//   3. instruction with no container rows -> the instruction's 6m/12m/abnormal counts
+// Steps 2 and 3 use containerTypeFromMix (assignmentModel.js): any 12m on the
+// load pays 12m; otherwise abnormal only if it outnumbers 6m; otherwise 6m.
+//   4. anything else                      -> 6m, as before
+// 'abnormal' has no route rate column; callers must not reprice those legs.
+// Expects aliases l (legs_m2), mc (m1_controller), c (container joined on
+// containernumber) and the LEG_CLAIMED_JOIN lateral below.
+const LEG_CLAIMED_JOIN = `
+  LEFT JOIN LATERAL (
+    SELECT
+      COUNT(*)                                                                     AS n,
+      COUNT(*) FILTER (WHERE LOWER(TRIM(COALESCE(cc.container_type, ''))) = '12m')      AS twelve,
+      COUNT(*) FILTER (WHERE LOWER(TRIM(COALESCE(cc.container_type, ''))) = 'abnormal') AS abnormal,
+      COUNT(*) FILTER (WHERE LOWER(TRIM(COALESCE(cc.container_type, ''))) NOT IN ('12m', 'abnormal')) AS six
+    FROM container cc
+    WHERE cc.legkey = l.legkey
+  ) claimed ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT COUNT(*) AS n FROM container ci WHERE ci.m1key = l.m1key
+  ) instr_containers ON TRUE`
+
+// Mirrors containerTypeFromMix in assignmentModel.js: any 12m pays 12m.
+const typeFromMix = (six, twelve, abnormal) => `
+  CASE
+    WHEN ${twelve} > 0       THEN '12m'
+    WHEN ${abnormal} > ${six} THEN 'abnormal'
+    ELSE '6m'
+  END`
+
+const LEG_CONTAINER_TYPE_SQL = `
+  CASE
+    WHEN c.containerkey IS NOT NULL THEN LOWER(TRIM(COALESCE(NULLIF(TRIM(c.container_type), ''), '6m')))
+    WHEN claimed.n > 0 THEN ${typeFromMix("claimed.six", "claimed.twelve", "claimed.abnormal")}
+    WHEN instr_containers.n = 0 THEN ${typeFromMix(
+      "COALESCE(mc.num_six_meters, 0)",
+      "COALESCE(mc.num_twelve_meters, 0)",
+      "COALESCE(mc.num_abnormal, 0)"
+    )}
+    ELSE '6m'
+  END`
+
 // ─── Month audit: find/fix legs with the wrong driverrate ───────────────────
 //
 // Re-derives the correct driverrate for every leg on instructions CREATED in a
@@ -871,14 +921,14 @@ const MONTH_AUDIT_CTE = `
       l.date::text                                   AS leg_date,
       l.driverrate                                   AS stored_rate,
       COALESCE(e.roleid, 5)                          AS roleid,
-      LOWER(TRIM(COALESCE(c.container_type, '6m')))  AS container_type,
+      ${LEG_CONTAINER_TYPE_SQL}                      AS container_type,
       r.m5ratekey                                    AS rate_id,
       CASE
         WHEN l.date IS NULL OR l.driverid IS NULL THEN NULL
         WHEN COALESCE(e.roleid, 5) = 6
-             AND LOWER(TRIM(COALESCE(c.container_type, '6m'))) = '12m' THEN r.subie_twelve_meter_rate
-        WHEN COALESCE(e.roleid, 5) = 6                              THEN r.subie_six_meter_rate
-        WHEN LOWER(TRIM(COALESCE(c.container_type, '6m'))) = '12m'  THEN r.driver_twelve_meter_rate
+             AND ${LEG_CONTAINER_TYPE_SQL} = '12m'   THEN r.subie_twelve_meter_rate
+        WHEN COALESCE(e.roleid, 5) = 6               THEN r.subie_six_meter_rate
+        WHEN ${LEG_CONTAINER_TYPE_SQL} = '12m'       THEN r.driver_twelve_meter_rate
         ELSE r.driver_six_meter_rate
       END                                            AS expected_rate
     FROM legs_m2 l
@@ -888,6 +938,8 @@ const MONTH_AUDIT_CTE = `
     LEFT JOIN container c
       ON LOWER(TRIM(COALESCE(c.containernum::text, ''))) = LOWER(TRIM(COALESCE(l.containernumber, '')))
      AND c.m1key = l.m1key
+     AND NULLIF(TRIM(l.containernumber), '') IS NOT NULL
+    ${LEG_CLAIMED_JOIN}
     LEFT JOIN LATERAL (
       SELECT dr.*
       FROM m5_driver_rate dr
@@ -1064,6 +1116,9 @@ export const refreshDriverRateLegsForInstructions = async (rateId, instructionId
 
     // Fetch all legs on the affected in-progress instructions that match the route,
     // including the driver's role and the container type for rate field selection.
+    // Break bulk is excluded: its subcontractor rate is typed by the controller
+    // (m5ratekey NULL), not read from the route table, so a route match must not
+    // overwrite it.
     const legsResult = await client.query(
       `SELECT
          l.legkey,
@@ -1071,15 +1126,18 @@ export const refreshDriverRateLegsForInstructions = async (rateId, instructionId
          l.containernumber,
          l.date,
          COALESCE(e.roleid, 5) AS roleid,
-         LOWER(TRIM(COALESCE(c.container_type, '6m'))) AS container_type
+         ${LEG_CONTAINER_TYPE_SQL} AS container_type
        FROM legs_m2 l
        INNER JOIN m1_controller mc ON mc.m1key = l.m1key
        LEFT JOIN m5_employee e ON e.userid = l.driverid
        LEFT JOIN container c
          ON LOWER(TRIM(COALESCE(c.containernum::text, ''))) = LOWER(TRIM(COALESCE(l.containernumber, '')))
          AND c.m1key = l.m1key
+         AND NULLIF(TRIM(l.containernumber), '') IS NOT NULL
+       ${LEG_CLAIMED_JOIN}
        WHERE l.m1key = ANY($1::int[])
          AND LOWER(COALESCE(mc.status, '')) = 'in progress'
+         AND COALESCE(mc.shipment_type, 0) <> 4
          AND LOWER(TRIM(COALESCE(l.startingpoint, ''))) = LOWER(TRIM($2))
          AND LOWER(TRIM(COALESCE(l.destination, ''))) = LOWER(TRIM($3))
          AND l.date IS NOT NULL`,
@@ -1096,10 +1154,14 @@ export const refreshDriverRateLegsForInstructions = async (rateId, instructionId
 
       const isSubcontractor = leg.roleid === 6
       const containerType = leg.container_type || '6m'
+      // No route rate column exists for abnormal loads — leave the stored rate.
+      if (containerType === 'abnormal') continue
 
       try {
         const rateResult = await getRateForLegDate(startingpoint, destination, legDate, isSubcontractor, containerType)
-        if (rateResult.success && rateResult.data?.applicable_rate != null) {
+        // Never overwrite with R0: a blank 6m/12m column on the new period means
+        // "no rate", not "pay nothing" (the assignment screen refuses R0 too).
+        if (rateResult.success && Number(rateResult.data?.applicable_rate) > 0) {
           await client.query(
             'UPDATE legs_m2 SET driverrate = $1 WHERE legkey = $2',
             [rateResult.data.applicable_rate, leg.legkey]

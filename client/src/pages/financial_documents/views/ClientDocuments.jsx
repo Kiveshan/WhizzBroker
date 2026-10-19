@@ -157,7 +157,14 @@ const ClientDocuments = () => {
   }, []);
 
   // View handlers
-  const handleViewInvoice = (ikey) => {
+  const handleViewInvoice = (ikey, instructionGroupId) => {
+    if (instructionGroupId) {
+      // Group invoices have no single m1key, so they're rendered via the
+      // combined group-invoice view instead of the per-instruction one.
+      navigate(`/group-invoice/${instructionGroupId}`);
+      return;
+    }
+
     if (!ikey) {
       alert("No invoice available for this instruction");
       return;
@@ -167,16 +174,17 @@ const ClientDocuments = () => {
     navigate(`/invoice/${ikey}`);
   };
 
-  const handleViewStatement = (statementId) => {
-    if (!statementId) {
+  // statementKey is the derived "<clientId>-YYYY-MM" identifier built by the
+  // client-instructions query from the invoice's own month.
+  const handleViewStatement = (statementKey) => {
+    if (!statementKey) {
       alert("No statement available for this instruction");
       return;
     }
 
-    // Navigate to the ClientStatement component with the statement ID
     navigate("/client-statement", {
       state: {
-        statementId: statementId,
+        statementKey: statementKey,
       },
     });
   };
@@ -310,7 +318,12 @@ const ClientDocuments = () => {
                           {/* Always show View button for invoices since completed instructions should have invoices */}
                           <button
                             className="view-button"
-                            onClick={() => handleViewInvoice(instruction.ikey)}
+                            onClick={() =>
+                              handleViewInvoice(
+                                instruction.ikey,
+                                instruction.instruction_group_id
+                              )
+                            }
                           >
                             View
                           </button>

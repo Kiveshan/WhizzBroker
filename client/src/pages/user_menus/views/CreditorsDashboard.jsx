@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import Card from "../../../components/Card";
 
 const creditorsDashboardData = [
-  { title: "Fuel", image: "/images/expenses.jpeg", path: "/FuelPage" },
   {
     title: "Subcontractors",
     image: "/images/subconstructor.jpg",
@@ -12,7 +11,7 @@ const creditorsDashboardData = [
   },
   { title: "Payroll", image: "/images/wages.jpeg", path: "/finance-clerk-wage" },
   {
-    title: "Other Expenses",
+    title: "Expenses",
     image: "/images/OtherExpence.jpg",
     path: "/Creditors/CreditorsOther",
   },
@@ -36,7 +35,7 @@ const CreditorsDashboard = () => {
   return (
     <div className="dashboard">
       <div className="dashboard-row top-row">
-        {creditorsDashboardData.slice(0, 3).map((item) => (
+        {creditorsDashboardData.slice(0, 2).map((item) => (
           <Card
             key={item.title}
             title={item.title}
@@ -46,7 +45,7 @@ const CreditorsDashboard = () => {
         ))}
       </div>
       <div className="dashboard-row bottom-row">
-        {creditorsDashboardData.slice(3, 5).map((item) => (
+        {creditorsDashboardData.slice(2, 4).map((item) => (
           <Card
             key={item.title}
             title={item.title}

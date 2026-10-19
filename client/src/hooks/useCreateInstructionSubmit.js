@@ -28,16 +28,22 @@ export function useCreateInstructionSubmit({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  const submitInstruction = useCallback(async () => {
-    setIsSubmitting(true);
-    setSubmitError("");
-
-    try {
+  // Builds the save payload without posting it — used by the standalone
+  // submit below and by the grouped create page, which collects payloads
+  // from every instruction panel and posts them as one group.
+  const buildPayload = useCallback(async () => {
+    {
       // Fetch set rate on-the-fly if Set Rate checkbox is checked (prevents race condition)
       let currentSetRateValue = setRateValue;
-      if (isSetRate && formData.clientId && formData.pickup && formData.dropoff) {
+      const hasRate = formData.rate_title || (formData.pickup && formData.dropoff);
+      if (isSetRate && formData.clientId && hasRate) {
         try {
-          const data = await fetchSetRateService(formData.clientId, formData.pickup, formData.dropoff);
+          const data = await fetchSetRateService(
+            formData.clientId,
+            formData.pickup,
+            formData.dropoff,
+            formData.rate_title
+          );
           if (data && data.set_rate != null) {
             currentSetRateValue = Number(data.set_rate);
           } else {
@@ -189,6 +195,9 @@ export function useCreateInstructionSubmit({
               is_12m_surcharge: Boolean(container.is_12m_surcharge),
               surcharge_12m_amount: Number(container.surcharge_12m_amount || 0),
               vgm: allowVgmUI ? container.vgm || false : false,
+              extra_charges: Array.isArray(container.selectedExtraCharges)
+                ? container.selectedExtraCharges
+                : [],
             }))
           : [];
 
@@ -209,6 +218,29 @@ export function useCreateInstructionSubmit({
         });
       }
 
+      return { instructionData, containerData, weightData };
+    }
+  }, [
+    formData,
+    isWeightBased,
+    isCrossHaul,
+    isImport,
+    isExport,
+    isSetRate,
+    isSetRateMode,
+    isAddOn,
+    allowVgmUI,
+    setRateValue,
+    containersRef,
+    weightRowsRef,
+  ]);
+
+  const submitInstruction = useCallback(async () => {
+    setIsSubmitting(true);
+    setSubmitError("");
+
+    try {
+      const { instructionData, containerData, weightData } = await buildPayload();
       const saveData = await saveInstructionService(instructionData, containerData, weightData);
 
       if (saveData.success) {
@@ -226,21 +258,7 @@ export function useCreateInstructionSubmit({
     } finally {
       setIsSubmitting(false);
     }
-  }, [
-    formData,
-    isWeightBased,
-    isCrossHaul,
-    isImport,
-    isExport,
-    isSetRate,
-    isSetRateMode,
-    isAddOn,
-    allowVgmUI,
-    setRateValue,
-    containersRef,
-    weightRowsRef,
-    navigate,
-  ]);
+  }, [buildPayload, navigate]);
 
-  return { submitInstruction, isSubmitting, submitError, setSubmitError };
+  return { submitInstruction, buildPayload, isSubmitting, submitError, setSubmitError };
 }

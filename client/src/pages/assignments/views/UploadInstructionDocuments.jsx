@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import "../css/UploadInstructionDocuments.css";
 import api from "../../../api"; // Import the Axios instance
+import { finalDestination } from "../../../utils/assignments/finalDestination.js";
 // Removed invoice preview from this page; handled in UpdateInstruction.jsx
 
 const UploadInstructionDocuments = () => {
@@ -611,14 +612,18 @@ const handleUpload = async (e) => {
       const instructionResponse = await api.get(
         `/instructions/${instructionId}/details`
       );
-      const dropoff = instructionResponse.data.dropoff;
-
-      // Normalize dropoff by converting to lowercase and removing spaces
-      const normalizedDropoff = dropoff?.toLowerCase().replace(/\s/g, "");
-
       // Get all legs for this instruction
       const legsResponse = await api.get(`/legs/${instructionId}`);
       const legsData = legsResponse.data;
+
+      // No dropoff (rate without a route) -> the last leg's destination
+      const dropoff = finalDestination(
+        instructionResponse.data.dropoff,
+        legsData
+      );
+
+      // Normalize dropoff by converting to lowercase and removing spaces
+      const normalizedDropoff = dropoff?.toLowerCase().replace(/\s/g, "");
 
       // Get all containers for this instruction
       const containersResponse = await api.get(

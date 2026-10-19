@@ -161,7 +161,7 @@ describe("fetchSetRate effect", () => {
     act(() => result.current.setIsSetRate(true));
     // Wait for both the fetch call AND the state update to settle
     await waitFor(() => {
-      expect(fetchSetRate).toHaveBeenCalledWith("c1", "A", "B");
+      expect(fetchSetRate).toHaveBeenCalledWith("c1", "A", "B", "");
       expect(result.current.setRateValue).toBe(750);
     });
     expect(onFormUpdate).toHaveBeenCalledWith({ setRateAmount: "750" });
@@ -344,7 +344,7 @@ describe("fetchRates", () => {
     });
     const { result, onFormUpdate } = renderRateHook();
     await act(() => result.current.fetchRates("c1", "A", "B"));
-    expect(fetchRates).toHaveBeenCalledWith("c1", "A", "B");
+    expect(fetchRates).toHaveBeenCalledWith("c1", "A", "B", null);
     expect(onFormUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ rateper_6: 100, rateper_12: 200 })
     );
@@ -356,7 +356,16 @@ describe("fetchRates", () => {
     const { result } = renderRateHook();
     await act(() => result.current.fetchRates("c1", "A", null));
     expect(fetchDestinations).toHaveBeenCalledWith("c1", "A");
-    expect(fetchRates).toHaveBeenCalledWith("c1", "A", "DefaultDrop");
+    expect(fetchRates).toHaveBeenCalledWith("c1", "A", "DefaultDrop", null);
+  });
+
+  it("looks a rate up by title without resolving destinations", async () => {
+    fetchRates.mockResolvedValueOnce({ sixMeterRate: 120 });
+    const { result, onFormUpdate } = renderRateHook();
+    await act(() => result.current.fetchRates("c1", null, null, "DBN-JHB Express"));
+    expect(fetchDestinations).not.toHaveBeenCalled();
+    expect(fetchRates).toHaveBeenCalledWith("c1", null, null, "DBN-JHB Express");
+    expect(onFormUpdate).toHaveBeenCalledWith(expect.objectContaining({ rateper_6: 120 }));
   });
 
   it("returns early when no dropoff can be resolved", async () => {
@@ -385,7 +394,7 @@ describe("fetchRates", () => {
     fetchRates.mockResolvedValueOnce({ rateper_6: 50 });
     const { result } = renderRateHook();
     await act(() => result.current.fetchRates("c1", "A", "B"));
-    expect(result.current.rateUpdateMessage).toMatch(/rates updated/i);
+    expect(result.current.rateUpdateMessage).toMatch(/prices updated/i);
     act(() => jest.advanceTimersByTime(3000));
     expect(result.current.rateUpdateMessage).toBe("");
     jest.useRealTimers();
@@ -479,5 +488,84 @@ describe("fetchFreshAmounts", () => {
       fresh = await result.current.fetchFreshAmounts([original], formData);
     });
     expect(fresh[0].surchargeAmount).toBe(99);
+  });
+
+  // Rate changes apply to new instructions only: saved containers keep the
+  // amounts they were saved with for flags that were already on.
+  const savedContainer = (overrides = {}) => ({
+    id: 1,
+    containerKey: 10,
+    containerType: "6m",
+    addSurcharges: true,
+    hazardous: true,
+    vgm: true,
+    surchargeAmount: 999,
+    hazardousAmount: 999,
+    vgmAmount: 999,
+    is_12m_surcharge: false,
+    surcharge_12m_amount: 0,
+    selectedExtraCharges: [{ charge_name: "Toll", amount: 999 }],
+    _saved: {
+      containerType: "6m",
+      addSurcharges: true,
+      surchargeAmount: 30,
+      is_12m_surcharge: false,
+      surcharge_12m_amount: 0,
+      hazardous: true,
+      hazardousAmount: 50,
+      vgm: true,
+      vgmAmount: 20,
+      extraCharges: [{ charge_name: "Toll", amount: 350 }],
+    },
+    ...overrides,
+  });
+
+  it("keeps saved amounts for flags that were already on, without fetching", async () => {
+    const { result } = renderRateHook();
+    let fresh;
+    await act(async () => {
+      fresh = await result.current.fetchFreshAmounts([savedContainer()], formData);
+    });
+    expect(fetchRates).not.toHaveBeenCalled();
+    expect(fresh[0].surchargeAmount).toBe(30);
+    expect(fresh[0].hazardousAmount).toBe(50);
+    expect(fresh[0].vgmAmount).toBe(20);
+    expect(fresh[0].selectedExtraCharges).toEqual([{ charge_name: "Toll", amount: 350 }]);
+  });
+
+  it("prices a flag newly ticked on a saved container from the current rate", async () => {
+    fetchRates.mockResolvedValueOnce({ hazardous: 75, surcharges: 40, vgm: 0 });
+    const container = savedContainer({
+      _saved: { ...savedContainer()._saved, hazardous: false, hazardousAmount: 0 },
+    });
+    const { result } = renderRateHook();
+    let fresh;
+    await act(async () => {
+      fresh = await result.current.fetchFreshAmounts([container], formData);
+    });
+    expect(fresh[0].hazardousAmount).toBe(75);
+    expect(fresh[0].surchargeAmount).toBe(30);
+  });
+
+  it("re-prices the surcharge when the container type changed", async () => {
+    fetchRates.mockResolvedValueOnce({ surcharges: 40, surcharge12m: 60 });
+    const container = savedContainer({ containerType: "12m" });
+    const { result } = renderRateHook();
+    let fresh;
+    await act(async () => {
+      fresh = await result.current.fetchFreshAmounts([container], formData);
+    });
+    expect(fresh[0].surcharge_12m_amount).toBe(60);
+    expect(fresh[0].hazardousAmount).toBe(50);
+  });
+
+  it("looks the current rate up by title when the instruction has one", async () => {
+    fetchRates.mockResolvedValueOnce({ hazardous: 75 });
+    const container = { id: 2, containerType: "6m", hazardous: true, addSurcharges: false, vgm: false };
+    const { result } = renderRateHook();
+    await act(async () => {
+      await result.current.fetchFreshAmounts([container], { clientId: "c1", rate_title: "DBN-JHB Express" });
+    });
+    expect(fetchRates).toHaveBeenCalledWith("c1", undefined, undefined, "DBN-JHB Express");
   });
 });

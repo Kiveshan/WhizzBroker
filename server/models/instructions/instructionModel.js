@@ -1,5 +1,14 @@
 import { pool, query } from "../../config/database.js";
 
+// WHERE clause for finding a client's rate in client_effective_rate, with
+// params $1 clientId, $2 pickup, $3 dropoff, $4 rate title. Rates are
+// identified by title (migration 015); instructions captured before titles
+// existed have none and fall back to their route.
+const RATE_MATCH_SQL = `clientid = $1 AND CASE
+    WHEN NULLIF(btrim($4::text), '') IS NOT NULL THEN title_key = rate_title_key($4::text)
+    ELSE starting_point = $2 AND destination = $3
+  END`;
+
 // Fallback total-cost calculation, used only when the controller did not
 // supply a server-calculated total_cost. Derives the total from the submitted
 // rate inputs — never from a client-precomputed total.
@@ -49,6 +58,117 @@ const calculateTotalCost = (instructionData) => {
   return Number(totalCost.toFixed(2));
 };
 
+// Persists the extra charges selected for one container (create or replace).
+// `extraCharges` is the raw array from the frontend payload — either
+// `container.selectedExtraCharges` or `container.extra_charges`, each entry
+// shaped { charge_name, amount }. Snapshots name+amount at capture time.
+const saveContainerExtraCharges = async (client, containerKey, extraCharges) => {
+  const charges = Array.isArray(extraCharges) ? extraCharges : [];
+  if (charges.length === 0) return;
+
+  for (const charge of charges) {
+    const chargeName = (charge.charge_name || charge.chargeName || "").toString().trim();
+    if (!chargeName) continue;
+    const amount = Number(charge.amount);
+    await client.query(
+      `INSERT INTO public.container_extra_charge (containerkey, charge_name, amount)
+       VALUES ($1, $2, $3)`,
+      [containerKey, chargeName, Number.isFinite(amount) ? amount : 0]
+    );
+  }
+};
+
+const getContainerExtraCharges = (container) =>
+  container.selectedExtraCharges || container.extra_charges || [];
+
+// ---------- Freezing amounts on existing containers ----------
+// Rate changes apply to NEW instructions only. When an instruction is edited,
+// a container keeps the surcharge / hazardous / VGM / extra-charge amounts it
+// was saved with for every flag that was already on. Only a flag switched on
+// during this edit (or a new container) is priced from the current rate.
+// The controller applies this before calculating total_cost and the model
+// applies the same rule when storing, so the two always agree.
+
+const payloadFlag = (container, ...keys) => keys.some((k) => Boolean(container[k]));
+const payloadContainerType = (container) => container.containerType || container.container_type || "";
+
+// Which amounts on an existing container are frozen, given its stored row.
+const frozenFlags = (stored, incoming) => ({
+  hazardous: Boolean(stored["Hazardous"]) && payloadFlag(incoming, "Hazardous", "hazardous"),
+  // The surcharge amount depends on 6m vs 12m, so a type change re-prices it
+  surcharge:
+    Boolean(stored["Add Surcharges"]) &&
+    payloadFlag(incoming, "Add Surcharges", "addSurcharges", "surcharges") &&
+    (stored.container_type || "") === payloadContainerType(incoming),
+  vgm: Boolean(stored.vgm) && payloadFlag(incoming, "vgm"),
+});
+
+const storedSurchargeAmount = (stored) =>
+  Number(stored.is_12m_surcharge ? stored.surcharge_12m_amount : stored["Surcharge Amount"]) || 0;
+
+// Returns the payload containers with frozen amounts copied in from the
+// database, in every key name the controller/model read.
+export const freezeExistingContainerAmounts = async (instructionId, containers) => {
+  if (!Array.isArray(containers) || containers.length === 0) return containers;
+  const storedRows = await query(
+    `SELECT containerkey, container_type, "Add Surcharges", "Surcharge Amount", is_12m_surcharge,
+            surcharge_12m_amount, "Hazardous", "Hazardous Amount", vgm, "vgm amount"
+     FROM public.container WHERE m1key = $1`,
+    [instructionId]
+  );
+  const chargeRows = await query(
+    `SELECT e.containerkey, e.charge_name, e.amount
+     FROM public.container_extra_charge e
+     JOIN public.container c ON c.containerkey = e.containerkey
+     WHERE c.m1key = $1`,
+    [instructionId]
+  );
+  const storedByKey = new Map(storedRows.rows.map((r) => [r.containerkey, r]));
+
+  return containers.map((container) => {
+    const key = Number(container.containerKey || container.containerkey);
+    const stored = key ? storedByKey.get(key) : null;
+    if (!stored) return container;
+
+    const frozen = frozenFlags(stored, container);
+    const out = { ...container };
+    if (frozen.hazardous) {
+      out["Hazardous Amount"] = Number(stored["Hazardous Amount"]) || 0;
+      out.hazardousAmount = out["Hazardous Amount"];
+    }
+    if (frozen.surcharge) {
+      const amount = storedSurchargeAmount(stored);
+      out.is_12m_surcharge = Boolean(stored.is_12m_surcharge);
+      out["Surcharge Amount"] = stored.is_12m_surcharge ? 0 : amount;
+      out.surcharge_12m_amount = stored.is_12m_surcharge ? amount : 0;
+      out.surchargeAmount = out["Surcharge Amount"];
+    }
+    if (frozen.vgm) {
+      out["vgm amount"] = Number(stored["vgm amount"]) || 0;
+      out.vgmAmount = out["vgm amount"];
+    }
+
+    // Extra charges already on the container keep their saved amount
+    const savedCharges = new Map(
+      chargeRows.rows
+        .filter((c) => c.containerkey === key)
+        .map((c) => [String(c.charge_name).trim().toLowerCase(), Number(c.amount)])
+    );
+    const freezeCharges = (list) =>
+      Array.isArray(list)
+        ? list.map((charge) => {
+            const name = String(charge.charge_name || charge.chargeName || "").trim().toLowerCase();
+            return savedCharges.has(name) ? { ...charge, amount: savedCharges.get(name) } : charge;
+          })
+        : list;
+    if (out.selectedExtraCharges) out.selectedExtraCharges = freezeCharges(out.selectedExtraCharges);
+    if (out.extra_charges) out.extra_charges = freezeCharges(out.extra_charges);
+
+    out._frozenAmounts = frozen;
+    return out;
+  });
+};
+
 export const getShipmentTypes = async () => {
   const sql = `
     SELECT shipkey, shipmenttype
@@ -63,25 +183,36 @@ export const getContainersByInstructionId = async (instructionId) => {
   // Convert instructionId to string to match database type
   const instructionIdStr = String(instructionId);
   const sql = `
-    SELECT 
-      containerkey,
-      containernum,
-      weight,
-      m1key,
-      container_type,
-      cargo_description,
-      "Hazardous",
-      "Add Surcharges",
-      "Surcharge Amount",
-      is_12m_surcharge,
-      surcharge_12m_amount,
-      "Hazardous Amount",
-      file_ref,
-      vgm,
-      "vgm amount"
-    FROM public.container
-    WHERE m1key = $1
-    ORDER BY containerkey
+    SELECT
+      c.containerkey,
+      c.containernum,
+      c.weight,
+      c.m1key,
+      c.container_type,
+      c.cargo_description,
+      c."Hazardous",
+      c."Add Surcharges",
+      c."Surcharge Amount",
+      c.is_12m_surcharge,
+      c.surcharge_12m_amount,
+      c."Hazardous Amount",
+      c.file_ref,
+      c.vgm,
+      c."vgm amount",
+      COALESCE(ec.charges, '[]'::json) as "extraCharges"
+    FROM public.container c
+    LEFT JOIN LATERAL (
+      SELECT json_agg(
+        json_build_object(
+          'charge_name', e.charge_name,
+          'amount', e.amount
+        ) ORDER BY e.id
+      ) as charges
+      FROM container_extra_charge e
+      WHERE e.containerkey = c.containerkey
+    ) ec ON true
+    WHERE c.m1key = $1
+    ORDER BY c.containerkey
   `;
 
   console.log(
@@ -237,14 +368,31 @@ export const saveInstruction = async ({
   controllerData,
   containerData = [],
   weightData = [],
+  dbClient = null,
+  instructionGroupId = null,
 }) => {
-  const client = await pool.connect();
+  // When dbClient is provided the caller owns the connection and transaction
+  // (group save); standalone calls open and manage their own.
+  const ownsTransaction = !dbClient;
+  const client = dbClient || (await pool.connect());
   try {
-    await client.query("BEGIN");
+    if (ownsTransaction) await client.query("BEGIN");
 
     console.log(
       `DEBUG: saveInstruction called with ${containerData.length} containers`
     );
+
+    // Every instruction belongs to a group. Standalone saves (legacy
+    // endpoint) get their own single-child group so the invariant holds.
+    let groupId = instructionGroupId;
+    if (!groupId) {
+      const groupInsert = await client.query(
+        `INSERT INTO public.instruction_group (client, status, created_at)
+         VALUES ($1, 'New', CURRENT_DATE) RETURNING group_key`,
+        [controllerData.client || controllerData.clientId]
+      );
+      groupId = groupInsert.rows[0].group_key;
+    }
 
     const controllerQuery = `
       INSERT INTO public.m1_controller (
@@ -254,11 +402,13 @@ export const saveInstruction = async ({
         num_six_meters, num_twelve_meters, num_abnormal, num_breakbulk,
         weight, total_cost, booking_ref, vessel_name,
         rateper_6, rateper_12, rateper_abnormal, rateper_breakbulk, unitrate,
-        is_set_rate, historical_set_rate, created_at, addon_id
+        is_set_rate, historical_set_rate, created_at, addon_id, instruction_group_id,
+        rate_title
       ) VALUES (
         $1, $2, $3, $4, $5,
         $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
-        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
+        $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+        $31
       ) RETURNING m1key
     `;
 
@@ -320,8 +470,10 @@ export const saveInstruction = async ({
 
       // Other fields
       ksmFileRef: controllerData.ksmFileRef || controllerData.task, // renamed from task
-      pickup: controllerData.pickup,
-      dropoff: controllerData.dropoff,
+      // Route is optional for title-based rates (migration 015); blank -> NULL
+      pickup: controllerData.pickup || null,
+      dropoff: controllerData.dropoff || null,
+      rateTitle: controllerData.rate_title || controllerData.rateTitle || null,
       hazardous: Boolean(controllerData.hazardous) || false,
       surcharges: Boolean(controllerData.surcharges) || false,
       surchargesAmount: controllerData.surchargesAmount || 0, // Use the surcharge amount from client rate
@@ -442,6 +594,8 @@ export const saveInstruction = async ({
       fields.historical_set_rate, // Historical set rate value
       formatDate(new Date()), // Current date for created_at
       fields.addon_id, // Link to add-on invoice (null for non-add-on instructions)
+      groupId, // Parent instruction group
+      fields.rateTitle, // Title of the client rate this instruction is priced from
     ];
 
     const controllerResult = await client.query(
@@ -510,8 +664,9 @@ export const saveInstruction = async ({
       }
     }
 
-    // Define clientId, pickup, and dropoff variables before container processing
+    // Define clientId, pickup, dropoff and rate title before container processing
     let clientId = controllerData.client || controllerData.clientId;
+    const rateTitle = fields.rateTitle;
     let pickup =
       controllerData.pickup ||
       controllerData.selectedStartingPoint ||
@@ -573,21 +728,19 @@ export const saveInstruction = async ({
       // For shipment type 5 (add-on), surcharge amounts must always remain 0
       // even if the flag is true.
       let surchargeAmount = 0;
-      if (!isAddOnType && addSurcharges && clientId && pickup && dropoff) {
+      if (!isAddOnType && addSurcharges && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
           if (surchargeResult.rows.length > 0) {
             const resolvedType = container.container_type || container.containerType || "";
@@ -606,21 +759,19 @@ export const saveInstruction = async ({
       // For shipment type 5 (add-on), hazardous amounts must always remain 0
       // even if the flag is true.
       let hazardousAmount = container["Hazardous Amount"] || container.hazardousAmount || 0;
-      if (!isAddOnType && isHazardous && hazardousAmount === 0 && clientId && pickup && dropoff) {
+      if (!isAddOnType && isHazardous && hazardousAmount === 0 && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const hazardousQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const hazardousResult = await client.query(hazardousQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
           if (hazardousResult.rows.length > 0) {
             const fetched = Number.parseFloat(hazardousResult.rows[0].hazardous);
@@ -641,21 +792,19 @@ export const saveInstruction = async ({
 
       let vgmAmount = 0;
 
-      if (!isAddOnType && allowVgm && isVgm && clientId && pickup && dropoff) {
+      if (!isAddOnType && allowVgm && isVgm && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const vgmResult = await client.query(vgmQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
           if (vgmResult.rows.length > 0) {
             const fetched = Number.parseFloat(vgmResult.rows[0].vgm);
@@ -727,8 +876,14 @@ export const saveInstruction = async ({
           is_12m_surcharge, surcharge_12m_amount,
           file_ref, vgm, "vgm amount"
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        RETURNING containerkey
       `;
-      await client.query(insertContainerQuery, containerValues);
+      const insertedContainerResult = await client.query(insertContainerQuery, containerValues);
+      await saveContainerExtraCharges(
+        client,
+        insertedContainerResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
 
       // Debug log for container values
       console.log("Container values array:", {
@@ -821,8 +976,16 @@ export const saveInstruction = async ({
         return total;
       }, 0);
 
-      console.log(`DEBUG: Base cost: ${baseCost}, Surcharges: ${totalSurchargeAmount}, Hazardous: ${totalHazardousAmount}, VGM: ${totalVgmAmount}`);
-      const totalCost = baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount;
+      // Calculate total selected extra-charges amount from containers
+      const totalExtraChargesAmount = containers.reduce((total, container) => {
+        const charges = getContainerExtraCharges(container);
+        if (!Array.isArray(charges)) return total;
+        return total + charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
+      }, 0);
+
+      console.log(`DEBUG: Base cost: ${baseCost}, Surcharges: ${totalSurchargeAmount}, Hazardous: ${totalHazardousAmount}, VGM: ${totalVgmAmount}, ExtraCharges: ${totalExtraChargesAmount}`);
+      const totalCost =
+        baseCost + totalSurchargeAmount + totalHazardousAmount + totalVgmAmount + totalExtraChargesAmount;
       return Number(totalCost.toFixed(2));
     };
 
@@ -841,7 +1004,12 @@ export const saveInstruction = async ({
         vgmAmt = 0;
       }
 
-      return { ...c, vgm: isVgmFlag, "vgm amount": vgmAmt };
+      return {
+        ...c,
+        vgm: isVgmFlag,
+        "vgm amount": vgmAmt,
+        extra_charges: getContainerExtraCharges(original),
+      };
     });
 
     const recalculatedTotalCost = calculateTotalCostWithSurcharges(
@@ -872,14 +1040,124 @@ export const saveInstruction = async ({
       await client.query(updateTotalCostQuery, [recalculatedTotalCost, m1key]);
     }
 
+    if (ownsTransaction) await client.query("COMMIT");
+    return { m1key, finalTotalCost: recalculatedTotalCost, instructionGroupId: groupId };
+  } catch (error) {
+    if (ownsTransaction) await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    if (ownsTransaction) client.release();
+  }
+};
+
+/**
+ * Saves a whole instruction group in one transaction: the group row plus
+ * every child instruction (each child reuses saveInstruction, so container,
+ * weight-row and total-cost behaviour is identical to a standalone save).
+ * All children must belong to the group's client.
+ */
+export const saveInstructionGroup = async ({ clientId, groupRef = null, instructions = [] }) => {
+  if (!Array.isArray(instructions) || instructions.length === 0) {
+    throw new Error("An instruction group needs at least one instruction");
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const groupInsert = await client.query(
+      `INSERT INTO public.instruction_group (client, status, created_at, group_ref)
+       VALUES ($1, 'New', CURRENT_DATE, $2) RETURNING group_key`,
+      [clientId, groupRef]
+    );
+    const groupKey = groupInsert.rows[0].group_key;
+
+    const children = [];
+    for (const instruction of instructions) {
+      const childClient =
+        instruction.controllerData?.client || instruction.controllerData?.clientId;
+      if (String(childClient) !== String(clientId)) {
+        throw new Error("All instructions in a group must belong to the group's client");
+      }
+      const saved = await saveInstruction({
+        controllerData: instruction.controllerData,
+        containerData: instruction.containerData || [],
+        weightData: instruction.weightData || [],
+        dbClient: client,
+        instructionGroupId: groupKey,
+      });
+      children.push(saved);
+    }
+
     await client.query("COMMIT");
-    return { m1key, finalTotalCost: recalculatedTotalCost };
+    return { groupKey, instructions: children };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
   } finally {
     client.release();
   }
+};
+
+/**
+ * Appends one instruction to an existing group. The child must belong to
+ * the group's client; container/weight/total-cost behaviour comes from
+ * saveInstruction, exactly like the children created with the group.
+ */
+export const addInstructionToGroup = async (
+  groupKey,
+  { controllerData, containerData = [], weightData = [] }
+) => {
+  const groupResult = await query(
+    `SELECT group_key, client FROM public.instruction_group WHERE group_key = $1`,
+    [groupKey]
+  );
+  if (groupResult.rows.length === 0) {
+    throw new Error("Instruction group not found");
+  }
+
+  const childClient = controllerData?.client || controllerData?.clientId;
+  if (String(childClient) !== String(groupResult.rows[0].client)) {
+    throw new Error("All instructions in a group must belong to the group's client");
+  }
+
+  return saveInstruction({
+    controllerData,
+    containerData,
+    weightData,
+    instructionGroupId: groupKey,
+  });
+};
+
+/**
+ * Fetches a group with its children, each child in the same shape
+ * getInstructionById returns (containers + weight_rows included).
+ */
+export const getInstructionGroupById = async (groupKey) => {
+  const groupResult = await query(
+    `SELECT g.group_key, g.client, g.status, g.created_at, g.group_ref,
+            c.client AS client_name
+     FROM public.instruction_group g
+     LEFT JOIN public.m5_client c ON g.client = c.m5clientkey
+     WHERE g.group_key = $1`,
+    [groupKey]
+  );
+  if (groupResult.rows.length === 0) return null;
+
+  const childKeys = await query(
+    `SELECT m1key FROM public.m1_controller
+     WHERE instruction_group_id = $1
+     ORDER BY m1key`,
+    [groupKey]
+  );
+
+  const instructions = [];
+  for (const row of childKeys.rows) {
+    const instruction = await getInstructionById(row.m1key);
+    if (instruction) instructions.push(instruction);
+  }
+
+  return { ...groupResult.rows[0], instructions };
 };
 
 export const getClientInstructionStats = async () => {
@@ -1001,10 +1279,14 @@ export const getInstructions = async (clientId) => {
       m."clientFileRef" as client_ref,
       m.booking_ref,
       m."ksmFileRef" as ksm_file_ref,
+      m.rate_title,
+      m.pickup,
+      m.dropoff,
       m.shipment_type,
       s.shipmenttype AS type_text,
       m.status,
       m."lastFreeDate",
+      m.stackdate,
       m.client,
       c.client AS companyname,
       m.created_at as startingdate,
@@ -1017,7 +1299,9 @@ export const getInstructions = async (clientId) => {
         WHERE cn.m1key = m.m1key
       ) AS has_valid_containers,
       i.invoice_num,
-      ao.invoice_number AS addon_invoice_number
+      ao.invoice_number AS addon_invoice_number,
+      m.instruction_group_id,
+      g.group_ref
     FROM
       public.m1_controller m
     JOIN
@@ -1025,9 +1309,16 @@ export const getInstructions = async (clientId) => {
     LEFT JOIN
       public.shipment s ON m.shipment_type = s.shipkey
     LEFT JOIN
-      public.invoice i ON m.m1key = i.m1key
+      public.invoice i ON i.m1key = m.m1key
+      OR (
+        i.m1key IS NULL
+        AND m.instruction_group_id IS NOT NULL
+        AND i.instruction_group_id = m.instruction_group_id
+      )
     LEFT JOIN
       public.add_ons ao ON m.addon_id = ao.addon_id
+    LEFT JOIN
+      public.instruction_group g ON m.instruction_group_id = g.group_key
   `;
   const queryParams = [];
   if (clientId) {
@@ -1110,10 +1401,14 @@ export const searchInstructions = async ({ q, clientId } = {}) => {
       m."clientFileRef" AS client_ref,
       m.booking_ref,
       m."ksmFileRef" AS ksm_file_ref,
+      m.rate_title,
+      m.pickup,
+      m.dropoff,
       m.shipment_type,
       s.shipmenttype AS type_text,
       m.status,
       m."lastFreeDate",
+      m.stackdate,
       m.client,
       c.client AS companyname,
       c.m5clientkey,
@@ -1130,7 +1425,12 @@ export const searchInstructions = async ({ q, clientId } = {}) => {
     FROM public.m1_controller m
     JOIN public.m5_client c ON m.client = c.m5clientkey
     LEFT JOIN public.shipment s ON m.shipment_type = s.shipkey
-    LEFT JOIN public.invoice i ON m.m1key = i.m1key
+    LEFT JOIN public.invoice i ON i.m1key = m.m1key
+      OR (
+        i.m1key IS NULL
+        AND m.instruction_group_id IS NOT NULL
+        AND i.instruction_group_id = m.instruction_group_id
+      )
     LEFT JOIN public.container cont ON cont.m1key = m.m1key
     ${whereClause}
     ORDER BY m.m1key, m.created_at DESC
@@ -1220,7 +1520,18 @@ export const getInstructionById = async (instructionId) => {
               'surcharge_12m_amount', COALESCE(c.surcharge_12m_amount, 0),
               'Hazardous Amount', COALESCE(c."Hazardous Amount", 0),
               'vgm', COALESCE(c.vgm, false),
-              'vgm amount', COALESCE(c."vgm amount", 0)
+              'vgm amount', COALESCE(c."vgm amount", 0),
+              'extraCharges', COALESCE(
+                (
+                  SELECT json_agg(
+                    json_build_object('charge_name', e.charge_name, 'amount', e.amount)
+                    ORDER BY e.id
+                  )
+                  FROM container_extra_charge e
+                  WHERE e.containerkey = c.containerkey
+                ),
+                '[]'::json
+              )
             )
             ORDER BY c.containerkey
           )
@@ -1393,6 +1704,11 @@ export const updateContainersByInstructionId = async (
 
       const result = await client.query(insertQuery, values);
       console.log(`Inserted container with ID: ${result.rows[0].containerkey}`);
+      await saveContainerExtraCharges(
+        client,
+        result.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
       insertResults.push(result.rows[0]);
     }
 
@@ -1454,7 +1770,7 @@ export const getActiveClients = async () => {
 export const getClientStartingPoints = async (clientId) => {
   const sql = `
     SELECT DISTINCT starting_point
-    FROM public.m5_client_rate
+    FROM public.client_effective_rate
     WHERE clientid = $1 
       AND starting_point IS NOT NULL 
       AND starting_point IS DISTINCT FROM ''
@@ -1486,7 +1802,7 @@ export const getClientDestinations = async (clientId, startingPoint) => {
 
   const sql = `
     SELECT DISTINCT destination
-    FROM public.m5_client_rate
+    FROM public.client_effective_rate
     WHERE clientid = $1 
       AND starting_point = $2
       AND destination IS NOT NULL 
@@ -1513,10 +1829,8 @@ export const checkClientHasRates = async (clientId) => {
   const sql = `
     SELECT EXISTS (
       SELECT 1 
-      FROM public.m5_client_rate 
+      FROM public.client_effective_rate
       WHERE clientid = $1
-      AND starting_point IS NOT NULL 
-      AND starting_point IS DISTINCT FROM ''
     ) as has_rates
   `;
 
@@ -1543,42 +1857,63 @@ const applyFuelSurcharge = (value, fuelSurchargePct) => {
   return Number((base * (1 + pct / 100)).toFixed(2));
 };
 
-export const getClientRates = async (clientId, start, destination) => {
-  if (!clientId || !start || !destination) {
-    throw new Error("clientId, start, and destination are required");
+// Every rate a client can be priced from, one per title (the winning one:
+// client override first, then cards in priority order). Feeds the instruction
+// form's Rate dropdown.
+export const getClientRateTitles = async (clientId) => {
+  const result = await query(
+    `SELECT title, starting_point, destination, rate_source, rate_card_name
+     FROM (
+       SELECT er.*,
+              ROW_NUMBER() OVER (PARTITION BY er.title_key
+                                 ORDER BY er.source_rank, er.source_rate_id DESC) AS rn
+       FROM public.client_effective_rate er
+       WHERE er.clientid = $1
+     ) ranked
+     WHERE rn = 1
+     ORDER BY lower(title)`,
+    [clientId]
+  );
+  return result.rows || [];
+};
+
+// Looks a rate up by title, or by start + destination for instructions
+// captured before rate titles existed.
+export const getClientRates = async (clientId, start, destination, title = null) => {
+  if (!clientId || (!title && (!start || !destination))) {
+    throw new Error("clientId and either a rate title or start and destination are required");
   }
 
   const sql = `
     SELECT
-      "6m_rate" as "sixMeterRate",
-      "12m_rate" as "twelveMeterRate",
-      set_rate as "setRate",
-      surcharges,
-      surcharge12m,
-      hazardous,
-      vgm,
-      fuel_surcharge as "fuelSurcharge",
-      starting_point as "startingPoint",
-      destination
-    FROM public.m5_client_rate
-    WHERE clientid = $1
-      AND starting_point = $2
-      AND destination = $3
-    ORDER BY client_rate_id DESC
+      cr.title,
+      cr.source_rate_id as "clientRateId",
+      cr.rate_source as "rateSource",
+      cr.rate_card_id as "rateCardId",
+      cr.rate_card_name as "rateCardName",
+      cr."6m_rate" as "sixMeterRate",
+      cr."12m_rate" as "twelveMeterRate",
+      cr.set_rate as "setRate",
+      cr.surcharges,
+      cr.surcharge12m,
+      cr.hazardous,
+      cr.vgm,
+      cr.fuel_surcharge as "fuelSurcharge",
+      cr.starting_point as "startingPoint",
+      cr.destination,
+      cr.extra_charges as "extraCharges"
+    FROM public.client_effective_rate cr
+    WHERE ${RATE_MATCH_SQL}
+    ORDER BY cr.source_rank, cr.source_rate_id DESC
     LIMIT 1
   `;
 
   try {
     console.log(
-      `[getClientRates] Querying rates for client: ${clientId}, start: ${start}, destination: ${destination}`
+      `[getClientRates] Querying rates for client: ${clientId}, title: ${title}, start: ${start}, destination: ${destination}`
     );
-    console.log(`[getClientRates] Executing query:`, sql, `with params:`, [
-      clientId,
-      start,
-      destination,
-    ]);
 
-    const result = await query(sql, [clientId, start, destination]);
+    const result = await query(sql, [clientId, start || null, destination || null, title || null]);
     const rates = result.recordset || result.rows || [];
 
     console.log(`[getClientRates] Query result:`, {
@@ -2038,6 +2373,11 @@ export const updateFCInstructionAndContainers = async (
         currentInstruction.dropoff,
         "string"
       ),
+      rate_title: preserveExistingValue(
+        instructionData.rate_title,
+        currentInstruction.rate_title,
+        "string"
+      ),
       // pickuptime and pickupdate fields removed
       stackdate: preserveExistingValue(
         instructionData.stackdate,
@@ -2177,6 +2517,7 @@ export const updateFCInstructionAndContainers = async (
       { field: "shipment_type", type: "number" },
       { field: "pickup", type: "string" },
       { field: "dropoff", type: "string" },
+      { field: "rate_title", type: "string" },
       { field: "surchages", type: "boolean" },
       { field: "surcharge", type: "number" },
       // pickuptime and pickupdate fields removed
@@ -2231,8 +2572,9 @@ export const updateFCInstructionAndContainers = async (
           stackdate = $6, "lastFreeDate" = $7, "clientFileRef" = $8, rateweight = $9, description = $10,
           status = $11, vat = $12, num_six_meters = $13, num_twelve_meters = $14, num_abnormal = $15,
           num_breakbulk = $16, weight = $17, total_cost = $18, booking_ref = $19, vessel_name = $20,
-          rateper_6 = $21, rateper_12 = $22, rateper_abnormal = $23, rateper_breakbulk = $24, unitrate = $25, is_set_rate = $26, historical_set_rate = $27, created_at = $28, addon_id = $29
-        WHERE m1key = $30
+          rateper_6 = $21, rateper_12 = $22, rateper_abnormal = $23, rateper_breakbulk = $24, unitrate = $25, is_set_rate = $26, historical_set_rate = $27, created_at = $28, addon_id = $29,
+          rate_title = $30
+        WHERE m1key = $31
         RETURNING *
       `;
 
@@ -2267,6 +2609,7 @@ export const updateFCInstructionAndContainers = async (
         updateData.historical_set_rate,
         updateData.created_at,
         updateData.addon_id,
+        updateData.rate_title,
         instructionId,
       ];
 
@@ -2386,10 +2729,34 @@ export const updateFCInstructionAndContainers = async (
       } to delete`
     );
 
-    // Make current instruction fields available for rate lookups (hazardous/VGM)
-    const clientId = currentInstruction.client;
-    const pickup = currentInstruction.pickup;
-    const dropoff = currentInstruction.dropoff;
+    // Sync extra charges for every existing container in the payload,
+    // independent of the field-diffing above (compareContainers only flags a
+    // container as changed when hazardous/surcharge/vgm/etc. differ, so a
+    // container whose ONLY change is its extra-charge selection would
+    // otherwise be silently skipped).
+    const currentContainerKeys = new Set(
+      currentContainers.map((c) => c.containerkey)
+    );
+    for (const newContainer of containerData) {
+      const key = Number(newContainer.containerKey);
+      if (!key || !currentContainerKeys.has(key)) continue;
+      await client.query(
+        `DELETE FROM public.container_extra_charge WHERE containerkey = $1`,
+        [key]
+      );
+      await saveContainerExtraCharges(
+        client,
+        key,
+        getContainerExtraCharges(newContainer)
+      );
+    }
+
+    // Rate lookups (hazardous/VGM/surcharge) use the instruction's rate as it
+    // stands after this update, so a newly chosen rate prices new containers.
+    const clientId = updateData.client;
+    const pickup = updateData.pickup;
+    const dropoff = updateData.dropoff;
+    const rateTitle = updateData.rate_title;
 
     // Delete containers (and any associated legs for those containers)
     for (const containerKey of containerChanges.toDelete) {
@@ -2418,15 +2785,20 @@ export const updateFCInstructionAndContainers = async (
 
     // Update containers
     for (const container of containerChanges.toUpdate) {
+      // Amounts for flags that were already on keep their saved value (see
+      // freezeExistingContainerAmounts); only newly switched-on flags are
+      // priced from the current rate. Add-on shipments stay at 0 either way.
+      const storedContainer = currentContainers.find((c) => c.containerkey === container.containerkey);
+      const frozen = storedContainer
+        ? frozenFlags(storedContainer, container)
+        : { hazardous: false, surcharge: false, vgm: false };
 
-      // Always recompute hazardous amount from current client rates when the
-      // hazardous flag is true (except for add-on shipments where amounts
-      // must remain 0). This ensures we refresh from m5_client_rate even if
-      // the frontend sends a non-zero "Hazardous Amount" from a previous rate.
       let hazardousAmount = 0;
       const isHazardous = container["Hazardous"] || container.hazardous || false;
-      
-      if (!isAddOnType && isHazardous && clientId && pickup && dropoff) {
+
+      if (frozen.hazardous) {
+        hazardousAmount = Number(storedContainer["Hazardous Amount"]) || 0;
+      } else if (!isAddOnType && isHazardous && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           console.log(
             `[${new Date().toISOString()}] [MODEL] Container ${container.containerkey} is hazardous, refreshing hazardous amount for client ${clientId}, pickup ${pickup}, dropoff ${dropoff}`
@@ -2434,18 +2806,16 @@ export const updateFCInstructionAndContainers = async (
 
           const hazardousRateQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
 
           const hazardousRateResult = await client.query(hazardousRateQuery, [
             clientId,
             pickup,
-            dropoff
+            dropoff, rateTitle
           ]);
 
           if (hazardousRateResult.rows.length > 0) {
@@ -2493,29 +2863,29 @@ export const updateFCInstructionAndContainers = async (
 
       // Get VGM flag and amount with fallbacks. For shipment type 4 VGM is
       // explicitly disabled. For shipment type 5 (add-on), the VGM flag
-      // should be persisted, but the amount must stay 0. When VGM is
-      // enabled, always refresh the amount from current client rates so it
-      // stays in sync with m5_client_rate.
+      // should be persisted, but the amount must stay 0. A VGM flag that was
+      // already on keeps its saved amount; a newly ticked one uses the
+      // current rate.
       const rawIsVgm = container.vgm || container["vgm"] || false;
       const isVgm = allowVgm ? rawIsVgm : false;
 
       let vgmAmount = 0;
 
-      if (!isAddOnType && allowVgm && isVgm && clientId && pickup && dropoff) {
+      if (isVgm && frozen.vgm) {
+        vgmAmount = Number(storedContainer["vgm amount"]) || 0;
+      } else if (!isAddOnType && allowVgm && isVgm && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const vgmResult = await client.query(vgmQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
           if (vgmResult.rows.length > 0) {
             const fetched = Number.parseFloat(vgmResult.rows[0].vgm);
@@ -2553,10 +2923,9 @@ export const updateFCInstructionAndContainers = async (
         RETURNING *
       `;
 
-      // Always recompute surcharge amount from current client rates when the
-      // "Add Surcharges" flag is true (except for add-on shipments where
-      // amounts must remain 0). This keeps container surcharges aligned with
-      // m5_client_rate even if the frontend sends an older amount.
+      // A surcharge that was already on (same container type) keeps its saved
+      // amount; a newly ticked one is priced from the current rate. Add-on
+      // shipments stay at 0.
       let rawSurchargeAmount =
         container["Surcharge Amount"] || container.surchargeAmount || 0;
       let surchargeAmount = isAddOnType ? 0 : rawSurchargeAmount;
@@ -2564,21 +2933,21 @@ export const updateFCInstructionAndContainers = async (
       const hasAddSurcharges =
         container["Add Surcharges"] || container.addSurcharges || false;
 
-      if (!isAddOnType && hasAddSurcharges && clientId && pickup && dropoff) {
+      if (!isAddOnType && hasAddSurcharges && frozen.surcharge) {
+        surchargeAmount = storedSurchargeAmount(storedContainer);
+      } else if (!isAddOnType && hasAddSurcharges && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
 
           if (surchargeResult.rows.length > 0) {
@@ -2659,12 +3028,12 @@ export const updateFCInstructionAndContainers = async (
         try {
           // Get current instruction data to access client ID, pickup and dropoff
           const currentInstructionResult = await client.query(
-            "SELECT client, pickup, dropoff FROM public.m1_controller WHERE m1key = $1",
+            "SELECT client, pickup, dropoff, rate_title FROM public.m1_controller WHERE m1key = $1",
             [instructionId]
           );
-          
+
           if (currentInstructionResult.rows.length > 0) {
-            const { client: clientId, pickup, dropoff } = currentInstructionResult.rows[0];
+            const { client: clientId, pickup, dropoff, rate_title: rateTitle } = currentInstructionResult.rows[0];
             
             console.log(
               `[${new Date().toISOString()}] [MODEL] New container is hazardous, fetching hazardous amount for client ${clientId}, pickup ${pickup}, dropoff ${dropoff}`
@@ -2673,18 +3042,16 @@ export const updateFCInstructionAndContainers = async (
             // Query to fetch hazardous amount from m5_client_rate table
             const hazardousRateQuery = `
               SELECT hazardous
-              FROM public.m5_client_rate
-              WHERE clientid = $1
-                AND starting_point = $2
-                AND destination = $3
-              ORDER BY client_rate_id DESC
+              FROM public.client_effective_rate
+              WHERE ${RATE_MATCH_SQL}
+              ORDER BY source_rank, source_rate_id DESC
               LIMIT 1
             `;
             
             const hazardousRateResult = await client.query(hazardousRateQuery, [
               clientId,
               pickup,
-              dropoff
+              dropoff, rateTitle
             ]);
             
             if (hazardousRateResult.rows.length > 0) {
@@ -2711,21 +3078,19 @@ export const updateFCInstructionAndContainers = async (
       let insertSurchargeAmount = 0;
       const hasAddSurcharges = container["Add Surcharges"] || container.addSurcharges || false;
       
-      if (!isAddOnType && hasAddSurcharges && clientId && pickup && dropoff) {
+      if (!isAddOnType && hasAddSurcharges && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           const surchargeResult = await client.query(surchargeQuery, [
             clientId,
             pickup,
-            dropoff,
+            dropoff, rateTitle,
           ]);
 
           if (surchargeResult.rows.length > 0) {
@@ -2788,6 +3153,12 @@ export const updateFCInstructionAndContainers = async (
         isAddOnType ? 0 : vgmAmount,
       ]);
 
+      await saveContainerExtraCharges(
+        client,
+        insertResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
+
       console.log("Inserted new container with VGM values:", { isVgm, vgmAmount });
       console.log(
         `[${new Date().toISOString()}] [MODEL] Inserted new container ${insertResult.rows[0].containerkey} with hazardous=${isHazardous}, hazardousAmount=${hazardousAmount}, file_ref=${container.file_ref || ""}`,
@@ -2836,7 +3207,16 @@ export const updateFCInstructionAndContainers = async (
         totalVgm += Number(container["vgm amount"] || 0);
       }
     }
-    
+
+    const extraChargesTotalQuery = `
+      SELECT COALESCE(SUM(e.amount), 0) as total
+      FROM public.container_extra_charge e
+      JOIN public.container c ON c.containerkey = e.containerkey
+      WHERE c.m1key = $1
+    `;
+    const extraChargesTotalResult = await client.query(extraChargesTotalQuery, [instructionId]);
+    const totalExtraCharges = Number(extraChargesTotalResult.rows[0].total || 0);
+
     // Get the instruction data for recalculation
     const currentInstructionQuery = `
       SELECT
@@ -2872,18 +3252,18 @@ export const updateFCInstructionAndContainers = async (
       }, 0);
       const unitRate = Number(d.unitrate || 0);
       baseCost = totalWeight * unitRate;
-      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm).toFixed(2));
+      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm + totalExtraCharges).toFixed(2));
     } else {
       // Container-based calculation
       baseCost =
         (Number(d.num_six_meters || 0) * Number(d.rateper_6 || 0)) +
         (Number(d.num_twelve_meters || 0) * Number(d.rateper_12 || 0)) +
         (Number(d.num_abnormal || 0) * Number(d.rateper_abnormal || 0));
-      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm).toFixed(2));
+      recalculatedTotalCost = Number((baseCost + totalSurcharge + totalHazardous + totalVgm + totalExtraCharges).toFixed(2));
     }
-    
+
     console.log(
-      `[${new Date().toISOString()}] [MODEL] Recalculated total_cost: ${recalculatedTotalCost} (is_set_rate: ${d.is_set_rate}, isAddOn: ${isAddOnType}, base: ${baseCost}, surcharge: ${totalSurcharge}, hazardous: ${totalHazardous}, vgm: ${totalVgm})`
+      `[${new Date().toISOString()}] [MODEL] Recalculated total_cost: ${recalculatedTotalCost} (is_set_rate: ${d.is_set_rate}, isAddOn: ${isAddOnType}, base: ${baseCost}, surcharge: ${totalSurcharge}, hazardous: ${totalHazardous}, vgm: ${totalVgm}, extraCharges: ${totalExtraCharges})`
     );
     
     // Update the instruction with the recalculated total_cost
@@ -2913,6 +3293,11 @@ export const updateFCInstructionAndContainers = async (
     return {
       instruction: finalInstructionResult.rows[0],
       containers: finalContainersResult.rows,
+      // State before this update, for the audit trail's before/after list.
+      previous: {
+        instruction: currentInstruction,
+        containers: currentContainers,
+      },
       changes: {
         instructionUpdated: instructionNeedsUpdate,
         containersUpdated: containerChanges.toUpdate.length,
@@ -2941,7 +3326,11 @@ export const saveInstructionAndContainers = async (
   try {
     await client.query("BEGIN");
 
-    // clientId, pickup, and dropoff variables are already defined above
+    // Used by the surcharge/hazardous/VGM rate lookups below
+    const clientId = controllerData.client;
+    const pickup = controllerData.pickup || null;
+    const dropoff = controllerData.dropoff || null;
+    const rateTitle = controllerData.rate_title || null;
 
     // Calculate total cost if not provided
     const totalCost =
@@ -2956,10 +3345,10 @@ export const saveInstructionAndContainers = async (
         stackdate, "lastFreeDate", "clientFileRef", rateweight, description,
         status, vat, num_six_meters, num_twelve_meters, num_abnormal, num_breakbulk,
         weight, total_cost, booking_ref, vessel_name, rateper_6, rateper_12,
-        rateper_abnormal, rateper_breakbulk, unitrate, addon_id
+        rateper_abnormal, rateper_breakbulk, unitrate, addon_id, rate_title
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
-        $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28
+        $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29
       ) RETURNING m1key
     `;
 
@@ -2967,8 +3356,8 @@ export const saveInstructionAndContainers = async (
       controllerData.client,
       controllerData.ksmFileRef || controllerData.task,
       controllerData.shipment_type,
-      controllerData.pickup,
-      controllerData.dropoff,
+      pickup,
+      dropoff,
       controllerData.surchages || false,
       controllerData.surcharge || 0,
       controllerData.stackdate,
@@ -2992,6 +3381,7 @@ export const saveInstructionAndContainers = async (
       controllerData.rateper_breakbulk,
       controllerData.unitrate,
       controllerData.addon_id ?? null,
+      rateTitle,
     ];
 
     const instructionResult = await client.query(
@@ -3031,15 +3421,13 @@ export const saveInstructionAndContainers = async (
 
       console.log(`DEBUG: Container ${container.containerNum || 'unnamed'} - addSurcharges: ${addSurcharges}`);
 
-      if (addSurcharges && clientId && pickup && dropoff) {
+      if (addSurcharges && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const surchargeQuery = `
             SELECT surcharges, surcharge12m
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing surcharge query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3047,7 +3435,7 @@ export const saveInstructionAndContainers = async (
           const surchargeResult = await client.query(surchargeQuery, [
             clientId,
             pickup,
-            dropoff
+            dropoff, rateTitle
           ]);
           
           console.log(`DEBUG: Surcharge query result rows: ${surchargeResult.rows.length}`);
@@ -3087,15 +3475,13 @@ export const saveInstructionAndContainers = async (
 
       console.log(`DEBUG: Container ${container.containerNum || 'unnamed'} - isHazardous: ${isHazardous}`);
 
-      if (isHazardous && clientId && pickup && dropoff) {
+      if (isHazardous && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const hazardousQuery = `
             SELECT hazardous
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing hazardous query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3103,7 +3489,7 @@ export const saveInstructionAndContainers = async (
           const hazardousResult = await client.query(hazardousQuery, [
             clientId,
             pickup,
-            dropoff
+            dropoff, rateTitle
           ]);
           
           console.log(`DEBUG: Hazardous query result rows: ${hazardousResult.rows.length}`);
@@ -3143,15 +3529,13 @@ export const saveInstructionAndContainers = async (
       });
 
       // <CHANGE> Fetch VGM amount if VGM is true
-      if (isVgm && clientId && pickup && dropoff) {
+      if (isVgm && clientId && (rateTitle || (pickup && dropoff))) {
         try {
           const vgmQuery = `
             SELECT vgm
-            FROM public.m5_client_rate
-            WHERE clientid = $1
-              AND starting_point = $2
-              AND destination = $3
-            ORDER BY client_rate_id DESC
+            FROM public.client_effective_rate
+            WHERE ${RATE_MATCH_SQL}
+            ORDER BY source_rank, source_rate_id DESC
             LIMIT 1
           `;
           console.log(`DEBUG: Executing VGM query with exact params: clientId='${clientId}', pickup='${pickup}', dropoff='${dropoff}'`);
@@ -3159,7 +3543,7 @@ export const saveInstructionAndContainers = async (
           const vgmResult = await client.query(vgmQuery, [
             clientId,
             pickup,
-            dropoff
+            dropoff, rateTitle
           ]);
           
           console.log(`DEBUG: VGM query result rows: ${vgmResult.rows.length}`);
@@ -3200,6 +3584,7 @@ export const saveInstructionAndContainers = async (
           "Hazardous Amount", file_ref
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        RETURNING containerkey
       `;
 
       const resolvedContainerType = container.container_type || container.containerType || "";
@@ -3226,7 +3611,12 @@ export const saveInstructionAndContainers = async (
           ? container.fileRef
           : ""), // New file reference field for export shipments
       ];
-      await client.query(containerQuery, containerValues);
+      const containerInsertResult = await client.query(containerQuery, containerValues);
+      await saveContainerExtraCharges(
+        client,
+        containerInsertResult.rows[0].containerkey,
+        getContainerExtraCharges(container)
+      );
     }
 
     await client.query("COMMIT");
@@ -3314,20 +3704,20 @@ export const deleteInstruction = async (instructionId) => {
   }
 };
 
-export const getClientSetRate = async (clientId, starting_point, destination) => {
+// By rate title, or by route for instructions captured before rate titles.
+export const getClientSetRate = async (clientId, starting_point, destination, title = null) => {
   const sql = `
     SELECT set_rate, fuel_surcharge
-    FROM public.m5_client_rate
-    WHERE clientid = $1 AND starting_point = $2 AND destination = $3
-    ORDER BY client_rate_id DESC
+    FROM public.client_effective_rate
+    WHERE ${RATE_MATCH_SQL}
+    ORDER BY source_rank, source_rate_id DESC
     LIMIT 1
   `;
 
-  console.log(`[${new Date().toISOString()}] getClientSetRate: Executing SQL:`, sql);
-  console.log(`[${new Date().toISOString()}] getClientSetRate: With params:`, [clientId, starting_point, destination]);
+  console.log(`[${new Date().toISOString()}] getClientSetRate: With params:`, [clientId, starting_point, destination, title]);
 
   try {
-    const result = await query(sql, [clientId, starting_point, destination]);
+    const result = await query(sql, [clientId, starting_point || null, destination || null, title || null]);
     const rows = result.recordset || result.rows || [];
 
     console.log(`[${new Date().toISOString()}] getClientSetRate: Query completed, found ${rows.length} rates`);

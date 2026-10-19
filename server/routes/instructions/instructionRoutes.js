@@ -13,6 +13,7 @@ import {
   getClientDestinationsHandler,
   checkClientRatesHandler,
   getClientRatesHandler,
+  getClientRateTitlesHandler,
   getClientSetRateHandler,
   // FC Handlers
   getFCContainersHandler,
@@ -23,10 +24,13 @@ import {
   checkFCContainerLegsHandler,
   deleteFCContainerAndLegsHandler,
   deleteInstructionHandler,
+  saveInstructionGroupHandler,
+  getInstructionGroupHandler,
+  addInstructionToGroupHandler,
 } from "../../controllers/instructions/instructionController.js"
 import { verifyToken } from "../../middleware/auth.js"
 import { validate } from "../../middleware/validate.js"
-import { instructionSaveSchema } from "../../validation/financialSchemas.js"
+import { instructionSaveSchema, instructionGroupSaveSchema } from "../../validation/financialSchemas.js"
 
 const router = express.Router()
 
@@ -42,6 +46,11 @@ router.get('/test-containers/:id', (req, res) => {
 // Containers routes
 router.get('/containers/:instructionId', getContainersHandler);
 router.post("/save-instruction", verifyToken, validate(instructionSaveSchema), saveInstructionHandler)
+
+// ========== Instruction Group Endpoints ==========
+router.post("/group", verifyToken, validate(instructionGroupSaveSchema), saveInstructionGroupHandler)
+router.get("/group/:id", getInstructionGroupHandler)
+router.post("/group/:id/instructions", verifyToken, validate(instructionSaveSchema), addInstructionToGroupHandler)
 router.get("/client-instruction-stats", getClientInstructionStatsHandler)
 router.get("/instructions", getInstructionsHandler)
 router.get("/search", searchInstructionsHandler)
@@ -72,7 +81,9 @@ router.get("/active-clients", getActiveClientsHandler)
 router.get("/client/:clientId/starting-points", getClientStartingPointsHandler)
 router.get("/client/:clientId/destinations/:startingPoint", getClientDestinationsHandler)
 router.get("/client/:clientId/check-rates", checkClientRatesHandler)
+router.get("/client/:clientId/rate-titles", getClientRateTitlesHandler)
 router.get("/client/:clientId/rates", getClientRatesHandler)
+router.get("/client/:clientId/set-rate", getClientSetRateHandler)
 router.get("/client/:clientId/set-rate/:starting_point/:destination", getClientSetRateHandler)
 
 export default router

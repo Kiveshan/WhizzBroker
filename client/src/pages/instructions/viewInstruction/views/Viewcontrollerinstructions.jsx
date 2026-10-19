@@ -5,6 +5,12 @@ import "../../css/viewcontrollerinstructions.css"
 import { useNavigate, useLocation } from "react-router-dom"
 import ErrorModal from "../../../../components/ErrorModal"
 import api from "../../../../api"
+import { ClientInfoSection } from "../../../../components/instructions/ClientInfoSection"
+import { BookingDetailsSection } from "../../../../components/instructions/BookingDetailsSection"
+import { ContainersCard } from "../../../../components/instructions/ContainersCard"
+import { mapContainersFromDb } from "../../../../utils/instructions/payloadBuilders.js"
+import { InstructionValueCard } from "../../../../components/instructions/InstructionValueCard"
+import { instructionValue, savedInstructionValue } from "../../../../utils/instructions/instructionValue"
 import "../../../../css/components.css"
 
 // ErrorTooltip component for displaying validation errors
@@ -19,11 +25,17 @@ const ErrorTooltip = ({ message }) => {
   )
 }
 
-const Viewcontrollerinstructions = () => {
+// Renders standalone (route + location.state) by default. When embedded in the
+// Director's read-only instruction-group view, the group page passes
+// instructionId/groupMode as props and owns the Back navigation itself.
+const Viewcontrollerinstructions = ({
+  instructionId: instructionIdProp = null,
+  groupMode = false,
+} = {}) => {
   const navigate = useNavigate()
   const location = useLocation()
   const isMounted = useRef(true)
-  const instructionId = location.state?.instructionId
+  const instructionId = instructionIdProp ?? location.state?.instructionId
   const preservedFormData = location.state?.preservedFormData || {}
 
   // Form data state with default values
@@ -310,6 +322,7 @@ const Viewcontrollerinstructions = () => {
         shipmentTypeName: data.shipmenttype || "",
         ksmFileRef: data.ksmFileRef || "", // Updated from task to ksmFileRef
         pickup: data.pickup || "",
+        rate_title: data.rate_title || "",
         dropoff: data.dropoff || "",
         hazardous: Boolean(data.hazardous),
         surchages: Boolean(data.surchages), // Note: This matches the database field name (missing 'r')
@@ -564,16 +577,6 @@ const Viewcontrollerinstructions = () => {
     return containersList
   }
 
-  // Determine container type based on index and form data
-  const determineContainerType = (index, data) => {
-    if (!data) return "Unknown"
-    const sixMCount = data.num_six_meters || 0
-    const twelveMCount = data.num_twelve_meters || 0
-    if (index < sixMCount) return "6m"
-    if (index < sixMCount + twelveMCount) return "12m"
-    return "Abnormal"
-  }
-
   // Fetch container details
   const fetchContainerDetails = async () => {
     if (!instructionId) {
@@ -609,39 +612,12 @@ const Viewcontrollerinstructions = () => {
       console.log("Containers data from API:", data)
 
       if (data && data.length > 0) {
-        // Map container data to match the expected format
-        const containersList = data.map((container, index) => {
-          // Ensure container is not null or undefined before accessing properties
-          if (!container) {
-            console.log(`Container at index ${index} is null or undefined`);
-            return {
-              id: index + 1,
-              containerKey: null,
-              containerNum: "",
-              weight: "",
-              containerType: determineContainerType(index, formData),
-              cargoDescription: "",
-              hazardous: false,
-              addSurcharges: false
-            };
-          }
-          
-          // Log the container data to debug
-          console.log(`Container ${index} data:`, container);
-          
-          return {
-            id: index + 1,
-            containerKey: container.containerkey || null,
-            containerNum: container.containernum ? String(container.containernum) : "",
-            weight: container.weight != null ? String(container.weight) : "",
-            containerType: container.container_type || determineContainerType(index, formData),
-            cargoDescription: container.cargo_description || "",
-            // The column names in PostgreSQL are case-sensitive with quotes
-            // These fields might be missing if the backend query doesn't select them
-            hazardous: container["Hazardous"] === true || false,
-            addSurcharges: container["Add Surcharges"] === true || false,
-            vgm: container["vgm"] === true || false,
-          };
+        // Shared with the FC edit view so read-only viewing gets the same
+        // fields (surcharge/hazardous/vgm amounts, extra charges) instead of
+        // a partial hand-rolled mapping.
+        const containersList = mapContainersFromDb(data, {
+          isImportType: String(formData.shipmentTypeId) === "1",
+          shipmentType: formData.shipmentTypeId,
         })
         console.log("Mapped containers list:", containersList)
         setContainers(containersList)
@@ -733,12 +709,14 @@ const Viewcontrollerinstructions = () => {
   return (
     <div className="controller-instructions-root">
       <div className="controller-instructions-unique-wrapper">
-        {/* Header with Back Button */}
-        <div className="controller-instructions-header">
-          <button className="controller-instructions-back-button" onClick={handleBackClick}>
-            Back
-          </button>
-        </div>
+        {/* Header with Back Button - the group page owns navigation when embedded */}
+        {!groupMode && (
+          <div className="controller-instructions-header">
+            <button className="controller-instructions-back-button" onClick={handleBackClick}>
+              Back
+            </button>
+          </div>
+        )}
 
         {/* Success Message */}
         {successMessage && <div className="alert alert-success">{successMessage}</div>}
@@ -768,528 +746,43 @@ const Viewcontrollerinstructions = () => {
         {initialDataLoaded && (
           <div className="controller-instructions-form-container" style={{ maxWidth: "1200px" }}>
             {/* Client Information Section */}
-            <div className="controller-instructions-form-section controller-instructions-client-info-section">
-              <div className="controller-instructions-form-row">
-                <div className="controller-instructions-form-field">
-                  <label>Client</label>
-                  <div className="controller-instructions-select-wrapper" ref={fieldRefs.clientId}>
-                    <select
-                      style={nonEditableStyle}
-                      className="dropdown"
-                      name="clientId"
-                      value={formData.clientId || ""}
-                      disabled={true}
-                    >
-                      <option value="" disabled>
-                        Select Client
-                      </option>
-                      {clients.map((client) => (
-                        <option key={client.m5clientkey} value={client.m5clientkey}>
-                          {client.companyname}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="controller-instructions-form-field">
-                  <label>Representative</label>
-                  <input
-                    type="text"
-                    className="controller-instructions-form-input"
-                    style={nonEditableStyle}
-                    value={formData.representative || ""}
-                    readOnly
-                    placeholder="Autoload representative"
-                    name="representative"
-                    disabled={true}
-                  />
-                </div>
-                <div className="controller-instructions-form-field">
-                  <label>Contact Details</label>
-                  <input
-                    type="text"
-                    className="controller-instructions-form-input"
-                    placeholder="Autoload contact details"
-                    name="contactDetails"
-                    value={formData.contactDetails}
-                    readOnly
-                    style={nonEditableStyle}
-                  />
-                </div>
-                <div className="controller-instructions-form-field">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    className="controller-instructions-form-input"
-                    placeholder="Autoload email"
-                    name="email"
-                    value={formData.email}
-                    readOnly
-                    style={nonEditableStyle}
-                  />
-                </div>
-              </div>
-            </div>
+            <ClientInfoSection
+              formData={formData}
+              clients={clients}
+              fieldErrors={{}}
+              fieldRefs={fieldRefs}
+              isReadOnly={true}
+              clientLocked={true}
+              readOnlyStyle={nonEditableStyle}
+              nonEditableStyle={nonEditableStyle}
+              onClientChange={() => {}}
+              onChange={() => {}}
+              showLocations={true}
+              rateOptions={
+                formData.rate_title
+                  ? [{ title: formData.rate_title, starting_point: formData.pickup, destination: formData.dropoff }]
+                  : []
+              }
+              onRateChange={() => {}}
+            />
 
-            {/* Container and Booking Section */}
-            <div className="controller-instructions-form-section">
-              <div className="controller-instructions-form-row controller-instructions-trailer-container">
-                <div
-                  className="controller-instructions-container-section"
-                >
-                  <div className="controller-instructions-container-group">
-                    <div className="controller-instructions-container-label">
-                      <span className="controller-instructions-trailer-size-label">Trailer Size</span>
-                      <label>No. of Containers</label>
-                    </div>
-                    <div className="controller-instructions-container-inputs">
-                      <div className="controller-instructions-container-input">
-                        <label>6m</label>
-                        <div className="controller-instructions-container-rate-group">
-                          <input
-                            type="number"
-                            value={formData.num_six_meters}
-                            min="0"
-                            name="num_six_meters"
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                          <div className="controller-instructions-input-wrapper controller-instructions-rate-input">
-                            <input
-                              type="text"
-                              className="controller-instructions-form-input"
-                              placeholder="Rate"
-                              value={formData.rateper_6 || ""}
-                              readOnly
-                              style={nonEditableStyle}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="controller-instructions-container-input">
-                        <label>12m</label>
-                        <div className="controller-instructions-container-rate-group">
-                          <input
-                            type="number"
-                            value={formData.num_twelve_meters}
-                            min="0"
-                            name="num_twelve_meters"
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                          <div className="controller-instructions-input-wrapper controller-instructions-rate-input">
-                            <input
-                              type="text"
-                              className="controller-instructions-form-input"
-                              placeholder="Rate"
-                              value={formData.rateper_12 || ""}
-                              readOnly
-                              style={nonEditableStyle}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      <div className="controller-instructions-container-input">
-                        <label>Abnormal</label>
-                        <div className="controller-instructions-container-rate-group">
-                          <input
-                            type="number"
-                            value={formData.num_abnormal}
-                            min="0"
-                            name="num_abnormal"
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                          <div className="controller-instructions-input-wrapper controller-instructions-rate-input">
-                            <input
-                              type="text"
-                              className="controller-instructions-form-input"
-                              placeholder="Rate"
-                              value={formData.rateper_abnormal || ""}
-                              readOnly
-                              style={nonEditableStyle}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Hazardous and Surcharges Checkboxes removed */}
-                  </div>
-
-                  {/* Booking Vertical Group */}
-                  <div
-                    className="controller-instructions-booking-vertical-group"
-                    style={{
-                      marginTop: "8px",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "8px",
-                      maxWidth: "220px",
-                    }}
-                  >
-                    <div className="controller-instructions-form-field">
-                      <label>Shipment Type</label>
-                      <div className="controller-instructions-select-wrapper" ref={fieldRefs.shipmentTypeId}>
-                        <select
-                          className="controller-instructions-dropdown"
-                          name="shipmentTypeId"
-                          value={formData.shipmentTypeId}
-                          disabled={true}
-                          style={nonEditableStyle}
-                        >
-                          <option value="" disabled>
-                            Select Shipment
-                          </option>
-                          {shipmentTypes.map((type) => {
-                            console.log("Rendering shipment type:", type);
-                            return (
-                              <option key={type.shipkey} value={type.shipkey}>
-                                {type.shipmenttype}
-                              </option>
-                            );
-                          })}
-                        </select>
-                      </div>
-                    </div>
-                    <div className="controller-instructions-form-field">
-                      <label>Pickup Location</label>
-                      <div className="controller-instructions-input-wrapper" ref={fieldRefs.pickup}>
-                        <input
-                          type="text"
-                          className="controller-instructions-form-input"
-                          placeholder="Pickup location"
-                          name="pickup"
-                          value={formData.pickup || ""}
-                          readOnly
-                          style={nonEditableStyle}
-                        />
-                      </div>
-                    </div>
-                    <div className="controller-instructions-form-field">
-                      <label>Dropoff Location</label>
-                      <div className="controller-instructions-input-wrapper" ref={fieldRefs.dropoff}>
-                        <input
-                          type="text"
-                          className="controller-instructions-form-input"
-                          placeholder="Dropoff location"
-                          name="dropoff"
-                          value={formData.dropoff || ""}
-                          readOnly
-                          style={nonEditableStyle}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Compact Rates per dropdown and input fields in one row */}
-                    <div
-                      className="controller-instructions-form-field"
-                    >
-                      <label>Unit per</label>
-                      <div style={{ display: "flex", alignItems: "center", gap: "15px", width: "100%" }}>
-                        {/* Unit per dropdown */}
-                        <div
-                          className="controller-instructions-select-wrapper"
-                          style={{ minWidth: "100px", marginTop: "0" }}
-                        >
-                          <select
-                            className="controller-instructions-dropdown"
-                            name="rateWeight"
-                            value={formData.rateWeight || "Container"}
-                            disabled={true}
-                            style={{ ...nonEditableStyle, width: "100%", padding: "4px 8px" }}
-                            ref={fieldRefs.rateWeight}
-                          >
-                            <option value="kg">kg</option>
-                            <option value="m³">m³</option>
-                            <option value="ton">ton</option>
-                            <option value="Container">Container</option>
-                          </select>
-                        </div>
-
-                        {/* Rate per unit and weight textboxes */}
-                        {(formData.rateWeight === "kg" ||
-                          formData.rateWeight === "m³" ||
-                          formData.rateWeight === "ton") && (
-                          <div
-                            style={{
-                              display: "flex",
-                              gap: "15px",
-                              width: "100%",
-                              alignItems: "center",
-                            }}
-                          >
-                            {/* Unit Rate Field - inline text + input */}
-                            <div
-                              className="controller-instructions-form-field"
-                              style={{
-                                flex: 1,
-                                minWidth: "150px",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "8px",
-                                margin: 0,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  whiteSpace: "nowrap",
-                                  fontSize: "13px",
-                                  color: "#333",
-                                }}
-                              >
-                                {`Rate per ${formData.rateWeight}`}
-                              </span>
-                              <div
-                                className="controller-instructions-input-wrapper"
-                                ref={fieldRefs.unitRate}
-                                style={{ width: "100%" }}
-                              >
-                                <input
-                                  type="text"
-                                  className="controller-instructions-form-input"
-                                  name="unitRate"
-                                  value={formData.unitrate || ""}
-                                  readOnly
-                                  style={{ ...nonEditableStyle, width: "100%" }}
-                                />
-                              </div>
-                            </div>
-
-                            {/* Weight Field for non-type-4 shipments, or legacy type-4 instructions without weightRows */}
-                            {(formData.shipmentTypeId !== "4" || weightRows.length === 0) && (
-                              <div className="controller-instructions-form-field" style={{ flex: 1, minWidth: "150px" }}>
-                                <label>{`Weight (${formData.rateWeight})`}</label>
-                                <div
-                                  className="controller-instructions-input-wrapper"
-                                  ref={fieldRefs.weight}
-                                  style={{ width: "100%" }}
-                                >
-                                  <input
-                                    type="text"
-                                    className="controller-instructions-form-input"
-                                    name="weight"
-                                    value={formData.weight || ""}
-                                    readOnly
-                                    style={{ ...nonEditableStyle, width: "100%" }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Set Rate checkbox - positioned below Unit per */}
-                    {formData.shipmentTypeId === "4" && (
-                      <div className="controller-instructions-form-field" style={{ marginTop: "8px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                          <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px" }}>
-                            <input type="checkbox" checked={isSetRate} disabled={true} />
-                            Set Rate
-                          </label>
-                          {isSetRate && (
-                            <div className="controller-instructions-input-wrapper" style={{ width: "140px" }}>
-                              <input
-                                type="text"
-                                className="controller-instructions-form-input"
-                                value={Number.isFinite(Number(setRateValue)) ? String(setRateValue) : ""}
-                                readOnly
-                                disabled={true}
-                                style={{ ...nonEditableStyle, width: "100%" }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Date Time Group */}
-                  <div
-                    className="controller-instructions-date-time-group"
-                  >
-                    <div
-                      className="controller-instructions-shipment-task-row"
-                      style={{ order: -1, marginBottom: "8px" }}
-                    >
-                      <div className="controller-instructions-form-field controller-instructions-small-field">
-                        <label>Booking Reference</label>
-                        <div className="controller-instructions-input-wrapper" ref={fieldRefs.bookingRef}>
-                          <input
-                            type="text"
-                            className="controller-instructions-form-input"
-                            placeholder="Enter booking ref"
-                            name="bookingRef"
-                            value={formData.bookingRef}
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                        </div>
-                      </div>
-                      <div className="controller-instructions-form-field controller-instructions-small-field">
-                        <label>Client File Reference</label>
-                        <div className="controller-instructions-input-wrapper" ref={fieldRefs.clientFileRef}>
-                          <input
-                            type="text"
-                            className="controller-instructions-form-input"
-                            placeholder="Client File Reference"
-                            name="clientFileRef"
-                            value={formData.clientFileRef}
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className="controller-instructions-shipment-task-row"
-                      style={{ marginBottom: "8px" }}
-                    >
-                      <div className="controller-instructions-form-field controller-instructions-small-field">
-                        <label>KSM File Reference</label>
-                        <div className="controller-instructions-input-wrapper" ref={fieldRefs.ksmFileRef}>
-                          <input
-                            type="text"
-                            className="controller-instructions-form-input"
-                            placeholder="KSM File Reference"
-                            name="ksmFileRef"
-                            value={formData.ksmFileRef}
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                        </div>
-                      </div>
-                      <div className="controller-instructions-form-field controller-instructions-small-field">
-                        <label>Last Free Date</label>
-                        <div className="controller-instructions-date-wrapper" ref={fieldRefs.lastFreeDate}>
-                          <input
-                            type="date"
-                            className="controller-instructions-form-input"
-                            name="lastFreeDate"
-                            value={formData.lastFreeDate}
-                            readOnly
-                            style={nonEditableStyle}
-                            ref={lastFreeDateRef}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <div
-                      className="controller-instructions-shipment-task-row"
-                      style={{ marginBottom: "8px" }}
-                    >
-                      <div
-                        className="controller-instructions-form-field controller-instructions-small-field"
-                        style={{ maxWidth: "120px" }}
-                      >
-                        <label>VAT Rate %</label>
-                        <div className="controller-instructions-input-wrapper">
-                          <input
-                            type="number"
-                            className="controller-instructions-form-input"
-                            name="vat"
-                            value={formData.vat }
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                        </div>
-                      </div>
-                      {((isAddOn && !isCrossHaulShipment()) ||
-                        String(formData.shipmentTypeId) === "1" ||
-                        String(formData.shipmentTypeId) === "2") && (
-                        <div className="controller-instructions-form-field controller-instructions-small-field">
-                          <label>{isImport ? "ETA Date" : "Stack Date"}</label>
-                          <div className="controller-instructions-date-wrapper" ref={fieldRefs.stackDate}>
-                            <input
-                              type="date"
-                              className="controller-instructions-form-input"
-                              name="stackDate"
-                              value={formData.stackDate}
-                              readOnly
-                              style={nonEditableStyle}
-                              ref={etaDateRef}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="controller-instructions-form-field">
-                      <label>Vessel Name</label>
-                      <div className="controller-instructions-input-wrapper" ref={fieldRefs.vesselName}>
-                        <input
-                          type="text"
-                          className="controller-instructions-form-input"
-                          placeholder="Enter vessel name"
-                          name="vesselName"
-                          value={formData.vesselName}
-                          readOnly
-                          style={nonEditableStyle}
-                        />
-                      </div>
-                    </div>
-                    {isAddOn && (
-                      <div className="controller-instructions-form-field">
-                        <label>Add-On Invoice</label>
-                        <div className="controller-instructions-input-wrapper">
-                          <input
-                            type="text"
-                            className="controller-instructions-form-input"
-                            value={formData.addon_invoice_number || "N/A"}
-                            readOnly
-                            style={nonEditableStyle}
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <div className="controller-instructions-form-field">
-                      <label>Description</label>
-                      <div className="controller-instructions-input-wrapper" ref={fieldRefs.description}>
-                        <input
-                          type="text"
-                          className="controller-instructions-form-input"
-                          placeholder="Enter description"
-                          name="description"
-                          value={formData.description}
-                          readOnly
-                          style={nonEditableStyle}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    className="controller-instructions-date-time-group"
-                  >
-
-                    {!isCrossHaulShipment() &&
-                      !isAddOn &&
-                      String(formData.shipmentTypeId) !== "1" &&
-                      String(formData.shipmentTypeId) !== "2" && (
-                        <div className="controller-instructions-form-field">
-                          <label>{isImport ? "ETA Date" : "Stack Date"}</label>
-                          <div className="controller-instructions-date-wrapper" ref={fieldRefs.stackDate}>
-                            <input
-                              type="date"
-                              className="controller-instructions-form-input"
-                              name="stackDate"
-                              value={formData.stackDate}
-                              readOnly
-                              style={nonEditableStyle}
-                              ref={etaDateRef}
-                            />
-                          </div>
-                        </div>
-                      )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Instruction details */}
+            <BookingDetailsSection
+              formData={formData}
+              fieldErrors={{}}
+              fieldRefs={fieldRefs}
+              isReadOnly={true}
+              isAddOn={isAddOn}
+              readOnlyStyle={nonEditableStyle}
+              onInputChange={() => {}}
+              onVatChange={() => {}}
+              shipmentTypes={shipmentTypes}
+              onShipmentTypeChange={() => {}}
+              showCreationDate={true}
+            />
 
             {formData.shipmentTypeId === "4" && weightRows.length > 0 && (
-              <div
-                className="controller-instructions-form-section"
-                style={{ marginTop: "-100px", paddingTop: "0" }}
-              >
+              <div className="controller-instructions-form-section">
                 <div
                   className="controller-instructions-form-row"
                   style={{ marginTop: "0" }}
@@ -1307,7 +800,7 @@ const Viewcontrollerinstructions = () => {
                         <thead>
                           <tr>
                             <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
-                              KSM DN Number
+                              DN Number
                             </th>
                             <th style={{ border: "1px solid #dee2e6", padding: "4px" }}>
                               Ticket Number
@@ -1391,101 +884,53 @@ const Viewcontrollerinstructions = () => {
 
             {/* Container Details Section */}
             {containers.length > 0 && (
-              <div
-                className="controller-instructions-form-section"
-                style={isAddOn ? { marginTop: "-40px" } : undefined}
-              >
-                <div className="controller-instructions-container-details-section">
-                  <h3>Container Details</h3>
-                  {isLoadingContainers && (
-                    <div className="controller-instructions-loading-message">Loading containers...</div>
-                  )}
-                  <div className="controller-instructions-container-table-wrapper">
-                    <table className="controller-instructions-container-table">
-                      <thead>
-                        <tr>
-                          <th>Container Type</th>
-                          <th>{isExport || formData.shipmentTypeId === "2" ? "File Reference" : "Container Number"}</th>
-                          {(isImport || formData.shipmentTypeId === "2" || formData.shipmentTypeId === "3") && <th>Weight (kg)</th>}
-                          <th>Cargo Description</th>
-                          <th>Hazardous</th>
-                          <th>Add Surcharges</th>
-                          <th>VGM</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {containers.map((container) => (
-                          <tr key={container.id}>
-                            <td>{container.containerType}</td>
-                            <td>
-                              <div className="controller-instructions-input-wrapper">
-                                <input
-                                  type="text"
-                                  className="controller-instructions-form-input"
-                                  value={container.containerNum || "Not specified"}
-                                  readOnly
-                                  style={nonEditableStyle}
-                                />
-                              </div>
-                            </td>
-                            {(isImport || formData.shipmentTypeId === "2" || formData.shipmentTypeId === "3" || formData.shipmentTypeId === "1") && (
-                              <td>
-                                <div className="controller-instructions-input-wrapper">
-                                  <input
-                                    type="text"
-                                    className="controller-instructions-form-input"
-                                    value={container.weight || "Not specified"}
-                                    readOnly
-                                    style={nonEditableStyle}
-                                  />
-                                </div>
-                              </td>
-                            )}
-                            <td>
-                              <div className="controller-instructions-input-wrapper">
-                                <input
-                                  type="text"
-                                  className="controller-instructions-form-input"
-                                  value={container.cargoDescription || "Not specified"}
-                                  readOnly
-                                  style={nonEditableStyle}
-                                />
-                              </div>
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="checkbox"
-                                checked={container.hazardous || false}
-                                readOnly
-                                disabled
-                                style={nonEditableStyle}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="checkbox"
-                                checked={container.addSurcharges || false}
-                                readOnly
-                                disabled
-                                style={nonEditableStyle}
-                              />
-                            </td>
-                            <td className="text-center">
-                              <input
-                                type="checkbox"
-                                checked={container.vgm || false}
-                                readOnly
-                                disabled
-                                style={nonEditableStyle}
-                              />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              <ContainersCard
+                formData={formData}
+                setFormData={() => {}}
+                rateFieldsEnabled={{}}
+                rateLockStatus={{}}
+                rateFieldNames={{ '6m': 'rateper_6', '12m': 'rateper_12', Abnormal: 'rateper_abnormal' }}
+                handleContainerCountChange={() => {}}
+                containers={containers}
+                containerFieldErrors={{}}
+                handleContainerChange={() => {}}
+                isImport={formData.shipmentTypeId === '1'}
+                isExport={formData.shipmentTypeId === '2'}
+                isCrossHaul={formData.shipmentTypeId === '3'}
+                allowVgmUI={formData.shipmentTypeId !== '4'}
+                isReadOnly={true}
+              />
+            )}
+
+            {/* Value as saved — the stored total is what was invoiced */}
+            {formData.shipmentTypeId && (
+              <InstructionValueCard
+                value={savedInstructionValue(
+                  instructionValue({
+                    shipmentTypeId: formData.shipmentTypeId,
+                    rateWeight: formData.rateWeight,
+                    setRate: formData.is_set_rate ? Number(formData.historical_set_rate) || 0 : null,
+                    unitRate: formData.unitrate,
+                    weight: formData.weight,
+                    weightRows,
+                    counts: {
+                      six: formData.num_six_meters,
+                      twelve: formData.num_twelve_meters,
+                      abnormal: formData.num_abnormal,
+                      breakbulk: formData.num_breakbulk,
+                    },
+                    rates: {
+                      six: formData.rateper_6,
+                      twelve: formData.rateper_12,
+                      abnormal: formData.rateper_abnormal,
+                      breakbulk: formData.rateper_breakbulk,
+                    },
+                    containers: formData.shipmentTypeId === '4' ? [] : containers,
+                    vat: formData.vat,
+                  }),
+                  formData.total_cost,
+                )}
+              />
             )}
           </div>
         )}

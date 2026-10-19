@@ -5,6 +5,7 @@ import api from "../../../api";
 import "../css/finance-clerk-wageslip.css";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { BRAND_LOGO_SRC } from "../../../utils/brandLogo.js";
 
 const FinanceClerkWageSlip = () => {
   const navigate = useNavigate();
@@ -21,6 +22,8 @@ const FinanceClerkWageSlip = () => {
   const [employeeData, setEmployeeData] = useState(null);
   const [legs, setLegs] = useState([]);
   const [downloading, setDownloading] = useState(false);
+  const [companyData, setCompanyData] = useState(null);
+  const [companyLoading, setCompanyLoading] = useState(true);
 
   const wageSlipRef = useRef(null);
   const [wageData, setWageData] = useState({
@@ -202,6 +205,22 @@ const FinanceClerkWageSlip = () => {
       return { success: false, error: true };
     }
   };
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      try {
+        const response = await api.get("/api/companies");
+        setCompanyData(response.data);
+      } catch (error) {
+        console.error("Error fetching company details:", error);
+        setCompanyData(null);
+      } finally {
+        setCompanyLoading(false);
+      }
+    };
+
+    fetchCompany();
+  }, []);
 
   // Update the useEffect hook to handle wage slip saving more carefully
   useEffect(() => {
@@ -454,24 +473,12 @@ if (deductionsResponse.data) {
             
             
             else {
-              console.log(
-                "Failed to fetch deductions data:",
-                deductionsResponse.status
+              // No deductions data: take the error path below (no deductions,
+              // nothing saved). This used to invent R2,000 of deductions, put
+              // them on the slip and save them to the wages table.
+              throw new Error(
+                `No deductions data returned (status ${deductionsResponse.status})`
               );
-
-              // Use mock data for testing if API fails
-              deductions = [
-                {
-                  description: "Income Tax (API Error)",
-                  amount: "R 1500.00",
-                },
-                { description: "UIF (API Error)", amount: "R 200.00" },
-                {
-                  description: "Other Deductions (API Error)",
-                  amount: "R 300.00",
-                },
-              ];
-              totalDeductionsAmount = 2000; // Mock total
             }
 // Add loan deduction as negative earning (Less Loans) after we have deductionsData
 let loanAmount = 0;
@@ -729,7 +736,7 @@ if (!useStoredData) {
   return (
     <div className="wageslip-page-wrapper">
       <div className="wageslip-container">
-        {loading ? (
+        {loading || companyLoading ? (
           <div className="wageslip-loading-container">
             Loading employee data...
           </div>
@@ -737,15 +744,25 @@ if (!useStoredData) {
           <div className="wageslip-error-container">{error}</div>
         ) : (
           <div className="wageslip-slip-container" ref={wageSlipRef}>
+            {/* Letterhead — kept on white above the blue band, since the logo
+                artwork carries its own white background. */}
+            <div className="wageslip-letterhead">
+              <img className="wageslip-logo" src={BRAND_LOGO_SRC} alt="" />
+            </div>
+
             {/* Header */}
             <div className="wageslip-header">
               <div></div>
               <div className="wageslip-company-info">
-                <p className="wageslip-company-name">KSM Carriers</p>
-                <p className="wageslip-company-contact">
-                  accounts@ksmcarriers.co.za
+                <p className="wageslip-company-name">
+                  {companyData?.companyname || ""}
                 </p>
-                <p className="wageslip-company-contact">+27 71 675 2775</p>
+                <p className="wageslip-company-contact">
+                  {companyData?.email || ""}
+                </p>
+                <p className="wageslip-company-contact">
+                  {companyData?.cell_num || companyData?.cell_num2 || ""}
+                </p>
               </div>
             </div>
 
@@ -951,7 +968,7 @@ if (!useStoredData) {
           <button
             className="downloadwage1 wageslip-download-button"
             onClick={handleDownloadWageSlip}
-            disabled={downloading}
+            disabled={downloading || companyLoading || !companyData}
             style={{ marginLeft: "202px" }}
           >
             {downloading ? "Downloading..." : "Download Wage Slip"}

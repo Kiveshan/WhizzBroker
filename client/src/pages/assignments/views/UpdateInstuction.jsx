@@ -119,7 +119,7 @@ function UpdateInstruction() {
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [isCompleted, setIsCompleted] = useState(location.state?.isCompleted ?? false);
   const [shipmentType, setShipmentType] = useState(null);
-  // KSM DN Numbers (from the weight table) for the per-driver DN dropdown on
+  // DN Numbers (from the weight table) for the per-driver DN dropdown on
   // cross-haul break bulk (shipment type 4).
   const [dnOptions, setDnOptions] = useState([]);
   // New state for container validation
